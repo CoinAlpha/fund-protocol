@@ -1,0 +1,16 @@
+{
+  "name": "fund-protocol",
+  "version": "0.3.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CoinAlpha/fund-protocol.git"
+  },
+  "scripts": {},
+  "dependencies": {
+    "solc": "0.4.13",
+    "ethereumjs-testrpc": "^4.1.1",
+    "truffle": "^3.4.3",
+    "zeppelin-solidity": "^1.1.0"
+  }
+}
