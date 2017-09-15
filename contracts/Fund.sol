@@ -44,7 +44,7 @@ contract Fund is ERC20, DestructiblePausable {
   // Fund Balances
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
   uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
-  uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawal by investors, denominated in shares
+  uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
   // uint public totalSupply;                    // (ERC20 variable) total number of shares outstanding
 
   // Modules: where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment

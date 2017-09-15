@@ -9,7 +9,6 @@
   "scripts": {},
   "dependencies": {
     "solc": "0.4.13",
-    "ethereumjs-testrpc": "^4.1.1",
     "truffle": "^3.4.3",
     "zeppelin-solidity": "^1.1.0"
   }
