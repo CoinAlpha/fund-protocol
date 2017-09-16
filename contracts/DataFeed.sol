@@ -14,7 +14,7 @@ import "./math/SafeMath.sol";
 contract DataFeed is usingOraclize, DestructibleModified {
   using SafeMath for uint;
 
-  // Global variables 
+  // Global variables
   string  public name;                   // To differentiate in case there are multiple feeds
   bool    public useOraclize;            // True: use Oraclize (on testnet).  False: use testRPC address.
   uint    public value;                  // API value
@@ -41,7 +41,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     string  _queryUrl,
     uint    _secondsBetweenQueries,
     address _exchange
-  ) 
+  )
     payable
   {
     // Constants
@@ -63,8 +63,8 @@ contract DataFeed is usingOraclize, DestructibleModified {
 
   // Updates the value variable by fetching the queryUrl via Oraclize.
   // Recursively calls the update function again after secondsBetweenQueries seconds
-  function updateWithOraclize() 
-    payable  
+  function updateWithOraclize()
+    payable
   {
     if (useOraclize) {
       if (oraclize.getPrice("URL") > this.balance) {
@@ -86,9 +86,9 @@ contract DataFeed is usingOraclize, DestructibleModified {
     delete validIds[_myid];
     updateWithOraclize();
   }
-  
-  
-  function updateWithExchange(uint _percent) 
+
+
+  function updateWithExchange(uint _percent)
     onlyOwner
     returns (bool success)
   {
@@ -101,7 +101,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
 
   // ********* ADMIN *********
 
-  function changeQueryUrl(string _url) 
+  function changeQueryUrl(string _url)
     onlyOwner
     returns (bool success)
   {
@@ -116,7 +116,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     secondsBetweenQueries = _seconds;
     return true;
   }
-  
+
   function changeGasPrice(uint _price)
     onlyOwner
     returns (bool success)
@@ -124,8 +124,8 @@ contract DataFeed is usingOraclize, DestructibleModified {
     gasPrice = _price;
     oraclize_setCustomGasPrice(_price);
     return true;
-    
-  }    
+
+  }
 
   function changeGasLimit(uint _limit)
     onlyOwner
@@ -141,6 +141,6 @@ contract DataFeed is usingOraclize, DestructibleModified {
   {
     useOraclize = !useOraclize;
     return useOraclize;
-  }    
+  }
 
 }

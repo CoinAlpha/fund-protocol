@@ -36,7 +36,7 @@ contract NavCalculator is DestructibleModified {
 
   function NavCalculator(
     address _valueFeed
-  ) 
+  )
   {
     valueFeed = DataFeed(_valueFeed);
   }

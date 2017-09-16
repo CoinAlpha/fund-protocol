@@ -5,14 +5,15 @@ const DataFeed = artifacts.require('./DataFeed.sol');
 const { increaseTime, sendTransaction } = require('../js/helpers');
 
 contract('NavCalculator', (accounts) => {
-  const MANAGER = accounts[0];
-  const EXCHANGE = accounts[1];
+  let MANAGER = accounts[0];
+  let EXCHANGE = accounts[1];
   const GAS_AMT = 500000;
   const MGMT_FEE_BPS = 100;
   const SECONDS_IN_YEAR = 31536000;
   const PERFORM_FEE_BPS = 2000;
+  const TIMEDIFF = 50000;
 
-  let fund, calculator;
+  let fund, calculator, valueFeed;
   let totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal, navPerShare, accumulatedMgmtFees, accumulatedPerformFees, lossCarryforward;
 
   // Helpers
@@ -29,12 +30,34 @@ contract('NavCalculator', (accounts) => {
     });
   };
 
+  const retrieveFundParams = () => Promise.all([
+    fund.lastCalcDate.call(),
+    fund.navPerShare.call(),
+    fund.lossCarryforward.call(),
+    fund.accumulatedMgmtFees.call(),
+    fund.accumulatedPerformFees.call()
+  ]);
+
+  const checkRoughEqual = (vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees) => {
+    [ansNAV, ansLCF, ansAMF, ansAPF] = vals;
+    assert(Math.abs(parseInt(navPerShare) / ansNAV - 1) < 0.0001, 'incorrect navPerShare');
+
+    if (ansLCF !== 0) assert(Math.abs(parseInt(lossCarryforward) / ansLCF - 1) < 0.0001, 'incorrect lossCarryforward');
+    else assert.equal(parseInt(lossCarryforward), 0, 'incorrect lossCarryforward');
+
+    if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
+    else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
+
+    if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedPerformFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedPerformFees');
+    else assert.equal(parseInt(accumulatedPerformFees), 0, 'incorrect accumulatedPerformFees');
+  };
+
   const calc = (elapsedTime) => {
     return new Promise((resolve, reject) => {
       let fundBal, exchangeValue, ts;
-      Promise.all([valueFeed.value(), getBalInWei(EXCHANGE), getBalInWei(fund.address), fund.totalSupply()])
+      Promise.all([valueFeed.value(), getBalInWei(fund.address), fund.totalSupply()])
       .then((_vals) => {
-        [exchangeValue, exchangeBal, fundBal, ts] = _vals;
+        [exchangeValue, fundBal, ts] = _vals;
         let gav = parseInt(exchangeValue) + fundBal - totalEthPendingSubscription - totalEthPendingWithdrawal;
         // console.log('gav', gav);
         let nav = ts * navPerShare / 10000;
@@ -66,10 +89,10 @@ contract('NavCalculator', (accounts) => {
   }
 
   before(() => {
-    Promise.all([Fund.deployed(), NavCalculator.deployed(), DataFeed.deployed()])
+    return Promise.all([Fund.deployed(), NavCalculator.deployed(), DataFeed.deployed()])
     .then(_values => {
       [fund, navCalculator, valueFeed] = _values;
-      return navCalculator.setFund(fund.address);
+      return navCalculator.setFund(fund.address)
     }).then(() => {
       return Promise.all([
         fund.totalSupply(),
@@ -77,7 +100,7 @@ contract('NavCalculator', (accounts) => {
         fund.totalEthPendingWithdrawal(),
         fund.accumulatedMgmtFees(),
         fund.accumulatedPerformFees(),
-        fund.lossCarryforward(),
+        fund.lossCarryforward()
       ]);
     }).then((_vals) => {
       [totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal,
@@ -98,7 +121,7 @@ contract('NavCalculator', (accounts) => {
     });
   });
 
-  xit('should set value feed to the correct data feed address', (done) => {
+  it('should set value feed to the correct data feed address', (done) => {
     navCalculator.setValueFeed(valueFeed.address)
     .then(() => {
       return navCalculator.valueFeed.call()
@@ -110,78 +133,37 @@ contract('NavCalculator', (accounts) => {
 
   it('should calculate the navPerShare correctly (base case)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
-    const TIMEDIFF = 50000;
 
     fund.lastCalcDate.call()
     .then(_date => date1 = _date)
     .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
     .then(() => fund.calcNav())
-    .then(() => {
-      return Promise.all([
-        fund.lastCalcDate.call(),
-        fund.navPerShare.call(),
-        fund.lossCarryforward.call(),
-        fund.accumulatedMgmtFees.call(),
-        fund.accumulatedPerformFees.call() ]
-      );
-    }).then((_values) => {
+    .then(() => retrieveFundParams())
+    .then((_values) => {
       [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
       assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
       return calc(date2 - date1);
     }).then((_vals) => {
-      [ansNAV, ansLCF, ansAMF, ansAPF] = _vals;
-      // check if two numbers are roughly equal (due to rounding differences)
-      assert(Math.abs(parseInt(navPerShare) / ansNAV - 1) < 0.0001, 'incorrect navPerShare');
-
-      if (ansLCF !== 0) assert(Math.abs(parseInt(lossCarryforward) / ansLCF - 1) < 0.0001, 'incorrect lossCarryforward');
-      else assert.equal(parseInt(lossCarryforward), 0, 'incorrect lossCarryforward');
-
-      if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
-      else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
-
-      if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedPerformFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedPerformFees');
-      else assert.equal(parseInt(accumulatedPerformFees), 0, 'incorrect accumulatedPerformFees');
-
+      checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
       done();
     }).catch(console.error);
   });
 
   it('should calculate the navPerShare correctly (portfolio goes down)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
-    const TIMEDIFF = 50000;
 
     Promise.resolve(changeExchangeValue(75))
     .then(() => fund.lastCalcDate.call())
     .then(_date => date1 = _date)
     .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
     .then(() => fund.calcNav())
-    .then(() => {
-      return Promise.all([
-        fund.lastCalcDate.call(),
-        fund.navPerShare.call(),
-        fund.lossCarryforward.call(),
-        fund.accumulatedMgmtFees.call(),
-        fund.accumulatedPerformFees.call() ]
-      );
-    }).then((_values) => {
+    .then(() => retrieveFundParams())
+    .then((_values) => {
       [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
       assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
       return calc(date2 - date1);
     }).then((_vals) => {
-      [ansNAV, ansLCF, ansAMF, ansAPF] = _vals;
-
-      // check if two numbers are roughly equal (due to rounding differences)
-      assert(Math.abs(parseInt(navPerShare) / ansNAV - 1) < 0.0001, 'incorrect navPerShare');
-
-      if (ansLCF !== 0) assert(Math.abs(parseInt(lossCarryforward) / ansLCF - 1) < 0.0001, 'incorrect lossCarryforward');
-      else assert.equal(parseInt(lossCarryforward), 0, 'incorrect lossCarryforward');
-
-      if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
-      else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
-
-      if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedPerformFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedPerformFees');
-      else assert.equal(parseInt(accumulatedPerformFees), 0, 'incorrect accumulatedPerformFees');
-
+      checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
       done();
     }).catch(console.error);
   });
@@ -189,77 +171,76 @@ contract('NavCalculator', (accounts) => {
 
   it('should calculate the navPerShare correctly (portfolio recovers from loss)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
-    const TIMEDIFF = 50000;
 
     Promise.resolve(changeExchangeValue(150))
     .then(() => fund.lastCalcDate.call())
     .then((_date) => date1 = _date)
     .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
     .then(() => fund.calcNav())
-    .then(() => {
-      return Promise.all([
-        fund.lastCalcDate.call(),
-        fund.navPerShare.call(),
-        fund.lossCarryforward.call(),
-        fund.accumulatedMgmtFees.call(),
-        fund.accumulatedPerformFees.call() ]
-      );
-    }).then((_values) => {
+    .then(() => retrieveFundParams())
+    .then((_values) => {
       [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
       assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
       return calc(date2 - date1);
     }).then((_vals) => {
-      [ansNAV, ansLCF, ansAMF, ansAPF] = _vals;
-      // check if two numbers are roughly equal (due to rounding differences)
-      if (ansLCF !== 0) assert(Math.abs(parseInt(lossCarryforward) / ansLCF - 1) < 0.0001, 'incorrect lossCarryforward');
-      else assert.equal(parseInt(lossCarryforward), 0, 'incorrect lossCarryforward');
-
-      if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
-      else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
-
-      if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedPerformFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedPerformFees');
-      else assert.equal(parseInt(accumulatedPerformFees), 0, 'incorrect accumulatedPerformFees');
-
+      checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
       done();
     }).catch(console.error);
   });
 
   it('should calculate the navPerShare correctly (portfolio loses its gains)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
-    const TIMEDIFF = 50000;
 
     Promise.resolve(changeExchangeValue(25))
     .then(() => fund.lastCalcDate.call())
     .then(_date => date1 = _date)
     .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
     .then(() => fund.calcNav())
-    .then(() => {
-      return Promise.all([
-        fund.lastCalcDate.call(),
-        fund.navPerShare.call(),
-        fund.lossCarryforward.call(),
-        fund.accumulatedMgmtFees.call(),
-        fund.accumulatedPerformFees.call() ]
-      );
-    }).then((_values) => {
+    .then(() => retrieveFundParams())
+    .then((_values) => {
       [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
       assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
       return calc(date2 - date1);
     }).then((_vals) => {
-      [ansNAV, ansLCF, ansAMF, ansAPF] = _vals;
+      checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+      done();
+    }).catch(console.error);
+  });
 
-      // check if two numbers are roughly equal (due to rounding differences)
-      assert(Math.abs(parseInt(navPerShare) / ansNAV - 1) < 0.0001, 'incorrect navPerShare');
+  it('should calculate the navPerShare correctly (portfolio goes up 50x)', (done) => {
+    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
 
-      if (ansLCF !== 0) assert(Math.abs(parseInt(lossCarryforward) / ansLCF - 1) < 0.0001, 'incorrect lossCarryforward');
-      else assert.equal(parseInt(lossCarryforward), 0, 'incorrect lossCarryforward');
+    Promise.resolve(changeExchangeValue(5000))
+    .then(() => fund.lastCalcDate.call())
+    .then(_date => date1 = _date)
+    .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
+    .then(() => fund.calcNav())
+    .then(() => retrieveFundParams())
+    .then((_values) => {
+      [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
+      assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
+      return calc(date2 - date1);
+    }).then((_vals) => {
+      checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+      done();
+    }).catch(console.error);
+  });
 
-      if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
-      else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
+  it('should calculate the navPerShare correctly (portfolio goes to 0)', (done) => {
+    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
 
-      if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedPerformFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedPerformFees');
-      else assert.equal(parseInt(accumulatedPerformFees), 0, 'incorrect accumulatedPerformFees');
-
+    Promise.resolve(changeExchangeValue(0))
+    .then(() => fund.lastCalcDate.call())
+    .then(_date => date1 = _date)
+    .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
+    .then(() => fund.calcNav())
+    .then(() => retrieveFundParams())
+    .then((_values) => {
+      [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
+      assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
+      return calc(date2 - date1);
+    }).then((_vals) => {
+      checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
       done();
     }).catch(console.error);
   });
