@@ -139,9 +139,9 @@ contract InvestorActions is DestructibleModified {
     constant
     returns (uint, uint)
   {
-    var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
-
     require(_shares >= fund.minRedemptionShares());
+
+    var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
 
     // Investor's shares owned should be larger than their existing redemption requests
     // plus this new redemption request
