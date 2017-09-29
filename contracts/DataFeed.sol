@@ -1,4 +1,4 @@
-pragma solidity 0.4.13;
+pragma solidity ^0.4.13;
 
 import './oraclize/oraclizeAPI.sol';
 import './zeppelin/DestructibleModified.sol';
@@ -80,8 +80,12 @@ contract DataFeed is usingOraclize, DestructibleModified {
   function __callback(bytes32 _myid, string _result) {
     require(validIds[_myid]);
     require(msg.sender == oraclize_cbAddress());
-    value = parseInt(_result, 4);
-    timestamp = now;
+    // Assumes that API value is Ether-denominated to 2 decimals
+    uint tempValue = parseInt(_result, 2) * 1e18 / 100;
+    if (tempValue != 0) {
+      value = tempValue;
+      timestamp = now;
+    }
     LogDataFeedResponse(name, value, timestamp);
     delete validIds[_myid];
     updateWithOraclize();
