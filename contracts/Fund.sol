@@ -545,7 +545,7 @@ contract Fund is ERC20, DestructiblePausable {
     whenNotPaused
     returns (bool)
   {
-    if (investorActions.checkEligibility(_to, _value)) {
+    if (investorActions.checkEligibility(_to, _value) > 0) {
       investors[msg.sender].sharesOwned = investors[msg.sender].sharesOwned.sub(_value);
       balances[msg.sender] = balances[msg.sender].sub(_value);
       investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
@@ -566,7 +566,7 @@ contract Fund is ERC20, DestructiblePausable {
     // Check is not needed because sub(_allowance, _value) will already throw if this condition is not met
     // require (_value <= _allowance);
 
-    if (investorActions.checkEligibility(_to, _value)) {
+    if (investorActions.checkEligibility(_to, _value) > 0) {
       investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
       balances[_to] = balances[_to].add(_value);
       investors[_from].sharesOwned = investors[_from].sharesOwned.sub(_value);

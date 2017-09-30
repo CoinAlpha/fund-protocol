@@ -1,5 +1,6 @@
 {
   "name": "fund-protocol",
+  "author": "CoinAlpha, Inc",
   "version": "0.3.0",
   "private": true,
   "repository": {
@@ -9,7 +10,6 @@
   "scripts": {},
   "dependencies": {
     "solc": "0.4.13",
-    "truffle": "^3.4.3",
     "zeppelin-solidity": "^1.1.0"
   }
 }

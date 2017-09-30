@@ -51,16 +51,16 @@ contract InvestorActions is DestructibleModified {
   function checkEligibility(address _addr, uint _shares)
     onlyFund
     constant
-    returns (bool isEligible)
+    returns (uint availableEthAmount)
   {
     var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
 
     uint proFormaAmount = toEth(_shares).add(ethPendingSubscription).add(toEth(sharesOwned));
 
     if (ethTotalAllocation >= proFormaAmount) {
-      return true;
+      return ethTotalAllocation.sub(proFormaAmount);
     } else {
-      return false;
+      return 0;
     }
   }
 
