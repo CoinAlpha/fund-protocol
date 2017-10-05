@@ -7,19 +7,15 @@ contract('Investors', (accounts) => {
 
   before(() => {
     Promise.all([Fund.deployed(), NavCalculator.deployed(), InvestorActions.deployed()])
-    .then(values => {
-      [fund, navCalculator, investorActions] = values;
-    })
+      .then(values => {
+        [fund, navCalculator, investorActions] = values;
+      })
   });
 
-  it('should set fund to the correct fund address', (done) => {
-    investorActions.setFund(fund.address)
-    .then(() => {
-      return investorActions.fundAddress.call();
-    }).then((_fund_addr) => {
-      assert.equal(_fund_addr, fund.address, 'fund addresses don\'t match');
-      done();
-    });
+  it('should set fund to the correct fund address', () => {
+    return investorActions.setFund(fund.address)
+      .then(() => investorActions.fundAddress.call())
+      .then((_fund_addr) => assert.equal(_fund_addr, fund.address, 'fund addresses don\'t match'));
   });
 
 });

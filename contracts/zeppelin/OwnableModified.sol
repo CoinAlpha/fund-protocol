@@ -82,7 +82,7 @@ contract OwnableModified {
     onlyOwner
     returns (bool isSuccess)
   {
-    require(msg.sender != newOwner && newOwner != 0);
+    require(msg.sender != newOwner && newOwner != address(0));
     for (uint  i = 0; i < owners.length; i++) {
       if (msg.sender == owners[i]) {
         owners[i] = newOwner;

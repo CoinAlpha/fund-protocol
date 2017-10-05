@@ -165,7 +165,18 @@ contract Fund is ERC20, DestructiblePausable {
   {
     // Adds the investor to investorAddresses array if their previous allocation was zero
     if (investors[_addr].ethTotalAllocation == 0) {
-      investorAddresses.push(_addr);
+
+      // Check if address already exists before adding
+      bool addressExists;
+      for (uint i = 0; i < investorAddresses.length; i++) {
+        if (_addr == investorAddresses[i]) {
+          addressExists = true;
+          i = investorAddresses.length;
+        }
+      }
+      if (!addressExists) {
+        investorAddresses.push(_addr);
+      }
     }
     uint ethTotalAllocation = investorActions.modifyAllocation(_addr, _allocation);
     investors[_addr].ethTotalAllocation = ethTotalAllocation;
@@ -323,7 +334,7 @@ contract Fund is ERC20, DestructiblePausable {
   {
     require(totalEthPendingRedemption() <= this.balance.sub(totalEthPendingWithdrawal).sub(totalEthPendingSubscription));
 
-    for (uint8 i = 0; i < investorAddresses.length; i++) {
+    for (uint i = 0; i < investorAddresses.length; i++) {
       address addr = investorAddresses[i];
       if (investors[addr].sharesPendingRedemption > 0) {
         redeem(addr);
@@ -538,49 +549,52 @@ contract Fund is ERC20, DestructiblePausable {
   // 1) transfer and transferFrom check that the recipient is eligible based on their allocation
   // 2) the sharesOwned variable in the Investor struct is identical to balances
 
-  mapping(address => uint256) balances;
-  mapping (address => mapping (address => uint256)) allowed;
+  mapping(address => uint) balances;
+  mapping (address => mapping (address => uint)) allowed;
 
-  function transfer(address _to, uint256 _value)
+  function transfer(address _to, uint _value)
     whenNotPaused
-    returns (bool)
+    returns (bool success)
   {
-    if (investorActions.checkEligibility(_to, _value) > 0) {
-      investors[msg.sender].sharesOwned = investors[msg.sender].sharesOwned.sub(_value);
-      balances[msg.sender] = balances[msg.sender].sub(_value);
-      investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
-      balances[_to] = balances[_to].add(_value);
-      Transfer(msg.sender, _to, _value);
-      return true;
-    } else {
-      return false;
-    }
+    require(_to != address(0));
+    require(_value <= balances[msg.sender]);
+    require(_value <= investors[msg.sender].sharesOwned);
+    require(_value <= toShares(investorActions.getAvailableAllocation(_to)));
+    investors[msg.sender].sharesOwned = investors[msg.sender].sharesOwned.sub(_value);
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
+    balances[_to] = balances[_to].add(_value);
+    Transfer(msg.sender, _to, _value);
+    return true;
   }
 
-  function transferFrom(address _from, address _to, uint256 _value)
+  function transferFrom(address _from, address _to, uint _value)
     whenNotPaused
     returns (bool)
   {
-    var _allowance = allowed[_from][msg.sender];
+    require(_to != address(0));
+    require(_value <= allowed[_from][msg.sender]);
+    require(_value <= balances[_from]);
+    require(_value <= investors[_from].sharesOwned);
+    require(_value <= toShares(investorActions.getAvailableAllocation(_to)));
+    
+    uint _allowance = allowed[_from][msg.sender];
 
     // Check is not needed because sub(_allowance, _value) will already throw if this condition is not met
     // require (_value <= _allowance);
 
-    if (investorActions.checkEligibility(_to, _value) > 0) {
-      investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
-      balances[_to] = balances[_to].add(_value);
-      investors[_from].sharesOwned = investors[_from].sharesOwned.sub(_value);
-      balances[_from] = balances[_from].sub(_value);
-      allowed[_from][msg.sender] = _allowance.sub(_value);
-      Transfer(_from, _to, _value);
-      return true;
-    } else {
-      return false;
-    }
+    investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
+    balances[_to] = balances[_to].add(_value);
+    investors[_from].sharesOwned = investors[_from].sharesOwned.sub(_value);
+    balances[_from] = balances[_from].sub(_value);
+    allowed[_from][msg.sender] = _allowance.sub(_value);
+    Transfer(_from, _to, _value);
+    return true;
   }
 
   function approve(address _spender, uint256 _value)
-    returns (bool)
+    whenNotPaused
+    returns (bool success)
   {
 
     // To change the approve amount you first have to reduce the addresses`

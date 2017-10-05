@@ -37,28 +37,22 @@ contract InvestorActions is DestructibleModified {
     constant
     returns (uint _ethTotalAllocation)
   {
-    var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
-
     require(_allocation > 0);
-    ethTotalAllocation = _allocation;
-
-    return ethTotalAllocation;
+    return _allocation;
   }
 
-  // Checks whether a proposed transfer exceeds an investor's allocation
-  // The Fund contract's ERC20-compliant transfer and transferFrom functions use this function
-  // to determine whether a transfer is valid
-  function checkEligibility(address _addr, uint _shares)
+  // Get the remaining available amount in Ether that an investor can subscribe for
+  function getAvailableAllocation(address _addr)
     onlyFund
     constant
-    returns (uint availableEthAmount)
+    returns (uint ethAvailableAllocation)
   {
     var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
 
-    uint proFormaAmount = toEth(_shares).add(ethPendingSubscription).add(toEth(sharesOwned));
+    uint ethFilledAllocation = ethPendingSubscription.add(toEth(sharesOwned));
 
-    if (ethTotalAllocation >= proFormaAmount) {
-      return ethTotalAllocation.sub(proFormaAmount);
+    if (ethTotalAllocation > ethFilledAllocation) {
+      return ethTotalAllocation.sub(ethFilledAllocation);
     } else {
       return 0;
     }

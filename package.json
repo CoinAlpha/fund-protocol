@@ -11,5 +11,8 @@
   "dependencies": {
     "solc": "0.4.13",
     "zeppelin-solidity": "^1.1.0"
+  },
+  "devDependencies": {
+    "bluebird": "^3.5.0"
   }
 }
