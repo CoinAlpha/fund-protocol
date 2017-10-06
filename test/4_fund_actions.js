@@ -528,8 +528,8 @@ contract('Fund Actions', (accounts) => {
     let addresses;
     it('should fetch a list of investor addresses', () => fund.getInvestorAddresses()
       .then((_addresses) => {
-        addresses = _addresses;
         assert.equal(_addresses.length, INVESTOR_COUNT, 'list does not include all investors')
+        addresses = _addresses;
       })
     );
 
@@ -551,13 +551,13 @@ contract('Fund Actions', (accounts) => {
         .then((gotInvestors) => {
           gotInvestors.forEach(
             gotInvestor => gotInvestor.forEach(
-              amount => assert.equal(amount, 0, 'an amount was not zeroed out')
+              amount => assert.equal(amount, 0, 'an amount was not zeroed out during liquidation/withdrawal')
             )
           );
         })
     });
 
-    it('should remove an investor in the middle of the list', () => {
+    it('should remove an investor from the middle of the list', () => {
       let investoraddresses, investor;
       return fund.getInvestorAddresses({ from: MANAGER })
         .then((_addresses) => {
@@ -565,8 +565,10 @@ contract('Fund Actions', (accounts) => {
           investorAddresses = _addresses.slice(0);
           investor = investorAddresses[1];
         })
-        .then(() => fund.removeInvestor.call(investor, { from: investor }))
-        .then(success => assert.isFalse(success, 'Only manager should be able to remove an address'))
+        .then(() => fund.removeInvestor(investor, { from: investor }))
+        .then(
+        () => assert.throw('someone other than manager should not have been able to remove an investor'),
+        e => { })
         .then(() => fund.removeInvestor(investor, { from: MANAGER }))
         .then(() => fund.getInvestorAddresses())
         .then((_addresses) => {
@@ -575,16 +577,18 @@ contract('Fund Actions', (accounts) => {
         });
     });
 
-    it('should remove an investor in the beginning of the list', () => {
+    it('should remove an investor at the beginning of the list', () => {
       let investoraddresses, investor;
       return fund.getInvestorAddresses({ from: MANAGER })
         .then((_addresses) => {
-          assert.isAbove(_addresses.length, 2, 'there must be at leasst 2 investors in the investorAddresses list');
+          assert.isAbove(_addresses.length, 2, 'there must be at least 2 investors in the investorAddresses list');
           investorAddresses = _addresses.slice(0);
           investor = investorAddresses[0];
         })
-        .then(() => fund.removeInvestor.call(investor, { from: investor }))
-        .then(success => assert.isFalse(success, 'Only manager should be able to remove an address'))
+        .then(() => fund.removeInvestor(investor, { from: investor }))
+        .then(
+        () => assert.throw('someone other than manager should not have been able to remove an investor'),
+        e => { })
         .then(() => fund.removeInvestor(investor, { from: MANAGER }))
         .then(() => fund.getInvestorAddresses())
         .then((_addresses) => {
@@ -601,8 +605,10 @@ contract('Fund Actions', (accounts) => {
           investorAddresses = _addresses.slice(0);
           investor = investorAddresses[investorAddresses.length - 1];
         })
-        .then(() => fund.removeInvestor.call(investor, { from: investor }))
-        .then(success => assert.isFalse(success, 'Only manager should be able to remove an address'))
+        .then(() => fund.removeInvestor(investor, { from: investor }))
+        .then(
+        () => assert.throw('someone other than manager should not have been able to remove an investor'),
+        e => { })
         .then(() => fund.removeInvestor(investor, { from: MANAGER }))
         .then(() => fund.getInvestorAddresses())
         .then((_addresses) => {
