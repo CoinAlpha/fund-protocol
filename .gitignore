@@ -4,5 +4,4 @@ build/
 package-lock.json
 .vscode/
 bin/
-testnet/
 deployed/
