@@ -50,6 +50,7 @@ contract Fund is ERC20, DestructiblePausable {
   // Modules: where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
   NavCalculator   public navCalculator;         // calculating net asset value
   InvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
+  DataFeed        public dataFeed;              // fetching external data like total portfolio value and exchange rates
 
   // This struct tracks fund-related balances for a specific investor address
   struct Investor {
@@ -66,11 +67,11 @@ contract Fund is ERC20, DestructiblePausable {
   event LogAllocationModification(address indexed investor, uint eth);
   event LogSubscriptionRequest(address indexed investor, uint eth);
   event LogSubscriptionCancellation(address indexed investor);
-  event LogSubscription(address indexed investor, uint shares, uint navPerShare);
+  event LogSubscription(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogRedemptionRequest(address indexed investor, uint shares);
   event LogRedemptionCancellation(address indexed investor);
-  event LogRedemption(address indexed investor, uint shares, uint navPerShare);
-  event LogLiquidation(address indexed investor, uint shares, uint navPerShare);
+  event LogRedemption(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
+  event LogLiquidation(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogWithdrawal(address indexed investor, uint eth);
   event LogWithdrawalForInvestor(address indexed investor, uint eth);
   event LogNavSnapshot(uint indexed timestamp, uint navPerShare, uint lossCarryforward, uint accumulatedMgmtFees, uint accumulatedPerformFees);
@@ -95,6 +96,7 @@ contract Fund is ERC20, DestructiblePausable {
     address _exchange,
     address _navCalculator,
     address _investorActions,
+    address _dataFeed,
     string  _name,
     string  _symbol,
     uint8   _decimals,
@@ -120,6 +122,7 @@ contract Fund is ERC20, DestructiblePausable {
     exchange = _exchange;
     navCalculator = NavCalculator(_navCalculator);
     investorActions = InvestorActions(_investorActions);
+    dataFeed = DataFeed(_dataFeed);
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
@@ -235,7 +238,7 @@ contract Fund is ERC20, DestructiblePausable {
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
     exchange.transfer(transferAmount);
-    LogSubscription(_addr, shares, navPerShare);
+    LogSubscription(_addr, shares, navPerShare, dataFeed.usdEth);
     return true;
   }
   function subscribeInvestor(address _addr)
@@ -314,7 +317,7 @@ contract Fund is ERC20, DestructiblePausable {
     totalSharesPendingRedemption = _totalSharesPendingRedemption;
     totalEthPendingWithdrawal = _totalEthPendingWithdrawal;
 
-    LogRedemption(_addr, shares, navPerShare);
+    LogRedemption(_addr, shares, navPerShare, dataFeed.usdEth);
     return true;
   }
   function redeemInvestor(address _addr)
@@ -363,7 +366,7 @@ contract Fund is ERC20, DestructiblePausable {
     totalSupply = _totalSupply;
     totalEthPendingWithdrawal = _totalEthPendingWithdrawal;
 
-    LogLiquidation(_addr, shares, navPerShare);
+    LogLiquidation(_addr, shares, navPerShare, dataFeed.usdEth);
     return true;
   }
   function liquidateInvestor(address _addr)
