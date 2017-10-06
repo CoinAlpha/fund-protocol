@@ -2,6 +2,7 @@ pragma solidity ^0.4.13;
 
 import "./NavCalculator.sol";
 import "./InvestorActions.sol";
+import "./DataFeed.sol";
 import "./math/SafeMath.sol";
 import "./zeppelin/DestructiblePausable.sol";
 import './zeppelin/ERC20.sol';
@@ -238,7 +239,7 @@ contract Fund is ERC20, DestructiblePausable {
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
     exchange.transfer(transferAmount);
-    LogSubscription(_addr, shares, navPerShare, dataFeed.usdEth);
+    LogSubscription(_addr, shares, navPerShare, dataFeed.usdEth());
     return true;
   }
   function subscribeInvestor(address _addr)
@@ -317,7 +318,7 @@ contract Fund is ERC20, DestructiblePausable {
     totalSharesPendingRedemption = _totalSharesPendingRedemption;
     totalEthPendingWithdrawal = _totalEthPendingWithdrawal;
 
-    LogRedemption(_addr, shares, navPerShare, dataFeed.usdEth);
+    LogRedemption(_addr, shares, navPerShare, dataFeed.usdEth());
     return true;
   }
   function redeemInvestor(address _addr)
@@ -366,7 +367,7 @@ contract Fund is ERC20, DestructiblePausable {
     totalSupply = _totalSupply;
     totalEthPendingWithdrawal = _totalEthPendingWithdrawal;
 
-    LogLiquidation(_addr, shares, navPerShare, dataFeed.usdEth);
+    LogLiquidation(_addr, shares, navPerShare, dataFeed.usdEth());
     return true;
   }
   function liquidateInvestor(address _addr)
