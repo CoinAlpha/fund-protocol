@@ -1,4 +1,4 @@
-pragma solidity 0.4.13;
+pragma solidity ^0.4.13;
 
 import "./Fund.sol";
 import "./zeppelin/DestructibleModified.sol";
@@ -37,30 +37,24 @@ contract InvestorActions is DestructibleModified {
     constant
     returns (uint _ethTotalAllocation)
   {
-    var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
-
     require(_allocation > 0);
-    ethTotalAllocation = _allocation;
-
-    return ethTotalAllocation;
+    return _allocation;
   }
 
-  // Checks whether a proposed transfer exceeds an investor's allocation
-  // The Fund contract's ERC20-compliant transfer and transferFrom functions use this function
-  // to determine whether a transfer is valid
-  function checkEligibility(address _addr, uint _shares)
+  // Get the remaining available amount in Ether that an investor can subscribe for
+  function getAvailableAllocation(address _addr)
     onlyFund
     constant
-    returns (bool isEligible)
+    returns (uint ethAvailableAllocation)
   {
     var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
 
-    uint proFormaAmount = toEth(_shares).add(ethPendingSubscription).add(toEth(sharesOwned));
+    uint ethFilledAllocation = ethPendingSubscription.add(toEth(sharesOwned));
 
-    if (ethTotalAllocation >= proFormaAmount) {
-      return true;
+    if (ethTotalAllocation > ethFilledAllocation) {
+      return ethTotalAllocation.sub(ethFilledAllocation);
     } else {
-      return false;
+      return 0;
     }
   }
 
@@ -139,9 +133,9 @@ contract InvestorActions is DestructibleModified {
     constant
     returns (uint, uint)
   {
-    var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
-
     require(_shares >= fund.minRedemptionShares());
+
+    var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
 
     // Investor's shares owned should be larger than their existing redemption requests
     // plus this new redemption request

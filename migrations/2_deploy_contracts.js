@@ -4,7 +4,7 @@ var InvestorActions = artifacts.require("./InvestorActions.sol");
 var Fund = artifacts.require("./Fund.sol");
 
 // Deployment constants
-const managerInvestment = 1e18;
+const managerInvestment = 0;
 
 module.exports = function(deployer, network, accounts) {
 
@@ -15,8 +15,8 @@ module.exports = function(deployer, network, accounts) {
     DataFeed,
     "nav-service",                    // _name
     useOraclize,                      // _useOraclize
-    "json(https://api.fixer.io/latest?symbols=USD,GBP).rates.GBP", // _queryUrl
-    60,                               // _secondsBetweenQueries
+    "json(http://9afaae62.ngrok.io/api/sandbox).totalPortfolioValueEth", // _queryUrl
+    300,                              // _secondsBetweenQueries
     accounts[1],                      // _exchange
     {from: accounts[0], value: dataFeedReserve}
   ).then(() =>
@@ -35,11 +35,11 @@ module.exports = function(deployer, network, accounts) {
       "Falcon",                       // _name
       "FALC",                         // _symbol
       4,                              // _decimals
-      4e18,                           // _minInitialSubscriptionEth
-      1e18,                           // _minSubscriptionEth
-      1e18,                           // _minRedemptionShares,
+      20e18,                          // _minInitialSubscriptionEth
+      5e18,                           // _minSubscriptionEth
+      5e18,                           // _minRedemptionShares,
       100,                            // _mgmtFeeBps
-      2000,                           // _performFeeBps
+      0,                              // _performFeeBps
       {from: accounts[0], value: managerInvestment}
   ));
 };
