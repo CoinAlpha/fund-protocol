@@ -55,7 +55,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
     usdEth = _initialExchangeRate;
-    gasLimit = 200000;                                // Oraclize default value
+    gasLimit = 500000;                                // Oraclize default value
 
     if (useOraclize) {
       oraclize_setCustomGasPrice(20000000000 wei);    // 20 GWei, Oraclize default
@@ -97,10 +97,12 @@ contract DataFeed is usingOraclize, DestructibleModified {
 
     if (returnValue == 0) {
       string memory valueRaw = JsmnSolLib.getBytes(_result, tokens[2].start, tokens[2].end);
-      value = parseInt(valueRaw, 2).mul(1e18).div(100);
+      value = parseInt(valueRaw, 2);
 
       string memory usdEthRaw = JsmnSolLib.getBytes(_result, tokens[4].start, tokens[4].end);
-      usdEth = parseInt(usdEthRaw, 2).div(100);
+      usdEth = parseInt(usdEthRaw, 2);
+
+      timestamp = now;
 
       LogDataFeedResponse(_result, value, usdEth, timestamp);
       updateWithOraclize();
