@@ -525,9 +525,90 @@ contract('Fund Actions', (accounts) => {
 
   describe('Contract Maintenance', () => {
     // Contract Maintenance
-    it('should fetch a list of investor addresses', () => {
-      fund.getInvestorAddresses()
-        .then((_addresses) => assert.equal(_addresses.length, INVESTOR_COUNT, 'list does not include all investors'));
+    let addresses;
+    it('should fetch a list of investor addresses', () => fund.getInvestorAddresses()
+      .then((_addresses) => {
+        addresses = _addresses;
+        assert.equal(_addresses.length, INVESTOR_COUNT, 'list does not include all investors')
+      })
+    );
+
+    it('should liquidate & withdraw all investors', () => {
+      return getBalancePromise(EXCHANGE)
+        .then(_bal => fund.remitFromExchange({ from: EXCHANGE, value: ethToWei(weiToNum(_bal) - 1) }))
+        .then(() => Promise.all(addresses.map(address => fund.liquidateInvestor(address, { from: MANAGER }))))
+        .then(() => Promise.all(addresses.map(address => fund.getInvestor(address))))
+        .then((gotInvestors) => {
+          const withdrawAddresses = [];
+          gotInvestors.forEach((gotInvestor, index) => {
+            if (+gotInvestor[4] > 0) {
+              withdrawAddresses.push(addresses[index]);
+            }
+          })
+          return Promise.all(withdrawAddresses.map(address => fund.withdrawPayment({ from: address })));
+        })
+        .then(() => Promise.all(addresses.map(address => fund.getInvestor(address))))
+        .then((gotInvestors) => {
+          gotInvestors.forEach(
+            gotInvestor => gotInvestor.forEach(
+              amount => assert.equal(amount, 0, 'an amount was not zeroed out')
+            )
+          );
+        })
+    });
+
+    it('should remove an investor in the middle of the list', () => {
+      let investoraddresses, investor;
+      return fund.getInvestorAddresses({ from: MANAGER })
+        .then((_addresses) => {
+          assert.isAbove(_addresses.length, 3, 'there must be more than 3 investors in the investorAddresses list');
+          investorAddresses = _addresses.slice(0);
+          investor = investorAddresses[1];
+        })
+        .then(() => fund.removeInvestor.call(investor, { from: investor }))
+        .then(success => assert.isFalse(success, 'Only manager should be able to remove an address'))
+        .then(() => fund.removeInvestor(investor, { from: MANAGER }))
+        .then(() => fund.getInvestorAddresses())
+        .then((_addresses) => {
+          assert.equal(_addresses.length, investorAddresses.length - 1, 'investor addresses list length should have decreased');
+          assert.equal(_addresses.indexOf(investor), -1, 'removed investor should no longer be in investorAddresses');
+        });
+    });
+
+    it('should remove an investor in the beginning of the list', () => {
+      let investoraddresses, investor;
+      return fund.getInvestorAddresses({ from: MANAGER })
+        .then((_addresses) => {
+          assert.isAbove(_addresses.length, 2, 'there must be at leasst 2 investors in the investorAddresses list');
+          investorAddresses = _addresses.slice(0);
+          investor = investorAddresses[0];
+        })
+        .then(() => fund.removeInvestor.call(investor, { from: investor }))
+        .then(success => assert.isFalse(success, 'Only manager should be able to remove an address'))
+        .then(() => fund.removeInvestor(investor, { from: MANAGER }))
+        .then(() => fund.getInvestorAddresses())
+        .then((_addresses) => {
+          assert.equal(_addresses.length, investorAddresses.length - 1, 'investor addresses list length should have decreased');
+          assert.equal(_addresses.indexOf(investor), -1, 'removed investor should no longer be in investorAddresses');
+        });
+    });
+
+    it('should remove an investor at the end of the list', () => {
+      let investoraddresses, investor;
+      return fund.getInvestorAddresses({ from: MANAGER })
+        .then((_addresses) => {
+          assert.isAbove(_addresses.length, 2, 'there must be at least 2 investors in the investorAddresses list');
+          investorAddresses = _addresses.slice(0);
+          investor = investorAddresses[investorAddresses.length - 1];
+        })
+        .then(() => fund.removeInvestor.call(investor, { from: investor }))
+        .then(success => assert.isFalse(success, 'Only manager should be able to remove an address'))
+        .then(() => fund.removeInvestor(investor, { from: MANAGER }))
+        .then(() => fund.getInvestorAddresses())
+        .then((_addresses) => {
+          assert.equal(_addresses.length, investorAddresses.length - 1, 'investor addresses list length should have decreased');
+          assert.equal(_addresses.indexOf(investor), -1, 'removed investor should no longer be in investorAddresses');
+        });
     });
 
     it('should modify exchange address', (done) => {

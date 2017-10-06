@@ -470,6 +470,40 @@ contract Fund is ERC20, DestructiblePausable {
     return investorAddresses;
   }
 
+  event LogInvestorRemoved(address investorRemoved);
+
+  // Remove investor address from list
+  function removeInvestor(address _address)
+    constant
+    onlyOwner
+    returns (bool success)
+  {
+    require(investors[_address].ethPendingSubscription == 0);
+    require(investors[_address].sharesOwned == 0);
+    require(investors[_address].sharesPendingRedemption == 0);
+    require(investors[_address].ethPendingWithdrawal == 0);
+
+    bool investorWasRemoved;
+    for (uint i = 0; i < investorAddresses.length; i++) {
+      if (_address == investorAddresses[i]) {
+        // If investor is not the last investor, swap with the last
+        if (i < investorAddresses.length - 1) {
+          investorAddresses[i] = investorAddresses[investorAddresses.length - 1];
+        }
+        // Remove last investor
+        investorAddresses.length = investorAddresses.length - 1;
+
+        i = investorAddresses.length;
+        investorWasRemoved = true;
+      }
+    }
+    if (!investorWasRemoved) {
+      revert();
+    }
+    LogInvestorRemoved(_address);
+    return true;
+  }
+
   // Update the address of the exchange account
   function setExchange(address _exchange)
     onlyOwner
