@@ -105,7 +105,8 @@ contract Fund is ERC20, DestructiblePausable {
     uint    _minSubscriptionEth,
     uint    _minRedemptionShares,
     uint    _mgmtFeeBps,
-    uint    _performFeeBps
+    uint    _performFeeBps,
+    uint    _navPerShare
   )
     payable
   {
@@ -127,7 +128,7 @@ contract Fund is ERC20, DestructiblePausable {
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
-    navPerShare = 10000;
+    navPerShare = _navPerShare;
     lossCarryforward = 0;
     accumulatedMgmtFees = 0;
     accumulatedPerformFees = 0;
@@ -273,7 +274,7 @@ contract Fund is ERC20, DestructiblePausable {
     constant
     returns (uint)
   {
-    return toEth(totalSharesPendingRedemption);
+    return sharesToEth(totalSharesPendingRedemption);
   }
 
   // [INVESTOR METHOD] Issue a redemption request
@@ -507,6 +508,11 @@ contract Fund is ERC20, DestructiblePausable {
     return true;
   }
 
+  // Update the address of the data feed contract
+  function setDataFeed(address _address) onlyOwner {
+    dataFeed = DataFeed(_address);
+  }
+
   // Utility function for exchange to send funds to contract
   function remitFromExchange()
     payable
@@ -531,19 +537,43 @@ contract Fund is ERC20, DestructiblePausable {
   // ********* HELPERS *********
 
   // Converts ether to a corresponding number of shares based on the current nav per share
-  function toShares(uint _eth)
+  function ethToShares(uint _eth)
+    internal
     constant
     returns (uint shares)
   {
-    return _eth.mul(10000).div(navPerShare);
+    return ethToUsd(_eth).div(navPerShare);
   }
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
-  function toEth(uint _shares)
+  function sharesToEth(uint _shares)
+    internal
     constant
     returns (uint ethAmount)
   {
-    return _shares.mul(navPerShare).div(10000);
+    return usdToEth(_shares.mul(navPerShare));
+  }
+
+  function usdToEth(uint _usd) 
+    internal 
+    constant 
+    returns (uint eth) {
+    return _usd.mul(100).div(dataFeed.usdEth());
+  }
+
+  function ethToUsd(uint _eth) 
+    internal 
+    constant 
+    returns (uint usd) {
+    return _eth.mul(dataFeed.usdEth()).div(100);
+  }
+
+  // Returns the fund's balance less pending subscriptions and withdrawals
+  function getBalance()
+    constant
+    returns (uint ethAmount)
+  {
+    return this.balance.sub(totalEthPendingSubscription).sub(totalEthPendingWithdrawal);
   }
 
   // ********* ERC20 METHODS *********
@@ -563,7 +593,7 @@ contract Fund is ERC20, DestructiblePausable {
     require(_to != address(0));
     require(_value <= balances[msg.sender]);
     require(_value <= investors[msg.sender].sharesOwned);
-    require(_value <= toShares(investorActions.getAvailableAllocation(_to)));
+    require(_value <= ethToShares(investorActions.getAvailableAllocation(_to)));
     investors[msg.sender].sharesOwned = investors[msg.sender].sharesOwned.sub(_value);
     balances[msg.sender] = balances[msg.sender].sub(_value);
     investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
@@ -580,7 +610,7 @@ contract Fund is ERC20, DestructiblePausable {
     require(_value <= allowed[_from][msg.sender]);
     require(_value <= balances[_from]);
     require(_value <= investors[_from].sharesOwned);
-    require(_value <= toShares(investorActions.getAvailableAllocation(_to)));
+    require(_value <= ethToShares(investorActions.getAvailableAllocation(_to)));
     
     uint _allowance = allowed[_from][msg.sender];
 

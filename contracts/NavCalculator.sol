@@ -24,7 +24,7 @@ contract NavCalculator is DestructibleModified {
   address exchange;
 
   // Modules
-  DataFeed public valueFeed;
+  DataFeed public dataFeed;
   Fund fund;
 
   // This modifier is applied to all external methods in this contract since only
@@ -35,10 +35,10 @@ contract NavCalculator is DestructibleModified {
   }
 
   function NavCalculator(
-    address _valueFeed
+    address _dataFeed
   )
   {
-    valueFeed = DataFeed(_valueFeed);
+    dataFeed = DataFeed(_dataFeed);
   }
 
   event LogNavCalculation(
@@ -62,19 +62,17 @@ contract NavCalculator is DestructibleModified {
   ) {
 
     // Set the initial value of the variables below from the last NAV calculation
-    uint netAssetValue = toEth(fund.totalSupply());
+    uint netAssetValue = ethToUsd(sharesToEth(fund.totalSupply()));
     uint elapsedTime = now - fund.lastCalcDate();
     lossCarryforward = fund.lossCarryforward();
-    accumulatedMgmtFees = fund.accumulatedMgmtFees();
-    accumulatedPerformFees = fund.accumulatedPerformFees();
 
     // The new grossAssetValue equals the updated value, denominated in ether, of the exchange account,
     // plus any amounts that sit in the fund contract, excluding unprocessed subscriptions
     // and unwithdrawn investor payments.
-    uint grossAssetValue = valueFeed.value().add(fund.balance).sub(fund.totalEthPendingSubscription()).sub(fund.totalEthPendingWithdrawal());
+    uint grossAssetValue = dataFeed.value().add(ethToUsd(fund.getBalance()));
 
     // Removes the accumulated management fees from grossAssetValue
-    uint gpvlessFees = grossAssetValue.sub(accumulatedMgmtFees).sub(accumulatedPerformFees);
+    uint gpvlessFees = grossAssetValue.sub(ethToUsd(fund.accumulatedMgmtFees())).sub(ethToUsd(fund.accumulatedPerformFees()));
 
     // Calculates the base management fee accrued since the last NAV calculation
     uint mgmtFee = getMgmtFee(elapsedTime);
@@ -104,8 +102,9 @@ contract NavCalculator is DestructibleModified {
     // Update the state variables and return them to the fund contract
     lastCalcDate = now;
     navPerShare = toNavPerShare(netAssetValue);
-    accumulatedMgmtFees = accumulatedMgmtFees.add(mgmtFee);
-    accumulatedPerformFees = accumulatedPerformFees.add(performFee);
+    accumulatedMgmtFees = fund.accumulatedMgmtFees().add(usdToEth(mgmtFee));
+    accumulatedPerformFees = fund.accumulatedPerformFees().add(usdToEth(performFee));
+
     lossCarryforward = lossCarryforward.sub(lossPayback);
     if (netGainLossAfterPerformFee < 0) {
       lossCarryforward = lossCarryforward.add(uint(-1 * netGainLossAfterPerformFee));
@@ -119,41 +118,76 @@ contract NavCalculator is DestructibleModified {
   // ********* ADMIN *********
 
   // Update the address of the Fund contract
-  function setFund(address ofFund) onlyOwner {
-    fund = Fund(ofFund);
-    fundAddress = ofFund;
+  function setFund(address _address) onlyOwner {
+    fund = Fund(_address);
+    fundAddress = _address;
   }
 
   // Update the address of the data feed contract
-  function setValueFeed(address addr) onlyOwner {
-    valueFeed = DataFeed(addr);
+  function setDataFeed(address _address) onlyOwner {
+    dataFeed = DataFeed(_address);
   }
 
   // ********* HELPERS *********
 
   // Returns the management fee accumulated given time elapsed
   // Equivalent to: annual fee percentage * total portfolio value in ether * (seconds elapsed / seconds in a year)
-  function getMgmtFee(uint elapsedTime) internal constant returns (uint) {
-    return fund.mgmtFeeBps().mul(toEth(fund.totalSupply())).div(10000).mul(elapsedTime).div(31536000);
+  function getMgmtFee(uint elapsedTime) 
+    internal 
+    constant 
+    returns (uint mgmtFee) 
+  {
+    return fund.mgmtFeeBps().mul(sharesToUsd(fund.totalSupply())).div(10000).mul(elapsedTime).div(31536000);
   }
 
   // Returns the performance fee for a given gain in portfolio value
-  function getPerformFee(uint gain) internal constant returns (uint)  {
-    return fund.performFeeBps().mul(gain).div(10000);
+  function getPerformFee(uint _usdGain) 
+    internal 
+    constant 
+    returns (uint performFee)  
+  {
+    return fund.performFeeBps().mul(_usdGain).div(10000);
   }
 
-  // Converts ether to a corresponding number of shares based on the current nav per share
-  function toShares(uint eth) internal constant returns (uint) {
-    return eth.mul(10000).div(fund.navPerShare());
+  // Converts shares to a corresponding amount of USD based on the current nav per share
+  function sharesToUsd(uint _shares) 
+    internal 
+    constant 
+    returns (uint usd) 
+  {
+    return _shares.mul(fund.navPerShare()).div(10000);
   }
 
-  // Converts shares to a corresponding amount of ether based on the current nav per share
-  function toEth(uint shares) internal constant returns (uint) {
-    return shares.mul(fund.navPerShare()).div(10000);
+  // Converts shares to a corresponding amount of Ether based on the current nav per share and USD/ETH exchange rate
+  function sharesToEth(uint _shares) 
+    internal 
+    constant 
+    returns (uint eth) 
+  {
+    return usdToEth(_shares.mul(fund.navPerShare()));
+  }
+
+  function usdToEth(uint _usd) 
+    internal 
+    constant 
+    returns (uint eth) 
+  {
+    return _usd.mul(100).div(dataFeed.usdEth());
+  }
+
+  function ethToUsd(uint _eth) 
+    internal 
+    constant 
+    returns (uint usd) 
+  {
+    return _eth.mul(dataFeed.usdEth()).div(100);
   }
 
   // Converts total fund NAV to NAV per share
-  function toNavPerShare(uint balance) internal constant returns (uint) {
-    return balance.mul(10000).div(fund.totalSupply());
+  function toNavPerShare(uint _balance) 
+    internal 
+    constant 
+    returns (uint) {
+    return _balance.mul(10000).div(fund.totalSupply());
   }
 }
