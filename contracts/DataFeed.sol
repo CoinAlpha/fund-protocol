@@ -97,7 +97,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
 
     if (returnValue == 0) {
       string memory valueRaw = JsmnSolLib.getBytes(_result, tokens[2].start, tokens[2].end);
-      value = parseInt(valueRaw, 2);
+      value = parseInt(valueRaw);
 
       string memory usdEthRaw = JsmnSolLib.getBytes(_result, tokens[4].start, tokens[4].end);
       usdEth = parseInt(usdEthRaw, 2);
@@ -117,7 +117,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     returns (bool success)
   {
     if (!useOraclize) {
-      value = exchange.balance.mul(_percent).div(100);
+      value = exchange.balance.mul(usdEth).mul(_percent).div(1e22);
       timestamp = now;
       return true;
     }

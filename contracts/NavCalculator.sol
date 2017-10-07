@@ -62,7 +62,7 @@ contract NavCalculator is DestructibleModified {
   ) {
 
     // Set the initial value of the variables below from the last NAV calculation
-    uint netAssetValue = ethToUsd(sharesToEth(fund.totalSupply()));
+    uint netAssetValue = sharesToUsd(fund.totalSupply());
     uint elapsedTime = now - fund.lastCalcDate();
     lossCarryforward = fund.lossCarryforward();
 
@@ -72,7 +72,7 @@ contract NavCalculator is DestructibleModified {
     uint grossAssetValue = dataFeed.value().add(ethToUsd(fund.getBalance()));
 
     // Removes the accumulated management fees from grossAssetValue
-    uint gpvlessFees = grossAssetValue.sub(ethToUsd(fund.accumulatedMgmtFees())).sub(ethToUsd(fund.accumulatedPerformFees()));
+    uint gpvlessFees = grossAssetValue.sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedPerformFees());
 
     // Calculates the base management fee accrued since the last NAV calculation
     uint mgmtFee = getMgmtFee(elapsedTime);
@@ -102,8 +102,8 @@ contract NavCalculator is DestructibleModified {
     // Update the state variables and return them to the fund contract
     lastCalcDate = now;
     navPerShare = toNavPerShare(netAssetValue);
-    accumulatedMgmtFees = fund.accumulatedMgmtFees().add(usdToEth(mgmtFee));
-    accumulatedPerformFees = fund.accumulatedPerformFees().add(usdToEth(performFee));
+    accumulatedMgmtFees = fund.accumulatedMgmtFees().add(mgmtFee);
+    accumulatedPerformFees = fund.accumulatedPerformFees().add(performFee);
 
     lossCarryforward = lossCarryforward.sub(lossPayback);
     if (netGainLossAfterPerformFee < 0) {
@@ -164,7 +164,7 @@ contract NavCalculator is DestructibleModified {
     constant 
     returns (uint eth) 
   {
-    return usdToEth(_shares.mul(fund.navPerShare()));
+    return usdToEth(_shares.mul(fund.navPerShare()).div(10000));
   }
 
   function usdToEth(uint _usd) 
@@ -172,7 +172,7 @@ contract NavCalculator is DestructibleModified {
     constant 
     returns (uint eth) 
   {
-    return _usd.mul(100).div(dataFeed.usdEth());
+    return _usd.mul(1e20).div(dataFeed.usdEth());
   }
 
   function ethToUsd(uint _eth) 
@@ -180,7 +180,7 @@ contract NavCalculator is DestructibleModified {
     constant 
     returns (uint usd) 
   {
-    return _eth.mul(dataFeed.usdEth()).div(100);
+    return _eth.mul(dataFeed.usdEth()).div(1e20);
   }
 
   // Converts total fund NAV to NAV per share

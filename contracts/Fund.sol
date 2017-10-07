@@ -81,7 +81,7 @@ contract Fund is ERC20, DestructiblePausable {
   event LogInvestorActionsModuleChanged(address oldAddress, address newAddress);
   event LogTransferToExchange(uint amount);
   event LogTransferFromExchange(uint amount);
-  event LogManagementFeeWithdrawal(uint amount);
+  event LogManagementFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
 
   // Modifiers
   modifier onlyFromExchange {
@@ -105,8 +105,7 @@ contract Fund is ERC20, DestructiblePausable {
     uint    _minSubscriptionEth,
     uint    _minRedemptionShares,
     uint    _mgmtFeeBps,
-    uint    _performFeeBps,
-    uint    _navPerShare
+    uint    _performFeeBps
   )
     payable
   {
@@ -128,7 +127,7 @@ contract Fund is ERC20, DestructiblePausable {
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
-    navPerShare = _navPerShare;
+    navPerShare = 10000;
     lossCarryforward = 0;
     accumulatedMgmtFees = 0;
     accumulatedPerformFees = 0;
@@ -137,8 +136,8 @@ contract Fund is ERC20, DestructiblePausable {
     // These amounts are included in fee calculations since it's assumed that the fees are going to the
     // manager anyway
     uint managerInvestment = exchange.balance.add(msg.value);
-    totalSupply = managerInvestment;
-    balances[msg.sender] = managerInvestment;
+    totalSupply = ethToShares(managerInvestment);
+    balances[msg.sender] = ethToShares(managerInvestment);
     LogTransferToExchange(managerInvestment);
 
     // Send any funds in  to exchange address
@@ -451,8 +450,8 @@ contract Fund is ERC20, DestructiblePausable {
     onlyOwner
     returns (bool success)
   {
-    uint totalFees = accumulatedMgmtFees + accumulatedPerformFees;
-    require(totalFees <= this.balance.sub(totalEthPendingWithdrawal).sub(totalEthPendingSubscription));
+    uint totalFees = usdToEth(accumulatedMgmtFees + accumulatedPerformFees);
+    require(totalFees <= getBalance());
 
     address payee = msg.sender;
     uint ethPendingWithdrawal = totalFees;
@@ -460,7 +459,7 @@ contract Fund is ERC20, DestructiblePausable {
     accumulatedMgmtFees = 0;
     accumulatedPerformFees = 0;
     payee.transfer(ethPendingWithdrawal);
-    LogManagementFeeWithdrawal(totalFees);
+    LogManagementFeeWithdrawal(totalFees, dataFeed.usdEth());
     return true;
   }
 
@@ -542,7 +541,7 @@ contract Fund is ERC20, DestructiblePausable {
     constant
     returns (uint shares)
   {
-    return ethToUsd(_eth).div(navPerShare);
+    return ethToUsd(_eth).mul(10000).div(navPerShare);
   }
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
@@ -551,21 +550,21 @@ contract Fund is ERC20, DestructiblePausable {
     constant
     returns (uint ethAmount)
   {
-    return usdToEth(_shares.mul(navPerShare));
+    return usdToEth(_shares.mul(navPerShare).div(10000));
   }
 
   function usdToEth(uint _usd) 
     internal 
     constant 
     returns (uint eth) {
-    return _usd.mul(100).div(dataFeed.usdEth());
+    return _usd.mul(1e20).div(dataFeed.usdEth());
   }
 
   function ethToUsd(uint _eth) 
     internal 
     constant 
     returns (uint usd) {
-    return _eth.mul(dataFeed.usdEth()).div(100);
+    return _eth.mul(dataFeed.usdEth()).div(1e20);
   }
 
   // Returns the fund's balance less pending subscriptions and withdrawals

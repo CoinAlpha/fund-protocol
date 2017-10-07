@@ -123,7 +123,7 @@ contract InvestorActions is DestructibleModified {
     // to the exchange account upon function return
     uint otherPendingSubscriptions = fund.totalEthPendingSubscription().sub(ethPendingSubscription);
     require(ethPendingSubscription <= fund.balance.sub(fund.totalEthPendingWithdrawal()).sub(otherPendingSubscriptions));
-    uint shares = sharesToEth(ethPendingSubscription);
+    uint shares = ethToShares(ethPendingSubscription);
 
     return (0,                                                                  // new investor.ethPendingSubscription
             sharesOwned.add(shares),                                            // new investor.sharesOwned
@@ -257,33 +257,31 @@ contract InvestorActions is DestructibleModified {
 
   // Converts ether to a corresponding number of shares based on the current nav per share
   function ethToShares(uint _eth)
-    internal
     constant
     returns (uint shares)
   {
-    return ethToUsd(_eth).div(fund.navPerShare());
+    return ethToUsd(_eth).mul(10000).div(fund.navPerShare());
   }
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
   function sharesToEth(uint _shares)
-    internal
     constant
     returns (uint ethAmount)
   {
-    return usdToEth(_shares.mul(fund.navPerShare()));
+    return usdToEth(_shares.mul(fund.navPerShare()).div(10000));
   }
 
   function usdToEth(uint _usd) 
-    internal 
     constant 
-    returns (uint eth) {
-    return _usd.mul(100).div(dataFeed.usdEth());
+    returns (uint eth) 
+  {
+    return _usd.mul(1e20).div(dataFeed.usdEth());
   }
 
   function ethToUsd(uint _eth) 
-    internal 
     constant 
-    returns (uint usd) {
-    return _eth.mul(dataFeed.usdEth()).div(100);
+    returns (uint usd) 
+  {
+    return _eth.mul(dataFeed.usdEth()).div(1e20);
   }
 }

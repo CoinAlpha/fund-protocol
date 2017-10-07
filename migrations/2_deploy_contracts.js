@@ -26,7 +26,8 @@ module.exports = function(deployer, network, accounts) {
       DataFeed.address
   )).then(() =>
     deployer.deploy(
-      InvestorActions
+      InvestorActions,
+      DataFeed.address
   )).then(() =>
     deployer.deploy(
       Fund,
