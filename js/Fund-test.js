@@ -75,7 +75,7 @@ fund.getTotalFees().then(amount => fund.remitFromExchange({from:exchange, value:
 fund.withdrawFees()
 
 // Investor requests redemption
-fund.requestRedemption(ethToWei(1),{from:investor2})
+fund.requestRedemption(6000,{from:investor2})
 
 // Fulfill all sharesPendingRedemption requests
 fund.totalEthPendingRedemption().then(amount => fund.remitFromExchange({from:exchange, value:amount, gas:gasAmt}));

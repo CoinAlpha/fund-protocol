@@ -40,7 +40,7 @@ module.exports = function(deployer, network, accounts) {
       4,                              // _decimals
       20e18,                          // _minInitialSubscriptionEth
       5e18,                           // _minSubscriptionEth
-      5e18,                           // _minRedemptionShares,
+      1000,                           // _minRedemptionShares,
       100,                            // _mgmtFeeBps
       2000,                           // _performFeeBps
       {from: accounts[0], value: managerInvestment}

@@ -55,7 +55,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
     usdEth = _initialExchangeRate;
-    gasLimit = 500000;                                // Oraclize default value
+    gasLimit = 200000;                                // Oraclize default value
 
     if (useOraclize) {
       oraclize_setCustomGasPrice(20000000000 wei);    // 20 GWei, Oraclize default
