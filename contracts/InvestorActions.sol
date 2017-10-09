@@ -257,6 +257,7 @@ contract InvestorActions is DestructibleModified {
 
   // Converts ether to a corresponding number of shares based on the current nav per share
   function ethToShares(uint _eth)
+    internal
     constant
     returns (uint shares)
   {
@@ -265,6 +266,7 @@ contract InvestorActions is DestructibleModified {
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
   function sharesToEth(uint _shares)
+    internal
     constant
     returns (uint ethAmount)
   {
@@ -272,6 +274,7 @@ contract InvestorActions is DestructibleModified {
   }
 
   function usdToEth(uint _usd) 
+    internal
     constant 
     returns (uint eth) 
   {
@@ -279,6 +282,7 @@ contract InvestorActions is DestructibleModified {
   }
 
   function ethToUsd(uint _eth) 
+    internal
     constant 
     returns (uint usd) 
   {

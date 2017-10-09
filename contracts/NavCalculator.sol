@@ -21,7 +21,6 @@ contract NavCalculator is DestructibleModified {
   using Math for uint;
 
   address public fundAddress;
-  address exchange;
 
   // Modules
   DataFeed public dataFeed;
@@ -156,23 +155,6 @@ contract NavCalculator is DestructibleModified {
     returns (uint usd) 
   {
     return _shares.mul(fund.navPerShare()).div(10000);
-  }
-
-  // Converts shares to a corresponding amount of Ether based on the current nav per share and USD/ETH exchange rate
-  function sharesToEth(uint _shares) 
-    internal 
-    constant 
-    returns (uint eth) 
-  {
-    return usdToEth(_shares.mul(fund.navPerShare()).div(10000));
-  }
-
-  function usdToEth(uint _usd) 
-    internal 
-    constant 
-    returns (uint eth) 
-  {
-    return _usd.mul(1e20).div(dataFeed.usdEth());
   }
 
   function ethToUsd(uint _eth) 

@@ -17,20 +17,22 @@ contract('NavCalculator', (accounts) => {
   const MGMT_FEE_BPS = 100;
   const SECONDS_IN_YEAR = 31536000;
   const PERFORM_FEE_BPS = 2000;
-  const TIMEDIFF = 50000;
+  const TIMEDIFF = 31536000;
 
-  let fund, calculator, valueFeed;
-  let totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal, navPerShare, accumulatedMgmtFees, accumulatedPerformFees, lossCarryforward;
+  let fund, calculator, dataFeed;
+  let totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal, navPerShare, accumulatedMgmtFees, accumulatedPerformFees, lossCarryforward, usdEth;
 
   // Helpers
   const getBalancePromise = address => web3.eth.getBalancePromise(address);
   const weiToNum = wei => web3.fromWei(wei, 'ether').toNumber();
-
+  const ethToUsd = (eth) => eth * usdEth / 1e20;
+  const usdToEth = (usd) => usd * 1e20 / usdEth;
+  
   const changeExchangeValue = (_multiplier) => {
     return new Promise((resolve, reject) => {
       resolve(
-        valueFeed.updateWithExchange(_multiplier)
-          .then(() => valueFeed.value())
+        dataFeed.updateWithExchange(_multiplier)
+          .then(() => dataFeed.value())
           .then((_val) => console.log("new exchange value:", weiToNum(_val)))
       );
     });
@@ -46,6 +48,8 @@ contract('NavCalculator', (accounts) => {
 
   const checkRoughEqual = (vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees) => {
     [ansNAV, ansLCF, ansAMF, ansAPF] = vals;
+    // console.log('navPerShare', parseInt(navPerShare));
+    // console.log('ansNAV', ansNAV);
     assert(Math.abs(parseInt(navPerShare) / ansNAV - 1) < 0.0001, 'incorrect navPerShare');
 
     if (ansLCF !== 0) assert(Math.abs(parseInt(lossCarryforward) / ansLCF - 1) < 0.0001, 'incorrect lossCarryforward');
@@ -53,22 +57,21 @@ contract('NavCalculator', (accounts) => {
 
     if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
     else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
-
     if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedPerformFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedPerformFees');
     else assert.equal(parseInt(accumulatedPerformFees), 0, 'incorrect accumulatedPerformFees');
   };
 
   const calc = (elapsedTime) => {
     return new Promise((resolve, reject) => {
-      let fundBal, exchangeValue, ts;
-      Promise.all([valueFeed.value(), getBalancePromise(fund.address), fund.totalSupply()])
+      let fundBal, portfolioValueUsd, ts;
+      Promise.all([dataFeed.value(), fund.getBalance(), fund.totalSupply()])
         .then((_vals) => {
-          [exchangeValue, fundBal, ts] = _vals;
-          let gav = parseInt(exchangeValue) + fundBal - totalEthPendingSubscription - totalEthPendingWithdrawal;
+          [portfolioValueUsd, fundBal, ts] = _vals;
+          let gav = parseInt(portfolioValueUsd) + ethToUsd(parseInt(fundBal));
           // console.log('gav', gav);
           let nav = ts * navPerShare / 10000;
           // console.log('nav', nav);
-          let mgmtFee = navPerShare * MGMT_FEE_BPS / 10000 * elapsedTime / SECONDS_IN_YEAR * ts / 10000;
+          let mgmtFee = Math.trunc(navPerShare * MGMT_FEE_BPS / 10000 * elapsedTime / SECONDS_IN_YEAR * ts / 10000);
           // console.log('mgmtFee', mgmtFee);
           let gpvlessFees = gav - accumulatedMgmtFees - accumulatedPerformFees;
           // console.log('gpvlessFees', gpvlessFees);
@@ -78,7 +81,7 @@ contract('NavCalculator', (accounts) => {
           // console.log('lossPayback', lossPayback);
           let gainLossAfterPayback = gainLoss - lossPayback;
           // console.log('gainLossAfterPayback', gainLossAfterPayback);
-          let performFee = gainLossAfterPayback > 0 ? gainLossAfterPayback * PERFORM_FEE_BPS / 10000 : 0;
+          let performFee = gainLossAfterPayback > 0 ? Math.trunc(gainLossAfterPayback * PERFORM_FEE_BPS / 10000) : 0;
           // console.log('performFee', performFee);
           let netGainLossAfterPerformFee = gainLossAfterPayback + lossPayback - performFee;
           // console.log('netGainLossAfterPerformFee', netGainLossAfterPerformFee);
@@ -98,7 +101,7 @@ contract('NavCalculator', (accounts) => {
   before(() => {
     return Promise.all([Fund.deployed(), NavCalculator.deployed(), DataFeed.deployed()])
       .then(_values => {
-        [fund, navCalculator, valueFeed] = _values;
+        [fund, navCalculator, dataFeed] = _values;
         return navCalculator.setFund(fund.address)
       })
       .then(() => {
@@ -108,12 +111,13 @@ contract('NavCalculator', (accounts) => {
           fund.totalEthPendingWithdrawal(),
           fund.accumulatedMgmtFees(),
           fund.accumulatedPerformFees(),
-          fund.lossCarryforward()
+          fund.lossCarryforward(),
+          dataFeed.usdEth(),
         ]);
       })
       .then((_vals) => {
         [totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal,
-          accumulatedMgmtFees, accumulatedPerformFees, lossCarryforward] = _vals.map(parseInt);
+          accumulatedMgmtFees, accumulatedPerformFees, lossCarryforward, usdEth] = _vals.map(parseInt);
         totalEthPendingSubscription = totalEthPendingSubscription || 0;
         return fund.navPerShare();
       })
@@ -133,12 +137,12 @@ contract('NavCalculator', (accounts) => {
   });
 
   it('should set value feed to the correct data feed address', (done) => {
-    navCalculator.setValueFeed(valueFeed.address)
+    navCalculator.setDataFeed(dataFeed.address)
       .then(() => {
-        return navCalculator.valueFeed.call()
+        return navCalculator.dataFeed.call()
       })
       .then((_val_addr) => {
-        assert.equal(_val_addr, valueFeed.address, 'data feed addresses don\'t match');
+        assert.equal(_val_addr, dataFeed.address, 'data feed addresses don\'t match');
         done();
       })
   });
