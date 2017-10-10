@@ -15,8 +15,9 @@ module.exports = function(deployer, network, accounts) {
     DataFeed,
     "nav-service",                    // _name
     useOraclize,                      // _useOraclize
-    "json(http://9afaae62.ngrok.io/api/sandbox).totalPortfolioValueEth", // _queryUrl
+    "https://coinalpha-oracle-staging.herokuapp.com/api/gdax", // _queryUrl
     300,                              // _secondsBetweenQueries
+    30000,                            // _initialExchangeRate
     accounts[1],                      // _exchange
     {from: accounts[0], value: dataFeedReserve}
   ).then(() =>
@@ -25,21 +26,23 @@ module.exports = function(deployer, network, accounts) {
       DataFeed.address
   )).then(() =>
     deployer.deploy(
-      InvestorActions
+      InvestorActions,
+      DataFeed.address
   )).then(() =>
     deployer.deploy(
       Fund,
       accounts[1],                    // _exchange
       NavCalculator.address,          // _navCalculator
-      InvestorActions.address,        // investorActions
+      InvestorActions.address,        // _investorActions
+      DataFeed.address,               // _dataFeed
       "Falcon",                       // _name
       "FALC",                         // _symbol
       4,                              // _decimals
       20e18,                          // _minInitialSubscriptionEth
       5e18,                           // _minSubscriptionEth
-      5e18,                           // _minRedemptionShares,
+      1000,                           // _minRedemptionShares,
       100,                            // _mgmtFeeBps
-      0,                              // _performFeeBps
+      2000,                           // _performFeeBps
       {from: accounts[0], value: managerInvestment}
   ));
 };

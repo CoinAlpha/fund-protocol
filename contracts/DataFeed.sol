@@ -3,6 +3,7 @@ pragma solidity ^0.4.13;
 import './oraclize/oraclizeAPI.sol';
 import './zeppelin/DestructibleModified.sol';
 import "./math/SafeMath.sol";
+import "./jsmnsol/JsmnSolLib.sol";
 
 /**
  * @title DataFeed
@@ -13,11 +14,13 @@ import "./math/SafeMath.sol";
 
 contract DataFeed is usingOraclize, DestructibleModified {
   using SafeMath for uint;
+  using JsmnSolLib for string;
 
   // Global variables
   string  public name;                   // To differentiate in case there are multiple feeds
   bool    public useOraclize;            // True: use Oraclize (on testnet).  False: use testRPC address.
   uint    public value;                  // API value
+  uint    public usdEth;                 // USD/ETH exchange rate
   uint    public timestamp;              // Timestamp of last update
 
   // Oraclize-specific variables
@@ -32,14 +35,15 @@ contract DataFeed is usingOraclize, DestructibleModified {
 
   // Only emitted when useOraclize is true
   event LogDataFeedQuery(string description);
-  event LogDataFeedResponse(string name, uint value, uint timestamp);
-
+  event LogDataFeedResponse(string rawResult, uint value, uint usdEth, uint timestamp);
+  event LogDataFeedError(string rawResult);
 
   function DataFeed(
     string  _name,
     bool    _useOraclize,
     string  _queryUrl,
     uint    _secondsBetweenQueries,
+    uint    _initialExchangeRate,
     address _exchange
   )
     payable
@@ -50,6 +54,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     queryUrl = _queryUrl;
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
+    usdEth = _initialExchangeRate;
     gasLimit = 200000;                                // Oraclize default value
 
     if (useOraclize) {
@@ -77,27 +82,42 @@ contract DataFeed is usingOraclize, DestructibleModified {
     }
   }
 
+  // Assumes that the result is a raw JSON object with exactly 2 fields: 
+  // 1) portfolio value in ETH, with 2 decimal places
+  // 2) current USD/ETH exchange rate, with 2 decimal places
+  // The function parses the JSON and stores the value and usdEth.
   function __callback(bytes32 _myid, string _result) {
     require(validIds[_myid]);
     require(msg.sender == oraclize_cbAddress());
-    // Assumes that API value is Ether-denominated to 2 decimals
-    uint tempValue = parseInt(_result, 2) * 1e18 / 100;
-    if (tempValue != 0) {
-      value = tempValue;
-      timestamp = now;
-    }
-    LogDataFeedResponse(name, value, timestamp);
-    delete validIds[_myid];
-    updateWithOraclize();
-  }
+    
+    uint returnValue;
+    JsmnSolLib.Token[] memory tokens;
+    uint actualNum;
+    (returnValue, tokens, actualNum) = JsmnSolLib.parse(_result, 10);
 
+    if (returnValue == 0) {
+      string memory valueRaw = JsmnSolLib.getBytes(_result, tokens[2].start, tokens[2].end);
+      value = parseInt(valueRaw);
+
+      string memory usdEthRaw = JsmnSolLib.getBytes(_result, tokens[4].start, tokens[4].end);
+      usdEth = parseInt(usdEthRaw, 2);
+
+      timestamp = now;
+
+      LogDataFeedResponse(_result, value, usdEth, timestamp);
+      updateWithOraclize();
+    } else {
+      LogDataFeedError(_result);
+    }
+    delete validIds[_myid];
+  }
 
   function updateWithExchange(uint _percent)
     onlyOwner
     returns (bool success)
   {
     if (!useOraclize) {
-      value = exchange.balance.mul(_percent).div(100);
+      value = exchange.balance.mul(usdEth).mul(_percent).div(1e22);
       timestamp = now;
       return true;
     }
