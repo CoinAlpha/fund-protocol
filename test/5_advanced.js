@@ -23,11 +23,16 @@ const diffInWei = (a, b) => weiToNum(a) - weiToNum(b);
 const gasToWei = gas => gas * 1e11;
 
 contract('Advanced', (accounts) => {
+<<<<<<< HEAD
 
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
 
   // test parameters
+=======
+  const MANAGER = accounts[0];
+  const EXCHANGE = accounts[1];
+>>>>>>> fixes to test #5
   const GAS_AMT = 500000;
   const USD_ETH = 300;
   const MIN_INITIAL_SUBSCRIPTION = 5;
@@ -36,8 +41,21 @@ contract('Advanced', (accounts) => {
   const MGMT_FEE = 1;
   const PERFORM_FEE = 20;
   const SECONDS_IN_YEAR = 31536000;
+<<<<<<< HEAD
   
   const investors = accounts.slice(2);
+=======
+  const PERFORM_FEE_BPS = 2000;
+
+  let fund;
+  let navCalculator;
+  let valueFeed;
+  let investorActions;
+  const investors = accounts.slice(2);
+  const getBal = address => web3.fromWei(web3.eth.getBalance(address), 'ether').toNumber();
+  const weiToNum = wei => web3.fromWei(wei, 'ether').toNumber();
+  const ethToWei = eth => web3.toWei(eth, 'ether');
+>>>>>>> fixes to test #5
 
   // contract instances
   let dataFeed, fund, navCalculator, investorActions;
@@ -193,5 +211,4 @@ contract('Advanced', (accounts) => {
       .then(() => { done(); })
       .catch(done);
   });
-
 });
