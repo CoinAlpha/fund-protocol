@@ -28,31 +28,31 @@ truffle migrate --network ropsten --reset // TESTNET ONLY
 Fund.deployed().then( instance => fund = instance )
 NavCalculator.deployed().then( instance => navCalculator = instance )
 InvestorActions.deployed().then( instance => investorActions = instance )
-DataFeed.deployed().then(instance => valueFeed = instance)
+DataFeed.deployed().then(instance => dataFeed = instance)
 
 // Log all events
 var fundEvents = fund.allEvents(function(error, event) { if (!error) console.log(event.args); });
 var calcEvents = navCalculator.allEvents(function(error, event) { if (!error) console.log(event.args); });
-var valueFeedEvents = valueFeed.allEvents(function(error, event) { if (!error) console.log(event.args); });
+var dataFeedEvents = dataFeed.allEvents(function(error, event) { if (!error) console.log(event.args); });
 
 // Set fund address for navCalculator
 navCalculator.setFund(fund.address)
 investorActions.setFund(fund.address)
 
 // Ensure datafeed is updated
-valueFeed.updateWithExchange()
+dataFeed.updateWithExchange(100)
 
 // Add investors to whitelist
-fund.modifyAllocation(investor1, ethToWei(2))
-fund.modifyAllocation(investor2, ethToWei(2))
+fund.modifyAllocation(investor1, ethToWei(20))
+fund.modifyAllocation(investor2, ethToWei(20))
 
 // Change exchange account balance to simulate trading P&L
 web3.eth.sendTransaction({from:exchange, to: manager, value: ethToWei(1), gas:gasAmt})
 web3.eth.sendTransaction({from:manager, to:exchange, value: ethToWei(1), gas:gasAmt})
 
 // Investors invest (fallback and subscribe function)
-web3.eth.sendTransaction({from:investor1, to:fund.address, value: ethToWei(1), gas:gasAmt})
-fund.requestSubscription({from:investor2, value: ethToWei(2), gas:gasAmt})
+web3.eth.sendTransaction({from:investor1, to:fund.address, value: ethToWei(20), gas:gasAmt})
+fund.requestSubscription({from:investor2, value: ethToWei(20), gas:gasAmt})
 
 // Calc NAV, then process all subscription requests
 fund.calcNav().then(() => fund.fillAllSubscriptionRequests());
@@ -75,7 +75,7 @@ fund.getTotalFees().then(amount => fund.remitFromExchange({from:exchange, value:
 fund.withdrawFees()
 
 // Investor requests redemption
-fund.requestRedemption(ethToWei(1),{from:investor2})
+fund.requestRedemption(6000,{from:investor2})
 
 // Fulfill all sharesPendingRedemption requests
 fund.totalEthPendingRedemption().then(amount => fund.remitFromExchange({from:exchange, value:amount, gas:gasAmt}));

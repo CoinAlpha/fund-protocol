@@ -1,6 +1,7 @@
 pragma solidity ^0.4.13;
 
 import "./Fund.sol";
+import "./DataFeed.sol";
 import "./zeppelin/DestructibleModified.sol";
 import "./math/SafeMath.sol";
 
@@ -21,6 +22,7 @@ contract InvestorActions is DestructibleModified {
   address public fundAddress;
 
   // Modules
+  DataFeed public dataFeed;
   Fund fund;
 
   // This modifier is applied to all external methods in this contract since only
@@ -28,6 +30,13 @@ contract InvestorActions is DestructibleModified {
   modifier onlyFund {
     require(msg.sender == fundAddress);
     _;
+  }
+
+  function InvestorActions(
+    address _dataFeed
+  )
+  {
+    dataFeed = DataFeed(_dataFeed);
   }
 
   // Modifies the max investment limit allowed for an investor and overwrites the past limit
@@ -49,7 +58,7 @@ contract InvestorActions is DestructibleModified {
   {
     var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
 
-    uint ethFilledAllocation = ethPendingSubscription.add(toEth(sharesOwned));
+    uint ethFilledAllocation = ethPendingSubscription.add(sharesToEth(sharesOwned));
 
     if (ethTotalAllocation > ethFilledAllocation) {
       return ethTotalAllocation.sub(ethFilledAllocation);
@@ -73,7 +82,7 @@ contract InvestorActions is DestructibleModified {
     } else {
       require(_amount >= fund.minSubscriptionEth());
     }
-    require(ethTotalAllocation >= _amount.add(ethPendingSubscription).add(toEth(sharesOwned)));
+    require(ethTotalAllocation >= _amount.add(ethPendingSubscription).add(sharesToEth(sharesOwned)));
 
     return (ethPendingSubscription.add(_amount),                                 // new investor.ethPendingSubscription
             fund.totalEthPendingSubscription().add(_amount)                      // new totalEthPendingSubscription
@@ -114,7 +123,7 @@ contract InvestorActions is DestructibleModified {
     // to the exchange account upon function return
     uint otherPendingSubscriptions = fund.totalEthPendingSubscription().sub(ethPendingSubscription);
     require(ethPendingSubscription <= fund.balance.sub(fund.totalEthPendingWithdrawal()).sub(otherPendingSubscriptions));
-    uint shares = toShares(ethPendingSubscription);
+    uint shares = ethToShares(ethPendingSubscription);
 
     return (0,                                                                  // new investor.ethPendingSubscription
             sharesOwned.add(shares),                                            // new investor.sharesOwned
@@ -170,7 +179,7 @@ contract InvestorActions is DestructibleModified {
 
     // Check that the fund balance has enough ether because after this function is processed, the ether
     // equivalent amount can be withdrawn by the investor
-    uint amount = toEth(sharesPendingRedemption);
+    uint amount = sharesToEth(sharesPendingRedemption);
     require(amount <= fund.balance.sub(fund.totalEthPendingSubscription()).sub(fund.totalEthPendingWithdrawal()));
 
     return (sharesOwned.sub(sharesPendingRedemption),                           // new investor.sharesOwned
@@ -195,7 +204,7 @@ contract InvestorActions is DestructibleModified {
     // equivalent amount can be withdrawn by the investor.  The fund balance less total withdrawals and other
     // investors' pending subscriptions should be larger than or equal to the liquidated amount.
     uint otherPendingSubscriptions = fund.totalEthPendingSubscription().sub(ethPendingSubscription);
-    uint amount = toEth(sharesOwned).add(ethPendingSubscription);
+    uint amount = sharesToEth(sharesOwned).add(ethPendingSubscription);
     require(amount <= fund.balance.sub(fund.totalEthPendingWithdrawal()).sub(otherPendingSubscriptions));
 
     return (ethPendingWithdrawal.add(amount),                                   // new investor.ethPendingWithdrawal
@@ -239,24 +248,44 @@ contract InvestorActions is DestructibleModified {
     return true;
   }
 
+  // Update the address of the data feed contract
+  function setDataFeed(address _address) onlyOwner {
+    dataFeed = DataFeed(_address);
+  }
+
   // ********* HELPERS *********
 
   // Converts ether to a corresponding number of shares based on the current nav per share
-  function toShares(uint _eth)
+  function ethToShares(uint _eth)
     internal
     constant
     returns (uint shares)
   {
-    return _eth.mul(10000).div(fund.navPerShare());
+    return ethToUsd(_eth).mul(10000).div(fund.navPerShare());
   }
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
-  function toEth(uint _shares)
+  function sharesToEth(uint _shares)
     internal
     constant
     returns (uint ethAmount)
   {
-    return _shares.mul(fund.navPerShare()).div(10000);
+    return usdToEth(_shares.mul(fund.navPerShare()).div(10000));
   }
 
+  function usdToEth(uint _usd) 
+    internal
+    constant 
+    returns (uint eth) 
+  {
+    return _usd.mul(1e20).div(dataFeed.usdEth());
+  }
+
+  function ethToUsd(uint _eth) 
+    internal
+    constant 
+    returns (uint usd) 
+  {
+    return _eth.mul(dataFeed.usdEth()).div(1e20);
+  }
 }

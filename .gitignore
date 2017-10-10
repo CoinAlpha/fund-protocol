@@ -4,5 +4,5 @@ build/
 package-lock.json
 .vscode/
 bin/
-testnet/
 deployed/
+migrations/config/datafeed.js
