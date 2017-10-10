@@ -33,7 +33,7 @@ contract('Fund Actions', (accounts) => {
   const MIN_INITIAL_SUBSCRIPTION = 20;
   const INVESTOR_ALLOCATION = 21;
   const MIN_SUBSCRIPTION = 5;
-  const MIN_REDEMPTION_SHARES = 5;
+  const MIN_REDEMPTION_SHARES = 5000;
   const ETH_INCREMENT = 0.1;
   const PRECISION = 1000000000;
 
@@ -48,18 +48,19 @@ contract('Fund Actions', (accounts) => {
   let dataFeed, fund, navCalculator, investorActions;
 
   before(() => DataFeed.new(
-    'nav-service',                    // _name
-    false,                      // _useOraclize
-    'json(http://9afaae62.ngrok.io/api/sandbox).totalPortfolioValueEth', // _queryUrl
-    300,                              // _secondsBetweenQueries
-    EXCHANGE,                      // _exchange
+    'nav-service',                          // _name
+    false,                                  // _useOraclize
+    '[NOT USED]',                           // _queryUrl
+    300,                                    // _secondsBetweenQueries
+    30000,                                  // _initialExchangeRate
+    EXCHANGE,                               // _exchange
     { from: MANAGER, value: 0 }
   )
     .then(instance => {
       dataFeed = instance;
       return Promise.all([
         NavCalculator.new(dataFeed.address, { from: MANAGER }),
-        InvestorActions.new({ from: MANAGER })
+        InvestorActions.new(dataFeed.address, { from: MANAGER })
       ]);
     })
     .then((contractInstances) => {
@@ -68,14 +69,15 @@ contract('Fund Actions', (accounts) => {
         EXCHANGE,                           // _exchange
         navCalculator.address,              // _navCalculator
         investorActions.address,            // investorActions
+        dataFeed.address,                   // _dataFeed
         "TestFund",                         // _name
         "TEST",                             // _symbol
         4,                                  // _decimals
         ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
         ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
-        ethToWei(MIN_REDEMPTION_SHARES),    // _minRedemptionShares,
+        MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
         100,                                // _mgmtFeeBps
-        0,                                  // _performFeeBps
+        2000,                               // _performFeeBps
         { from: MANAGER }
       );
     })

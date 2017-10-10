@@ -3,6 +3,7 @@ const Promise = require('bluebird');
 const Fund = artifacts.require("./Fund.sol");
 const NavCalculator = artifacts.require('./NavCalculator.sol');
 const InvestorActions = artifacts.require('./InvestorActions.sol');
+const DataFeed = artifacts.require('./DataFeed.sol');
 
 if (typeof web3.eth.getAccountsPromise === "undefined") {
   Promise.promisifyAll(web3.eth, { suffix: "Promise" });
@@ -16,36 +17,48 @@ contract('Initialize Fund', (accounts) => {
 
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
-  const DATAFEED = accounts[2];
   const INITIAL_NAV = web3.toWei(1, 'ether');
   const MANAGER_INVESTMENT = 1; // 1 ether
 
   const MIN_INITIAL_SUBSCRIPTION = 20;
   const INVESTOR_ALLOCATION = 21;
   const MIN_SUBSCRIPTION = 5;
-  const MIN_REDEMPTION_SHARES = 5;
+  const MIN_REDEMPTION_SHARES = 5000;
 
   let fund, navCalculator, investorActions, INITIAL_BALANCE;
 
-  before(() => Promise.all([
-    NavCalculator.new(DATAFEED, { from: MANAGER }),
-    InvestorActions.new({ from: MANAGER }),
-    getBalancePromise(EXCHANGE)
-  ])
+  before(() => DataFeed.new(
+    'nav-service',                          // _name
+    false,                                  // _useOraclize
+    '[NOT USED]',                           // _queryUrl
+    300,                                    // _secondsBetweenQueries
+    30000,                                  // _initialExchangeRate
+    EXCHANGE,                               // _exchange
+    { from: MANAGER, value: 0 }
+  )
+    .then(instance => {
+      dataFeed = instance;
+      return Promise.all([
+        NavCalculator.new(dataFeed.address, { from: MANAGER }),
+        InvestorActions.new(dataFeed.address, { from: MANAGER }),
+        getBalancePromise(EXCHANGE)
+      ]);
+    })
     .then((results) => {
       [navCalculator, investorActions, INITIAL_BALANCE] = results;
       return Fund.new(
         EXCHANGE,                           // _exchange
         navCalculator.address,              // _navCalculator
-        investorActions.address,            // investorActions
+        investorActions.address,            // _investorActions
+        dataFeed.address,                   // _dataFeed
         "TestFund",                         // _name
         "TEST",                             // _symbol
         4,                                  // _decimals
         ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
         ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
-        ethToWei(MIN_REDEMPTION_SHARES),    // _minRedemptionShares,
+        MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
         100,                                // _mgmtFeeBps
-        0,                                  // _performFeeBps
+        2000,                               // _performFeeBps
         { from: MANAGER, value: ethToWei(MANAGER_INVESTMENT) }
       );
     })
@@ -53,7 +66,8 @@ contract('Initialize Fund', (accounts) => {
       fund = fundInstance;
       return Promise.all([
         navCalculator.setFund(fund.address),
-        investorActions.setFund(fund.address)
+        investorActions.setFund(fund.address),
+        dataFeed.updateWithExchange(100)
       ]);
     })
     .then(() => Promise.all([
@@ -83,18 +97,21 @@ contract('Initialize Fund', (accounts) => {
     .then(_investorActions => assert.equal(_investorActions, investorActions.address, 'InvestorActions addresses don\'t match'))
   );
 
+  it('should instantiate with the right dataFeed address', () => fund.dataFeed.call()
+  .then(_dataFeed => assert.equal(_dataFeed, dataFeed.address, 'DataFeed addresses don\'t match'))
+  );
+
   it('should instantiate with the right initial NAV', () => fund.navPerShare.call()
     .then(_nav => assert.equal(_nav, 10000, 'Initial NAV doesn\'t equal 10000'))
   );
 
-  it('should instantiate with the right balance', () => {
-    const expected = weiToNum(INITIAL_BALANCE) + MANAGER_INVESTMENT;
-    return fund.balanceOf.call(MANAGER)
-      .then(_bal => {
-        assert.equal(weiToNum(_bal), expected, 'Manager\'s account balance doesn\'t match investment');
-        return fund.totalSupply();
-      })
-      .then(_tokens => assert.equal(weiToNum(_tokens), expected, 'Total supply doesn\'t match manager\'s investment'));
-  });
+  it('should instantiate with the right balance', () => Promise.all([
+    dataFeed.value(),
+    fund.balanceOf.call(MANAGER),
+    fund.totalSupply()
+  ]).then(([dataFeedValue, managerBalance, totalSupply]) => {
+    assert.equal(parseInt(dataFeedValue), parseInt(managerBalance), 'Manager\'s account balance doesn\'t match investment');
+    assert.equal(parseInt(totalSupply), parseInt(managerBalance), 'Total supply doesn\'t match manager\'s investment');
+  }));
 
 });
