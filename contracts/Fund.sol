@@ -537,7 +537,6 @@ contract Fund is ERC20, DestructiblePausable {
 
   // Converts ether to a corresponding number of shares based on the current nav per share
   function ethToShares(uint _eth)
-    internal
     constant
     returns (uint shares)
   {
@@ -546,7 +545,6 @@ contract Fund is ERC20, DestructiblePausable {
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
   function sharesToEth(uint _shares)
-    internal
     constant
     returns (uint ethAmount)
   {
@@ -554,14 +552,12 @@ contract Fund is ERC20, DestructiblePausable {
   }
 
   function usdToEth(uint _usd) 
-    internal 
     constant 
     returns (uint eth) {
     return _usd.mul(1e20).div(dataFeed.usdEth());
   }
 
   function ethToUsd(uint _eth) 
-    internal 
     constant 
     returns (uint usd) {
     return _eth.mul(dataFeed.usdEth()).div(1e20);

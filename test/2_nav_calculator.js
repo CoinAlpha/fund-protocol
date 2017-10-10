@@ -57,6 +57,10 @@ contract('NavCalculator', (accounts) => {
 
     if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
     else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
+
+    console.log(parseInt(accumulatedPerformFees));
+    console.log(ansAPF);
+
     if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedPerformFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedPerformFees');
     else assert.equal(parseInt(accumulatedPerformFees), 0, 'incorrect accumulatedPerformFees');
   };

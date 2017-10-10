@@ -30,11 +30,14 @@ contract('Fund Actions', (accounts) => {
 
   // test parameters
   const GAS_AMT = 500000;
+  const USD_ETH = 300;
   const MIN_INITIAL_SUBSCRIPTION = 20;
   const INVESTOR_ALLOCATION = 21;
   const MIN_SUBSCRIPTION = 5;
   const MIN_REDEMPTION_SHARES = 5000;
-  const ETH_INCREMENT = 0.1;
+  const MGMT_FEE = 1;
+  const PERFORM_FEE = 20;
+  const ETH_INCREMENT = 1;
   const PRECISION = 1000000000;
 
   // test for boundaries and a mid value
@@ -51,7 +54,7 @@ contract('Fund Actions', (accounts) => {
     'nav-service',                          // _name
     false,                                  // _useOraclize
     '[NOT USED]',                           // _queryUrl
-    300,                                    // _secondsBetweenQueries
+    USD_ETH * 100,                          // _secondsBetweenQueries
     30000,                                  // _initialExchangeRate
     EXCHANGE,                               // _exchange
     { from: MANAGER, value: 0 }
@@ -76,8 +79,8 @@ contract('Fund Actions', (accounts) => {
         ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
         ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
         MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
-        100,                                // _mgmtFeeBps
-        2000,                               // _performFeeBps
+        MGMT_FEE * 100,                     // _mgmtFeeBps
+        PERFORM_FEE * 100,                  // _performFeeBps
         { from: MANAGER }
       );
     })
@@ -90,7 +93,8 @@ contract('Fund Actions', (accounts) => {
     })
     .then(() => Promise.all([
       navCalculator.fundAddress.call({ from: MANAGER }),
-      investorActions.fundAddress.call({ from: MANAGER })
+      investorActions.fundAddress.call({ from: MANAGER }),
+      dataFeed.updateWithExchange(100)
     ]))
     .then(([navFund, investorActionsFund]) => {
       assert.equal(navFund, fund.address, 'Incorrect fund address in navCalculator');
@@ -271,13 +275,13 @@ contract('Fund Actions', (accounts) => {
         })
         .then((_results) => {
           [after, exchange2, totalSupply2, totalEthPendingSubscription2] = _results;
-          return fund.toShares(before[1]);
+          return fund.ethToShares(before[1]);
         })
         .then((_shares) => {
-          assert.equal(weiToNum(after[1]), 0, 'subscription failed to process');
-          assert.equal(diffInWei(after[2], before[2]), weiToNum(_shares), 'balance does not increase by the amount of tokens');
+          assert.equal(parseInt(after[1]), 0, 'subscription failed to process');
+          assert.equal(after[2] - before[2], parseInt(_shares), 'balance does not increase by the amount of tokens');
           assert.equal(diffInWei(totalEthPendingSubscription1, totalEthPendingSubscription2), weiToNum(before[1]), 'totalEthPendingSubscription does not decrease by the amount of ether');
-          assert.equal(Math.round(diffInWei(totalSupply2, totalSupply1) * PRECISION), Math.round(weiToNum(_shares) * PRECISION), 'totalSupply does not increase by the amount of tokens');
+          assert.equal(totalSupply2 - totalSupply1, _shares, 'totalSupply does not increase by the amount of tokens');
           assert.equal(Math.round(diffInWei(exchange2, exchange1) * PRECISION), Math.round(weiToNum(before[1]) * PRECISION), 'exchange balance does not increase by amount of ether');
         })
         .catch((err) => console.error(err));
@@ -314,7 +318,7 @@ contract('Fund Actions', (accounts) => {
     // INVESTOR ACTION: Request redemption
     it('should reject redemption requests lower than minRedemptionShares', () => {
       const amt = MIN_REDEMPTION_SHARES - ETH_INCREMENT;
-      return fund.requestRedemption(ethToWei(amt), { from: MIN_INVESTOR })
+      return fund.requestRedemption(amt, { from: MIN_INVESTOR })
         .then(
         () => assert.throw('should not have accepted request lower than min redemption shares'),
         e => assert.isAtLeast(e.message.indexOf('invalid opcode'), 0))
@@ -326,7 +330,7 @@ contract('Fund Actions', (accounts) => {
       return fund.getInvestor(MIN_INVESTOR)
         .then(_shares => {
           amt = _shares[2] + ETH_INCREMENT;
-          return fund.requestRedemption(ethToWei(amt), { from: MIN_INVESTOR });
+          return fund.requestRedemption(amt, { from: MIN_INVESTOR });
         })
         .then(
         () => assert.throw('should not have accepted request higher than amount of shares owned'),
@@ -368,23 +372,25 @@ contract('Fund Actions', (accounts) => {
     it('should get correct amount of total redemption requests', () => {
       const added = MIN_REDEMPTION_SHARES;
       let redemption1, redemption2;
-      return fund.requestRedemption(ethToWei(added), { from: MIN_INVESTOR })
+      return fund.requestRedemption(added, { from: MIN_INVESTOR })
         .then(() => fund.totalSharesPendingRedemption())
         .then(_bal => redemption1 = _bal)
-        .then(() => fund.requestRedemption(ethToWei(added), { from: MID_INVESTOR }))
+        .then(() => fund.requestRedemption(added, { from: MID_INVESTOR }))
         .then(() => fund.totalSharesPendingRedemption())
         .then(_final_bal => {
           redemption2 = _final_bal;
-          assert.equal(+weiToNum(_final_bal), +added + +weiToNum(redemption1),
+          assert.equal(+redemption2, +added + +redemption1,
             'outputs incorrect amount of total redemptions');
-          return fund.requestRedemption(ethToWei(added), { from: MAX_INVESTOR });
+          return fund.requestRedemption(added, { from: MAX_INVESTOR });
         })
     });
 
     it('should redeem a single investor', () => {
       let before, totalSupply1, totalEthPendingWithdrawal1, placeholder, after, totalSupply2, totalEthPendingWithdrawal2;
 
-      return fund.remitFromExchange({ from: EXCHANGE, value: ethToWei(2 * MIN_REDEMPTION_SHARES) })
+      return fund.totalEthPendingRedemption()
+        .then((ethNeeded) => 
+          fund.remitFromExchange({ from: EXCHANGE, value: ethNeeded }))
         .then(() => Promise.all([
           fund.getInvestor(MIN_INVESTOR),
           fund.totalSupply(),
@@ -400,13 +406,13 @@ contract('Fund Actions', (accounts) => {
         })
         .then((_results) => {
           [after, totalSupply2, totalEthPendingWithdrawal2] = _results;
-          return fund.toEth(before[3]);
+          return fund.sharesToEth(before[3]);
         })
         .then((_amt) => {
           assert.equal(weiToNum(after[3]), 0, 'redemption failed to process');
           assert.equal(Math.round(diffInWei(after[4], before[4])), Math.round(weiToNum(_amt)), 'ethPendingWithdrawal did not increase by the amount of ether');
           assert.equal(Math.round(diffInWei(totalEthPendingWithdrawal2, totalEthPendingWithdrawal1)), Math.round(weiToNum(_amt)), 'totalEthPendingWithdrawal does not increase by the amount of ether');
-          assert.equal(Math.round(diffInWei(totalSupply1, totalSupply2)), Math.round(weiToNum(before[3])), 'totalSupply does not decrease by the amount of tokens');
+          assert.equal(totalSupply1 - totalSupply2, before[3], 'totalSupply does not decrease by the amount of tokens');
         })
         .catch(console.log);
     });
@@ -462,7 +468,7 @@ contract('Fund Actions', (accounts) => {
         })
         .then((_results) => {
           [after, totalSupply2, totalEthPendingWithdrawal2] = _results;
-          return fund.toEth(before[2]);
+          return fund.sharesToEth(before[2]);
         })
         .then((_amt) => {
           assert.equal(weiToNum(after[2]), 0, 'liquidation failed to process');

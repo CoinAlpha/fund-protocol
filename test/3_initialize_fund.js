@@ -20,10 +20,13 @@ contract('Initialize Fund', (accounts) => {
   const INITIAL_NAV = web3.toWei(1, 'ether');
   const MANAGER_INVESTMENT = 1; // 1 ether
 
+  const USD_ETH = 300;
   const MIN_INITIAL_SUBSCRIPTION = 20;
   const INVESTOR_ALLOCATION = 21;
   const MIN_SUBSCRIPTION = 5;
   const MIN_REDEMPTION_SHARES = 5000;
+  const MGMT_FEE = 1;
+  const PERFORM_FEE = 20;
 
   let fund, navCalculator, investorActions, INITIAL_BALANCE;
 
@@ -32,7 +35,7 @@ contract('Initialize Fund', (accounts) => {
     false,                                  // _useOraclize
     '[NOT USED]',                           // _queryUrl
     300,                                    // _secondsBetweenQueries
-    30000,                                  // _initialExchangeRate
+    USD_ETH * 100,                          // _initialExchangeRate
     EXCHANGE,                               // _exchange
     { from: MANAGER, value: 0 }
   )
@@ -57,8 +60,8 @@ contract('Initialize Fund', (accounts) => {
         ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
         ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
         MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
-        100,                                // _mgmtFeeBps
-        2000,                               // _performFeeBps
+        MGMT_FEE * 100,                     // _mgmtFeeBps
+        PERFORM_FEE * 200,                  // _performFeeBps
         { from: MANAGER, value: ethToWei(MANAGER_INVESTMENT) }
       );
     })
