@@ -126,8 +126,12 @@ contract('Fund Actions', (accounts) => {
         return fund.modifyAllocation.call(investor, amt, { from: MANAGER })
           .then(success => assert.isTrue(success))
           .then(() => fund.modifyAllocation(investor, amt, { from: MANAGER }))
-          .then(() => fund.getInvestor(investor))
-          .then((_info) => assert.equal(_info[0].toNumber(), amt, 'Incorrect reset to allocation'))
+          .then(() => fund.getAvailableAllocation(investor))
+          .then((_allocation) => fund.getInvestor(investor))
+          .then((_info) => {
+            assert.equal(_info[0].toNumber(), amt, 'Incorrect reset to allocation');
+            assert.equal(_info[0].toNumber(), _allocation, 'Allocation and result of getAvailableAllocation doesn\'t match');
+          })
           .catch(err => console.log(err));
       });
 

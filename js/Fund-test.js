@@ -33,7 +33,7 @@ DataFeed.deployed().then(instance => dataFeed = instance)
 // Log all events
 var fundEvents = fund.allEvents(function(error, event) { if (!error) console.log(event.args); });
 var calcEvents = navCalculator.allEvents(function(error, event) { if (!error) console.log(event.args); });
-var valueFeedEvents = valueFeed.allEvents(function(error, event) { if (!error) console.log(event.args); });
+var dataFeedEvents = dataFeed.allEvents(function(error, event) { if (!error) console.log(event.args); });
 
 // Set fund address for navCalculator
 navCalculator.setFund(fund.address)

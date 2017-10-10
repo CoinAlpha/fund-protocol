@@ -1,23 +1,42 @@
-var DataFeed  = artifacts.require("./DataFeed.sol");
-var NavCalculator  = artifacts.require("./NavCalculator.sol");
-var InvestorActions = artifacts.require("./InvestorActions.sol");
-var Fund = artifacts.require("./Fund.sol");
+const DataFeed  = artifacts.require("./DataFeed.sol");
+const NavCalculator  = artifacts.require("./NavCalculator.sol");
+const InvestorActions = artifacts.require("./InvestorActions.sol");
+const Fund = artifacts.require("./Fund.sol");
 
-// Deployment constants
-const managerInvestment = 0;
+const dataFeedInfo = require('./config/datafeed.js');
+
+// helpers
+const ethToWei = (eth) => eth * 1e18;
+
+// DataFeed settings
+const SECONDS_BETWEEN_QUERIES       = 300;
+const USD_ETH_EXCHANGE_RATE         = 300;
+const DATA_FEED_GAS_RESERVE         = 1;
+
+// Fund settings
+const FUND_NAME                     = "CoinAlpha Falcon";
+const FUND_SYMBOL                   = "FALC";
+const FUND_DECIMALS                 = 4;
+const MANAGER_INVESTMENT            = 0;
+const MIN_INITIAL_SUBSCRIPTION_ETH  = 20;
+const MIN_SUBSCRIPTION_ETH          = 5;
+const MIN_REDEMPTION_SHARES         = 1000;
+const MGMT_FEE                      = 1;
+const PERFORM_FEE                   = 20;
 
 module.exports = function(deployer, network, accounts) {
 
   const useOraclize = network == "ropsten" ? true : false;
-  const dataFeedReserve = network == "ropsten" ? 1e18 : 0;
-  
+  const dataFeedReserve = network == "ropsten" ? ethToWei(DATA_FEED_GAS_RESERVE) : 0;
+  const navServiceUrl = dataFeedInfo[network].navServiceUrl;
+
   deployer.deploy(
     DataFeed,
     "nav-service",                    // _name
     useOraclize,                      // _useOraclize
-    "https://coinalpha-oracle-staging.herokuapp.com/api/gdax", // _queryUrl
-    300,                              // _secondsBetweenQueries
-    30000,                            // _initialExchangeRate
+    navServiceUrl,                    // _queryUrl
+    SECONDS_BETWEEN_QUERIES,          // _secondsBetweenQueries
+    USD_ETH_EXCHANGE_RATE * 100,      // _initialExchangeRate
     accounts[1],                      // _exchange
     {from: accounts[0], value: dataFeedReserve}
   ).then(() =>
@@ -35,14 +54,14 @@ module.exports = function(deployer, network, accounts) {
       NavCalculator.address,          // _navCalculator
       InvestorActions.address,        // _investorActions
       DataFeed.address,               // _dataFeed
-      "Falcon",                       // _name
-      "FALC",                         // _symbol
-      4,                              // _decimals
-      20e18,                          // _minInitialSubscriptionEth
-      5e18,                           // _minSubscriptionEth
-      1000,                           // _minRedemptionShares,
-      100,                            // _mgmtFeeBps
-      2000,                           // _performFeeBps
-      {from: accounts[0], value: managerInvestment}
+      FUND_NAME,                      // _name
+      FUND_SYMBOL,                    // _symbol
+      FUND_DECIMALS,                  // _decimals
+      ethToWei(MIN_INITIAL_SUBSCRIPTION_ETH), // _minInitialSubscriptionEth
+      ethToWei(MIN_SUBSCRIPTION_ETH), // _minSubscriptionEth
+      MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
+      MGMT_FEE * 100,                 // _mgmtFeeBps
+      PERFORM_FEE * 100,              // _performFeeBps
+      {from: accounts[0], value: MANAGER_INVESTMENT}
   ));
 };

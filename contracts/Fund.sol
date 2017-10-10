@@ -79,6 +79,7 @@ contract Fund is ERC20, DestructiblePausable {
   event LogExchangeAddressChanged(address oldAddress, address newAddress);
   event LogNavCalculatorModuleChanged(address oldAddress, address newAddress);
   event LogInvestorActionsModuleChanged(address oldAddress, address newAddress);
+  event LogDataFeedModuleChanged(address oldAddress, address newAddress);
   event LogTransferToExchange(uint amount);
   event LogTransferFromExchange(uint amount);
   event LogManagementFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
@@ -187,6 +188,15 @@ contract Fund is ERC20, DestructiblePausable {
 
     LogAllocationModification(_addr, _allocation);
     return true;
+  }
+
+  // [INVESTOR METHOD] External wrapper for the getAvailableAllocation function in InvestorActions
+  // Delegates logic to the InvestorActions module
+  function getAvailableAllocation(address _addr)
+    constant
+    returns (uint ethAvailableAllocation)
+  {
+    return investorActions.getAvailableAllocation(_addr);
   }
 
   // Fallback function which calls the requestSubscription function.
@@ -475,13 +485,14 @@ contract Fund is ERC20, DestructiblePausable {
   }
 
   // Update the address of the exchange account
-  function setExchange(address _exchange)
+  function setExchange(address _addr)
     onlyOwner
     returns (bool success)
   {
+    require(_addr != address(0));
     address old = exchange;
-    exchange = _exchange;
-    LogExchangeAddressChanged(old, _exchange);
+    exchange = _addr;
+    LogExchangeAddressChanged(old, _addr);
     return true;
   }
 
@@ -490,6 +501,7 @@ contract Fund is ERC20, DestructiblePausable {
     onlyOwner
     returns (bool success)
   {
+    require(_addr != address(0));
     address old = navCalculator;
     navCalculator = NavCalculator(_addr);
     LogNavCalculatorModuleChanged(old, _addr);
@@ -501,6 +513,7 @@ contract Fund is ERC20, DestructiblePausable {
     onlyOwner
     returns (bool success)
   {
+    require(_addr != address(0));
     address old = investorActions;
     investorActions = InvestorActions(_addr);
     LogInvestorActionsModuleChanged(old, _addr);
@@ -508,8 +521,15 @@ contract Fund is ERC20, DestructiblePausable {
   }
 
   // Update the address of the data feed contract
-  function setDataFeed(address _address) onlyOwner {
-    dataFeed = DataFeed(_address);
+  function setDataFeed(address _addr) 
+    onlyOwner
+    returns (bool success) 
+  {
+    require(_addr != address(0));
+    address old = dataFeed;
+    dataFeed = DataFeed(_addr);
+    LogDataFeedModuleChanged(old, _addr);
+    return true;
   }
 
   // Utility function for exchange to send funds to contract

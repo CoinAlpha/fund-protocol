@@ -55,7 +55,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
     usdEth = _initialExchangeRate;
-    gasLimit = 200000;                                // Oraclize default value
+    gasLimit = 300000;                                // Adjust this value depending on code length
 
     if (useOraclize) {
       oraclize_setCustomGasPrice(20000000000 wei);    // 20 GWei, Oraclize default
@@ -82,7 +82,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     }
   }
 
-  // Assumes that the result is a raw JSON object with exactly 2 fields: 
+  // Assumes that the result is a raw JSON object with at least 2 fields: 
   // 1) portfolio value in ETH, with 2 decimal places
   // 2) current USD/ETH exchange rate, with 2 decimal places
   // The function parses the JSON and stores the value and usdEth.
@@ -95,7 +95,8 @@ contract DataFeed is usingOraclize, DestructibleModified {
     uint actualNum;
     (returnValue, tokens, actualNum) = JsmnSolLib.parse(_result, 10);
 
-    if (returnValue == 0) {
+    // Check for the success return code and that the object is not an error string
+    if (returnValue == 0 && actualNum > 4) {
       string memory valueRaw = JsmnSolLib.getBytes(_result, tokens[2].start, tokens[2].end);
       value = parseInt(valueRaw);
 
