@@ -5,4 +5,4 @@ package-lock.json
 .vscode/
 bin/
 deployed/
-migrations/config
+migrations/config/datafeed.js
