@@ -22,9 +22,9 @@ npm install -g ethereumjs-testrpc
 ```
 
 ### Truffle
-Deployment and testing framework.  Use v3.4.7 which ships with solc v0.4.13.
+Deployment and testing framework.  Use v4.0.0-beta.0 which ships with solc v0.4.15.
 ```
-npm install -g truffle@3.4.7
+npm install -g truffle@4.0.0-beta.0
 ```
 
 
@@ -35,7 +35,7 @@ npm install
 ## Testing
 
 ### Local
-1. Run TestRPC with a 1 second block time, to allow for simulation of time-based fees: `testrpc -b 1` 
+1. Run TestRPC with a 1 second block time, to allow for simulation of time-based fees: `testrpc -b 1 -l 6000000` 
 2. In another Terminal window, `truffle console`
 3. `truffle test` to run all tests
 
