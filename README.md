@@ -35,7 +35,7 @@ npm install
 ## Testing
 
 ### Local
-1. Run TestRPC with a 1 second block time, to allow for simulation of time-based fees: `testrpc -b 1 -l 6000000` 
+1. Run TestRPC with a 1 second block time and increased block gas limit, to allow for simulation of time-based fees: `testrpc -b 1 -l 6000000` 
 2. In another Terminal window, `truffle console`
 3. `truffle test` to run all tests
 
