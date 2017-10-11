@@ -2,15 +2,15 @@
 
 module.exports = {
   development: {
-    navServiceUrl: "[NOT USED]"
+    navServiceUrl: '[NOT USED]',
   },
   test: {
     navServiceUrl: "[STAGING URL]"
   },
   ropsten: {
-    navServiceUrl: "[STAGING URL]"
+    navServiceUrl: '[STAGING URL]',
   },
   mainnet: {
-    navServiceUrl: "[PRODUCTION URL]"
-  }
+    navServiceUrl: '[PRODUCTION URL]',
+  },
 };
