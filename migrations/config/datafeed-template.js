@@ -4,6 +4,9 @@ module.exports = {
   development: {
     navServiceUrl: "[NOT USED]"
   },
+  test: {
+    navServiceUrl: "[STAGING URL]"
+  },
   ropsten: {
     navServiceUrl: "[STAGING URL]"
   },
