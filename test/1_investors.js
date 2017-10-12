@@ -10,7 +10,7 @@ contract('Investors', () => {
   before(() => Promise.all([
     Fund.deployed(),
     NavCalculator.deployed(),
-    InvestorActions.deployed(),
+    InvestorActions.deployed()
   ])
     .then(values => [fund, navCalculator, investorActions] = values));
 
