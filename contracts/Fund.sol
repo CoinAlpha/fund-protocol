@@ -5,7 +5,6 @@ import "./InvestorActions.sol";
 import "./DataFeed.sol";
 import "./math/SafeMath.sol";
 import "./zeppelin/DestructiblePausable.sol";
-import './zeppelin/ERC20.sol';
 
 /**
  * @title Fund
@@ -150,7 +149,7 @@ contract Fund is DestructiblePausable {
     investors[manager].ethTotalAllocation = managerInvestment;
     investors[manager].sharesOwned = totalSupply;
     LogAllocationModification(manager, managerInvestment);
-    LogSubscription(manager, uint totalSupply, navPerShare, _managerUsdEthBasis);
+    LogSubscription(manager, totalSupply, navPerShare, _managerUsdEthBasis);
     LogTransferToExchange(managerInvestment);
 
     // Send any funds in  to exchange address
@@ -482,7 +481,7 @@ contract Fund is DestructiblePausable {
     onlyOwner
     returns (bool success)
   {
-    uint ethWithdrawal = usdToEth(accumulatedMgmtFees);
+    uint ethWithdrawal = usdToEth(accumulatedAdminFees);
     require(ethWithdrawal <= getBalance());
 
     address payee = msg.sender;

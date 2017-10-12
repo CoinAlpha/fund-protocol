@@ -9,13 +9,14 @@ getBal = address => web3.fromWei(web3.eth.getBalance(address), 'ether').toNumber
 weiToNum = wei => web3.fromWei(wei, 'ether').toNumber()
 ethToWei = eth => web3.toWei(eth, 'ether')
 
-manager = web3.eth.accounts[0]
+owner = web3.eth.accounts[0]
 exchange = web3.eth.accounts[1]
 investor1 = web3.eth.accounts[2]
 investor2 = web3.eth.accounts[3]
+manager = web3.eth.accounts[4]
 
 // (IF TESTNET) Unlock accounts
-web3.personal.unlockAccount(manager, '<INSERT PASSWORD>', 15000)
+web3.personal.unlockAccount(owner, '<INSERT PASSWORD>', 15000)
 web3.personal.unlockAccount(exchange, '<INSERT PASSWORD>', 15000)
 web3.personal.unlockAccount(investor1, '<INSERT PASSWORD>', 15000)
 web3.personal.unlockAccount(investor2, '<INSERT PASSWORD>', 15000)
@@ -69,10 +70,6 @@ fund.approve(investor2, ethToWei(1), {from:investor1});
 
 // investor2 pulls one token from investor1
 fund.transferFrom(investor1, investor2, ethToWei(1), {from:investor2});
-
-// Remit fees from exchange to contract
-fund.getTotalFees().then(amount => fund.remitFromExchange({from:exchange, value:amount, gas:gasAmt}))
-fund.withdrawFees()
 
 // Investor requests redemption
 fund.requestRedemption(6000,{from:investor2})
