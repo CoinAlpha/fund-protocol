@@ -21,7 +21,7 @@ import './zeppelin/ERC20.sol';
  * in traditional funds, while maximizing transparency and mitigating fraud risk for investors.
  */
 
-contract Fund is ERC20, DestructiblePausable {
+contract Fund is DestructiblePausable {
   using SafeMath for uint;
 
   // Constants set at contract inception
@@ -48,7 +48,7 @@ contract Fund is ERC20, DestructiblePausable {
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
   uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
   uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
-  // uint public totalSupply;                    // (ERC20 variable) total number of shares outstanding
+  uint    public totalSupply;                    // total number of shares outstanding
 
   // Modules: where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
   NavCalculator   public navCalculator;         // calculating net asset value
@@ -114,8 +114,10 @@ contract Fund is ERC20, DestructiblePausable {
     uint    _minInitialSubscriptionEth,
     uint    _minSubscriptionEth,
     uint    _minRedemptionShares,
+    uint    _adminFeeBps,
     uint    _mgmtFeeBps,
-    uint    _performFeeBps
+    uint    _performFeeBps,
+    uint    _managerUsdEthBasis
   )
     payable
   {
@@ -126,6 +128,7 @@ contract Fund is ERC20, DestructiblePausable {
     minSubscriptionEth = _minSubscriptionEth;
     minInitialSubscriptionEth = _minInitialSubscriptionEth;
     minRedemptionShares = _minRedemptionShares;
+    adminFeeBps = _adminFeeBps;
     mgmtFeeBps = _mgmtFeeBps;
     performFeeBps = _performFeeBps;
 
@@ -144,7 +147,10 @@ contract Fund is ERC20, DestructiblePausable {
     // manager anyway
     uint managerInvestment = exchange.balance.add(msg.value);
     totalSupply = ethToShares(managerInvestment);
-    balances[manager] = ethToShares(managerInvestment);
+    investors[manager].ethTotalAllocation = managerInvestment;
+    investors[manager].sharesOwned = totalSupply;
+    LogAllocationModification(manager, managerInvestment);
+    LogSubscription(manager, uint totalSupply, navPerShare, _managerUsdEthBasis);
     LogTransferToExchange(managerInvestment);
 
     // Send any funds in  to exchange address
@@ -249,7 +255,7 @@ contract Fund is ERC20, DestructiblePausable {
   {
     var (ethPendingSubscription, sharesOwned, shares, transferAmount, _totalSupply, _totalEthPendingSubscription) = investorActions.subscribe(_addr);
     investors[_addr].ethPendingSubscription = ethPendingSubscription;
-    investors[_addr].sharesOwned = balances[_addr] = sharesOwned;
+    investors[_addr].sharesOwned = sharesOwned;
     totalSupply = _totalSupply;
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
@@ -326,7 +332,7 @@ contract Fund is ERC20, DestructiblePausable {
     returns (bool success)
   {
     var (sharesOwned, sharesPendingRedemption, ethPendingWithdrawal, shares, _totalSupply, _totalSharesPendingRedemption, _totalEthPendingWithdrawal) = investorActions.redeem(_addr);
-    investors[_addr].sharesOwned = balances[_addr] = sharesOwned;
+    investors[_addr].sharesOwned = sharesOwned;
     investors[_addr].sharesPendingRedemption = sharesPendingRedemption;
     investors[_addr].ethPendingWithdrawal = ethPendingWithdrawal;
     totalSupply = _totalSupply;
@@ -374,7 +380,7 @@ contract Fund is ERC20, DestructiblePausable {
 
     investors[_addr].ethTotalAllocation = 0;
     investors[_addr].ethPendingSubscription = 0;
-    investors[_addr].sharesOwned = balances[_addr] = 0;
+    investors[_addr].sharesOwned = 0;
     investors[_addr].sharesPendingRedemption = 0;
     investors[_addr].ethPendingWithdrawal = ethPendingWithdrawal;
     totalEthPendingSubscription = _totalEthPendingSubscription;
@@ -617,85 +623,4 @@ contract Fund is ERC20, DestructiblePausable {
   {
     return this.balance.sub(totalEthPendingSubscription).sub(totalEthPendingWithdrawal);
   }
-
-  // ********* ERC20 METHODS *********
-  // These ERC20 methods are based on the OpenZeppelin StandardToken library:
-  // https://github.com/OpenZeppelin/zeppelin-solidity/blob/master/contracts/token/StandardToken.sol
-  // They are have modified so that:
-  // 1) transfer and transferFrom check that the recipient is eligible based on their allocation
-  // 2) the sharesOwned variable in the Investor struct is identical to balances
-
-  mapping(address => uint) balances;
-  mapping (address => mapping (address => uint)) allowed;
-
-  function transfer(address _to, uint _value)
-    whenNotPaused
-    returns (bool success)
-  {
-    require(_to != address(0));
-    require(_value <= balances[msg.sender]);
-    require(_value <= investors[msg.sender].sharesOwned);
-    require(_value <= ethToShares(investorActions.getAvailableAllocation(_to)));
-    investors[msg.sender].sharesOwned = investors[msg.sender].sharesOwned.sub(_value);
-    balances[msg.sender] = balances[msg.sender].sub(_value);
-    investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
-    balances[_to] = balances[_to].add(_value);
-    Transfer(msg.sender, _to, _value);
-    return true;
-  }
-
-  function transferFrom(address _from, address _to, uint _value)
-    whenNotPaused
-    returns (bool)
-  {
-    require(_to != address(0));
-    require(_value <= allowed[_from][msg.sender]);
-    require(_value <= balances[_from]);
-    require(_value <= investors[_from].sharesOwned);
-    require(_value <= ethToShares(investorActions.getAvailableAllocation(_to)));
-    
-    uint _allowance = allowed[_from][msg.sender];
-
-    // Check is not needed because sub(_allowance, _value) will already throw if this condition is not met
-    // require (_value <= _allowance);
-
-    investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
-    balances[_to] = balances[_to].add(_value);
-    investors[_from].sharesOwned = investors[_from].sharesOwned.sub(_value);
-    balances[_from] = balances[_from].sub(_value);
-    allowed[_from][msg.sender] = _allowance.sub(_value);
-    Transfer(_from, _to, _value);
-    return true;
-  }
-
-  function approve(address _spender, uint256 _value)
-    whenNotPaused
-    returns (bool success)
-  {
-
-    // To change the approve amount you first have to reduce the addresses`
-    //  allowance to zero by calling `approve(_spender, 0)` if it is not
-    //  already 0 to mitigate the race condition described here:
-    //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-    require((_value == 0) || (allowed[msg.sender][_spender] == 0));
-
-    allowed[msg.sender][_spender] = _value;
-    Approval(msg.sender, _spender, _value);
-    return true;
-  }
-
-  function balanceOf(address _owner)
-    constant
-    returns (uint256 balance)
-  {
-    return balances[_owner];
-  }
-
-  function allowance(address _owner, address _spender)
-    constant
-    returns (uint256 remaining)
-  {
-    return allowed[_owner][_spender];
-  }
-
 }

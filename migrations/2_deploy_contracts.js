@@ -18,6 +18,7 @@ const FUND_NAME                     = "CoinAlpha Falcon";
 const FUND_SYMBOL                   = "FALC";
 const FUND_DECIMALS                 = 4;
 const MANAGER_INVESTMENT            = 0;
+const MANAGER_USD_ETH_BASIS         = 300;
 const MIN_INITIAL_SUBSCRIPTION_ETH  = 20;
 const MIN_SUBSCRIPTION_ETH          = 5;
 const MIN_REDEMPTION_SHARES         = 1000;
@@ -64,6 +65,7 @@ module.exports = function(deployer, network, accounts) {
       MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
       MGMT_FEE * 100,                 // _mgmtFeeBps
       PERFORM_FEE * 100,              // _performFeeBps
+      MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
       {from: accounts[0], value: MANAGER_INVESTMENT}
   ));
 };
