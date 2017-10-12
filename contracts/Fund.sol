@@ -68,7 +68,7 @@ contract Fund is ERC20, DestructiblePausable {
 
   // Events
   event LogAllocationModification(address indexed investor, uint eth);
-  event LogSubscriptionRequest(address indexed investor, uint eth);
+  event LogSubscriptionRequest(address indexed investor, uint eth, uint usdEthBasis);
   event LogSubscriptionCancellation(address indexed investor);
   event LogSubscription(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogRedemptionRequest(address indexed investor, uint shares);
@@ -205,15 +205,14 @@ contract Fund is ERC20, DestructiblePausable {
     return investorActions.getAvailableAllocation(_addr);
   }
 
-  // Fallback function which calls the requestSubscription function.
+  // Non-payable fallback function so that any attempt to send ETH directly to the contract is thrown
   function ()
     whenNotPaused
-    payable
-  { requestSubscription(); }
+  { }
 
   // [INVESTOR METHOD] Issue a subscription request by transferring ether into the fund
   // Delegates logic to the InvestorActions module
-  function requestSubscription()
+  function requestSubscription(uint usdEthBasis)
     whenNotPaused
     payable
     returns (bool success)
@@ -222,7 +221,7 @@ contract Fund is ERC20, DestructiblePausable {
     investors[msg.sender].ethPendingSubscription = _ethPendingSubscription;
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
-    LogSubscriptionRequest(msg.sender, msg.value);
+    LogSubscriptionRequest(msg.sender, msg.value, usdEthBasis);
     return true;
   }
 
