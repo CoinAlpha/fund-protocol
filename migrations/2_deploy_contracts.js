@@ -21,7 +21,8 @@ const MANAGER_INVESTMENT            = 0;
 const MIN_INITIAL_SUBSCRIPTION_ETH  = 20;
 const MIN_SUBSCRIPTION_ETH          = 5;
 const MIN_REDEMPTION_SHARES         = 1000;
-const MGMT_FEE                      = 1;
+const ADMIN_FEE                     = 1;
+const MGMT_FEE                      = 0;
 const PERFORM_FEE                   = 20;
 
 module.exports = function(deployer, network, accounts) {
@@ -37,6 +38,7 @@ module.exports = function(deployer, network, accounts) {
     navServiceUrl,                    // _queryUrl
     SECONDS_BETWEEN_QUERIES,          // _secondsBetweenQueries
     USD_ETH_EXCHANGE_RATE * 100,      // _initialExchangeRate
+    accounts[0],                      // _manager
     accounts[1],                      // _exchange
     {from: accounts[0], value: dataFeedReserve}
   ).then(() =>

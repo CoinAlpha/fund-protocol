@@ -31,15 +31,17 @@ contract Fund is ERC20, DestructiblePausable {
   uint    public minInitialSubscriptionEth;    // minimum amount of ether that a new investor can subscribe
   uint    public minSubscriptionEth;           // minimum amount of ether that an existing investor can subscribe
   uint    public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
-  uint    public mgmtFeeBps;                   // annual base management fee, in basis points
+  uint    public adminFeeBps;                  // annual administrative fee, if any, in basis points
+  uint    public mgmtFeeBps;                   // annual base management fee, if any, in basis points
   uint    public performFeeBps;                // performance management fee earned on gains, in basis points
+  address public manager;                      // address of the manager account allowed to withdraw base and performance management fees
   address public exchange;                     // address of the exchange account where the manager conducts trading.
 
   // Variables that are updated after each call to the calcNav function
   uint    public lastCalcDate;
   uint    public navPerShare;
   uint    public accumulatedMgmtFees;
-  uint    public accumulatedPerformFees;
+  uint    public accumulatedAdminFees;
   uint    public lossCarryforward;
 
   // Fund Balances
@@ -74,8 +76,9 @@ contract Fund is ERC20, DestructiblePausable {
   event LogRedemption(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogLiquidation(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogWithdrawal(address indexed investor, uint eth);
-  event LogWithdrawalForInvestor(address indexed investor, uint eth);
-  event LogNavSnapshot(uint indexed timestamp, uint navPerShare, uint lossCarryforward, uint accumulatedMgmtFees, uint accumulatedPerformFees);
+  event LogNavSnapshot(uint indexed timestamp, uint navPerShare, uint lossCarryforward, uint accumulatedMgmtFees, uint accumulatedAdminFees);
+  event LogAdminFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
+  event LogManagerAddressChanged(address oldAddress, address newAddress);
   event LogExchangeAddressChanged(address oldAddress, address newAddress);
   event LogNavCalculatorModuleChanged(address oldAddress, address newAddress);
   event LogInvestorActionsModuleChanged(address oldAddress, address newAddress);
@@ -83,10 +86,16 @@ contract Fund is ERC20, DestructiblePausable {
   event LogTransferToExchange(uint amount);
   event LogTransferFromExchange(uint amount);
   event LogManagementFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
+  event LogAdminFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
 
   // Modifiers
   modifier onlyFromExchange {
     require(msg.sender == exchange);
+    _;
+  }
+
+  modifier onlyManager {
+    require(msg.sender == manager);
     _;
   }
 
@@ -129,16 +138,13 @@ contract Fund is ERC20, DestructiblePausable {
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
     navPerShare = 10000;
-    lossCarryforward = 0;
-    accumulatedMgmtFees = 0;
-    accumulatedPerformFees = 0;
 
     // Treat funds sent and exchange balance at fund inception as the manager's own investment
     // These amounts are included in fee calculations since it's assumed that the fees are going to the
     // manager anyway
     uint managerInvestment = exchange.balance.add(msg.value);
     totalSupply = ethToShares(managerInvestment);
-    balances[msg.sender] = ethToShares(managerInvestment);
+    balances[manager] = ethToShares(managerInvestment);
     LogTransferToExchange(managerInvestment);
 
     // Send any funds in  to exchange address
@@ -433,43 +439,52 @@ contract Fund is ERC20, DestructiblePausable {
       _navPerShare,
       _lossCarryforward,
       _accumulatedMgmtFees,
-      _accumulatedPerformFees
+      _accumulatedAdminFees
     ) = navCalculator.calculate();
 
     lastCalcDate = _lastCalcDate;
     navPerShare = _navPerShare;
     lossCarryforward = _lossCarryforward;
     accumulatedMgmtFees = _accumulatedMgmtFees;
-    accumulatedPerformFees = _accumulatedPerformFees;
+    accumulatedAdminFees = _accumulatedAdminFees;
 
-    LogNavSnapshot(lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+    LogNavSnapshot(lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
     return true;
   }
 
   // ********* FEES *********
 
-  function getTotalFees()
-    constant
-    returns (uint)
+  // Withdraw management fees from the contract
+  function withdrawMgmtFees()
+    whenNotPaused
+    onlyManager
+    returns (bool success)
   {
-    return accumulatedMgmtFees + accumulatedPerformFees;
+    uint ethWithdrawal = usdToEth(accumulatedMgmtFees);
+    require(ethWithdrawal <= getBalance());
+
+    address payee = msg.sender;
+
+    accumulatedMgmtFees = 0;
+    payee.transfer(ethWithdrawal);
+    LogManagementFeeWithdrawal(ethWithdrawal, dataFeed.usdEth());
+    return true;
   }
 
   // Withdraw management fees from the contract
-  function withdrawFees()
+  function withdrawAdminFees()
+    whenNotPaused
     onlyOwner
     returns (bool success)
   {
-    uint totalFees = usdToEth(accumulatedMgmtFees + accumulatedPerformFees);
-    require(totalFees <= getBalance());
+    uint ethWithdrawal = usdToEth(accumulatedMgmtFees);
+    require(ethWithdrawal <= getBalance());
 
     address payee = msg.sender;
-    uint ethPendingWithdrawal = totalFees;
 
     accumulatedMgmtFees = 0;
-    accumulatedPerformFees = 0;
-    payee.transfer(ethPendingWithdrawal);
-    LogManagementFeeWithdrawal(totalFees, dataFeed.usdEth());
+    payee.transfer(ethWithdrawal);
+    LogAdminFeeWithdrawal(ethWithdrawal, dataFeed.usdEth());
     return true;
   }
 
@@ -482,6 +497,19 @@ contract Fund is ERC20, DestructiblePausable {
     returns (address[])
   {
     return investorAddresses;
+  }
+
+  // Update the address of the manager account
+  function setManager(address _addr)
+    whenNotPaused
+    onlyManager
+    returns (bool success)
+  {
+    require(_addr != address(0));
+    address old = manager;
+    manager = _addr;
+    LogManagerAddressChanged(old, _addr);
+    return true;
   }
 
   // Update the address of the exchange account
