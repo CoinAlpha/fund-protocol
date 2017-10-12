@@ -19,7 +19,6 @@ const gasToWei = gas => gas * 1e11;
 contract('Fund Actions', (accounts) => {
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
-
   const MIN_INVESTOR = accounts[2];
   const MID_INVESTOR = accounts[3];
   const MAX_INVESTOR = accounts[4];
@@ -108,6 +107,7 @@ contract('Fund Actions', (accounts) => {
 
   investors.forEach((investorObj) => {
     const { name, investor, subscribeAmount } = investorObj;
+    let allocation;
 
     describe(`Investor subscription: ${name}`, () => {
       it('should get investor information from investor address', () =>
@@ -127,10 +127,13 @@ contract('Fund Actions', (accounts) => {
           .then(success => assert.isTrue(success))
           .then(() => fund.modifyAllocation(investor, amt, { from: MANAGER }))
           .then(() => fund.getAvailableAllocation(investor))
-          .then(_allocation => fund.getInvestor(investor))
+          .then((_allocation) => {
+            allocation = _allocation;
+            return fund.getInvestor(investor);
+          })
           .then((_info) => {
             assert.equal(_info[0].toNumber(), amt, 'Incorrect reset to allocation');
-            assert.equal(_info[0].toNumber(), _allocation, 'Allocation and result of getAvailableAllocation doesn\'t match');
+            assert.equal(_info[0].toNumber(), allocation, 'Allocation and result of getAvailableAllocation doesn\'t match');
           })
           .catch(err => console.log(err));
       });
@@ -198,7 +201,7 @@ contract('Fund Actions', (accounts) => {
             return getBalancePromise(investor);
           })
           .then(_finalBal => assert.equal(
-            +initialBalance - gasToWei(gasUsed) + +ethToWei(amt), +_finalBal,
+            +initialBalance + +ethToWei(amt), +_finalBal - gasToWei(gasUsed),
             'Incorrect amount returned to investor'
           ));
       });
@@ -229,7 +232,7 @@ contract('Fund Actions', (accounts) => {
 
 
   describe('fund.totalEthPendingSubscription', () => {
-    const added = MIN_INITIAL_SUBSCRIPTION + (INVESTOR_ALLOCATION - MIN_INITIAL_SUBSCRIPTION) * Math.random();
+    const added = MIN_INITIAL_SUBSCRIPTION + ((INVESTOR_ALLOCATION - MIN_INITIAL_SUBSCRIPTION) * Math.random());
 
     // MANAGER ACTION: Get total subscriptions
     it('should get correct amount of total subscription requests | calculate incremental change', () => {
@@ -287,9 +290,15 @@ contract('Fund Actions', (accounts) => {
         .then((_shares) => {
           assert.equal(parseInt(after[1], 10), 0, 'subscription failed to process');
           assert.equal(after[2] - before[2], parseInt(_shares, 10), 'balance does not increase by the amount of tokens');
-          assert.equal(diffInWei(totalEthPendingSubscription1, totalEthPendingSubscription2), weiToNum(before[1]), 'totalEthPendingSubscription does not decrease by the amount of ether');
+          assert.equal(
+            diffInWei(totalEthPendingSubscription1, totalEthPendingSubscription2), weiToNum(before[1]),
+            'totalEthPendingSubscription does not decrease by the amount of ether'
+          );
           assert.equal(totalSupply2 - totalSupply1, _shares, 'totalSupply does not increase by the amount of tokens');
-          assert.equal(Math.round(diffInWei(exchange2, exchange1) * PRECISION), Math.round(weiToNum(before[1]) * PRECISION), 'exchange balance does not increase by amount of ether');
+          assert.equal(
+            Math.round(diffInWei(exchange2, exchange1) * PRECISION), Math.round(weiToNum(before[1]) * PRECISION),
+            'exchange balance does not increase by amount of ether'
+          );
         })
         .catch(err => console.error(err));
     });
@@ -432,8 +441,14 @@ contract('Fund Actions', (accounts) => {
         })
         .then((_amt) => {
           assert.equal(weiToNum(after[3]), 0, 'redemption failed to process');
-          assert.equal(Math.round(diffInWei(after[4], before[4])), Math.round(weiToNum(_amt)), 'ethPendingWithdrawal did not increase by the amount of ether');
-          assert.equal(Math.round(diffInWei(totalEthPendingWithdrawal2, totalEthPendingWithdrawal1)), Math.round(weiToNum(_amt)), 'totalEthPendingWithdrawal does not increase by the amount of ether');
+          assert.equal(
+            Math.round(diffInWei(after[4], before[4])), Math.round(weiToNum(_amt)),
+            'ethPendingWithdrawal did not increase by the amount of ether'
+          );
+          assert.equal(
+            Math.round(diffInWei(totalEthPendingWithdrawal2, totalEthPendingWithdrawal1)), Math.round(weiToNum(_amt)),
+            'totalEthPendingWithdrawal does not increase by the amount of ether'
+          );
           assert.equal(totalSupply1 - totalSupply2, before[3], 'totalSupply does not decrease by the amount of tokens');
         })
         .catch(console.log);
@@ -503,8 +518,14 @@ contract('Fund Actions', (accounts) => {
         .then((_amt) => {
           assert.equal(weiToNum(after[2]), 0, 'liquidation failed to process');
           assert.equal(diffInWei(after[4], before[4]), weiToNum(_amt), 'ethPendingWithdrawal does not increase by the amount of ether');
-          assert.equal(Math.round(diffInWei(totalEthPendingWithdrawal2, totalEthPendingWithdrawal1)), Math.round(weiToNum(after[4])), 'totalEthPendingWithdrawal does not increase by the amount of ether');
-          assert.equal(Math.round(diffInWei(totalSupply1, totalSupply2)), Math.round(weiToNum(before[2])), 'totalSupply does not decrease by the amount of tokens');
+          assert.equal(
+            Math.round(diffInWei(totalEthPendingWithdrawal2, totalEthPendingWithdrawal1)), Math.round(weiToNum(after[4])),
+            'totalEthPendingWithdrawal does not increase by the amount of ether'
+          );
+          assert.equal(
+            Math.round(diffInWei(totalSupply1, totalSupply2)), Math.round(weiToNum(before[2])),
+            'totalSupply does not decrease by the amount of tokens'
+          );
         })
         .then(() => fund.getInvestor(INVESTOR2))
         .then(_gotInvestor => assert.equal(_gotInvestor[4], amt, 'liquidate investor withdrawal amount is incorrect'))
