@@ -33,9 +33,7 @@ contract NavCalculator is DestructibleModified {
     _;
   }
 
-  function NavCalculator(
-    address _dataFeed
-  )
+  function NavCalculator(address _dataFeed)
   {
     dataFeed = DataFeed(_dataFeed);
   }
@@ -52,13 +50,17 @@ contract NavCalculator is DestructibleModified {
   );
 
   // Calculate nav and allocate fees
-  function calculate() onlyFund constant returns (
-    uint lastCalcDate,
-    uint navPerShare,
-    uint lossCarryforward,
-    uint accumulatedMgmtFees,
-    uint accumulatedAdminFees
-  ) {
+  function calculate()
+    onlyFund
+    constant
+    returns (
+      uint lastCalcDate,
+      uint navPerShare,
+      uint lossCarryforward,
+      uint accumulatedMgmtFees,
+      uint accumulatedAdminFees
+    )
+  {
 
     // Set the initial value of the variables below from the last NAV calculation
     uint netAssetValue = sharesToUsd(fund.totalSupply());
@@ -71,14 +73,14 @@ contract NavCalculator is DestructibleModified {
     uint grossAssetValue = dataFeed.value().add(ethToUsd(fund.getBalance()));
 
     // Removes the accumulated management fees from grossAssetValue
-    uint gpvlessFees = grossAssetValue.sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedAdminFees());
+    uint gpvLessFees = grossAssetValue.sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedAdminFees());
 
     // Calculates the base management fee accrued since the last NAV calculation
     uint mgmtFee = getAnnualFee(elapsedTime, fund.mgmtFeeBps());
     uint adminFee = getAnnualFee(elapsedTime, fund.adminFeeBps());
 
     // Calculate the gain/loss based on the new grossAssetValue and the old netAssetValue
-    int gainLoss = int(gpvlessFees) - int(netAssetValue) - int(mgmtFee) - int(adminFee);
+    int gainLoss = int(gpvLessFees) - int(netAssetValue) - int(mgmtFee) - int(adminFee);
 
     // If there's a loss carried forward, apply any gains to it before earning any performance fees
     uint lossPayback = gainLoss > 0
@@ -94,9 +96,9 @@ contract NavCalculator is DestructibleModified {
 
     // Apply the net gain/losses to the old netAssetValue
     if (netGainLossAfterPerformFee > 0) {
-        netAssetValue = netAssetValue.add(uint(netGainLossAfterPerformFee));
+      netAssetValue = netAssetValue.add(uint(netGainLossAfterPerformFee));
     } else {
-        netAssetValue = netAssetValue.sub(uint(-1 * netGainLossAfterPerformFee));
+      netAssetValue = netAssetValue.sub(uint(-1 * netGainLossAfterPerformFee));
     }
 
     // Update the state variables and return them to the fund contract
@@ -118,13 +120,17 @@ contract NavCalculator is DestructibleModified {
   // ********* ADMIN *********
 
   // Update the address of the Fund contract
-  function setFund(address _address) onlyOwner {
+  function setFund(address _address)
+    onlyOwner
+  {
     fund = Fund(_address);
     fundAddress = _address;
   }
 
   // Update the address of the data feed contract
-  function setDataFeed(address _address) onlyOwner {
+  function setDataFeed(address _address)
+    onlyOwner
+  {
     dataFeed = DataFeed(_address);
   }
 
@@ -171,7 +177,8 @@ contract NavCalculator is DestructibleModified {
   function toNavPerShare(uint _balance) 
     internal 
     constant 
-    returns (uint) {
+    returns (uint)
+  {
     return _balance.mul(10000).div(fund.totalSupply());
   }
 }

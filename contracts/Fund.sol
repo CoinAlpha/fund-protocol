@@ -148,12 +148,13 @@ contract Fund is DestructiblePausable {
     totalSupply = ethToShares(managerInvestment);
     investors[manager].ethTotalAllocation = managerInvestment;
     investors[manager].sharesOwned = totalSupply;
-    LogAllocationModification(manager, managerInvestment);
-    LogSubscription(manager, totalSupply, navPerShare, _managerUsdEthBasis);
-    LogTransferToExchange(managerInvestment);
 
     // Send any funds in  to exchange address
     exchange.transfer(msg.value);
+
+    LogAllocationModification(manager, managerInvestment);
+    LogSubscription(manager, totalSupply, navPerShare, _managerUsdEthBasis);
+    LogTransferToExchange(managerInvestment);
   }
 
   // [INVESTOR METHOD] Returns the variables contained in the Investor struct for a given address
@@ -217,7 +218,8 @@ contract Fund is DestructiblePausable {
 
   // [INVESTOR METHOD] Issue a subscription request by transferring ether into the fund
   // Delegates logic to the InvestorActions module
-  function requestSubscription(uint usdEthBasis)
+  // usdEthBasis is in units of "wei": USDETH basis of 300 will be input as (= 300e18)
+  function requestSubscription(uint _usdEthBasis)
     whenNotPaused
     payable
     returns (bool success)
@@ -226,7 +228,7 @@ contract Fund is DestructiblePausable {
     investors[msg.sender].ethPendingSubscription = _ethPendingSubscription;
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
-    LogSubscriptionRequest(msg.sender, msg.value, usdEthBasis);
+    LogSubscriptionRequest(msg.sender, msg.value, _usdEthBasis);
     return true;
   }
 
@@ -605,13 +607,15 @@ contract Fund is DestructiblePausable {
 
   function usdToEth(uint _usd) 
     constant 
-    returns (uint eth) {
+    returns (uint eth)
+  {
     return _usd.mul(1e20).div(dataFeed.usdEth());
   }
 
   function ethToUsd(uint _eth) 
     constant 
-    returns (uint usd) {
+    returns (uint usd)
+  {
     return _eth.mul(dataFeed.usdEth()).div(1e20);
   }
 

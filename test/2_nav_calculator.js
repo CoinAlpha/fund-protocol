@@ -77,9 +77,9 @@ contract('NavCalculator', (accounts) => {
           // console.log('nav', nav);
           let mgmtFee = Math.trunc(navPerShare * MGMT_FEE_BPS / 10000 * elapsedTime / SECONDS_IN_YEAR * ts / 10000);
           // console.log('mgmtFee', mgmtFee);
-          let gpvlessFees = gav - accumulatedMgmtFees - accumulatedPerformFees;
-          // console.log('gpvlessFees', gpvlessFees);
-          let gainLoss = gpvlessFees - nav - mgmtFee;
+          let gpvLessFees = gav - accumulatedMgmtFees - accumulatedPerformFees;
+          // console.log('gpvLessFees', gpvLessFees);
+          let gainLoss = gpvLessFees - nav - mgmtFee;
           // console.log('gainLoss', gainLoss);
           let lossPayback = gainLoss > 0 ? Math.min(gainLoss, lossCarryforward) : 0;
           // console.log('lossPayback', lossPayback);
