@@ -1,12 +1,12 @@
 const Promise = require('bluebird');
 
-const Fund = artifacts.require("./Fund.sol");
+const Fund = artifacts.require('./Fund.sol');
 const NavCalculator = artifacts.require('./NavCalculator.sol');
 const InvestorActions = artifacts.require('./InvestorActions.sol');
 const DataFeed = artifacts.require('./DataFeed.sol');
 
-if (typeof web3.eth.getAccountsPromise === "undefined") {
-  Promise.promisifyAll(web3.eth, { suffix: "Promise" });
+if (typeof web3.eth.getAccountsPromise === 'undefined') {
+  Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
 contract('Initialize Fund', (accounts) => {
@@ -28,7 +28,10 @@ contract('Initialize Fund', (accounts) => {
   const MGMT_FEE = 1;
   const PERFORM_FEE = 20;
 
-  let fund, navCalculator, investorActions, INITIAL_BALANCE;
+  let fund;
+  let navCalculator;
+  let investorActions;
+  let INITIAL_BALANCE;
 
   before(() => DataFeed.new(
     'nav-service',                          // _name
@@ -39,7 +42,7 @@ contract('Initialize Fund', (accounts) => {
     EXCHANGE,                               // _exchange
     { from: MANAGER, value: 0 }
   )
-    .then(instance => {
+    .then((instance) => {
       dataFeed = instance;
       return Promise.all([
         NavCalculator.new(dataFeed.address, { from: MANAGER }),
@@ -54,8 +57,8 @@ contract('Initialize Fund', (accounts) => {
         navCalculator.address,              // _navCalculator
         investorActions.address,            // _investorActions
         dataFeed.address,                   // _dataFeed
-        "TestFund",                         // _name
-        "TEST",                             // _symbol
+        'TestFund',                         // _name
+        'TEST',                             // _symbol
         4,                                  // _decimals
         ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
         ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
@@ -85,36 +88,29 @@ contract('Initialize Fund', (accounts) => {
 
 
   it('should instantiate with the right owner address', () => fund.getOwners()
-    .then(_owners => assert.equal(_owners[0], MANAGER, 'Manager addresses don\'t match'))
-  );
+    .then(_owners => assert.equal(_owners[0], MANAGER, 'Manager addresses don\'t match')));
 
   it('should instantiate with the right exchange address', () => fund.exchange.call()
-    .then(_exchange => assert.equal(_exchange, EXCHANGE, 'Exchange addresses don\'t match'))
-  );
+    .then(_exchange => assert.equal(_exchange, EXCHANGE, 'Exchange addresses don\'t match')));
 
   it('should instantiate with the right navCalculator address', () => fund.navCalculator.call()
-    .then(_calculator => assert.equal(_calculator, navCalculator.address, 'Calculator addresses don\'t match'))
-  );
+    .then(_calculator => assert.equal(_calculator, navCalculator.address, 'Calculator addresses don\'t match')));
 
   it('should instantiate with the right investorActions address', () => fund.investorActions.call()
-    .then(_investorActions => assert.equal(_investorActions, investorActions.address, 'InvestorActions addresses don\'t match'))
-  );
+    .then(_investorActions => assert.equal(_investorActions, investorActions.address, 'InvestorActions addresses don\'t match')));
 
   it('should instantiate with the right dataFeed address', () => fund.dataFeed.call()
-  .then(_dataFeed => assert.equal(_dataFeed, dataFeed.address, 'DataFeed addresses don\'t match'))
-  );
+    .then(_dataFeed => assert.equal(_dataFeed, dataFeed.address, 'DataFeed addresses don\'t match')));
 
   it('should instantiate with the right initial NAV', () => fund.navPerShare.call()
-    .then(_nav => assert.equal(_nav, 10000, 'Initial NAV doesn\'t equal 10000'))
-  );
+    .then(_nav => assert.equal(_nav, 10000, 'Initial NAV doesn\'t equal 10000')));
 
   it('should instantiate with the right balance', () => Promise.all([
     dataFeed.value(),
     fund.balanceOf.call(MANAGER),
     fund.totalSupply()
   ]).then(([dataFeedValue, managerBalance, totalSupply]) => {
-    assert.equal(parseInt(dataFeedValue), parseInt(managerBalance), 'Manager\'s account balance doesn\'t match investment');
-    assert.equal(parseInt(totalSupply), parseInt(managerBalance), 'Total supply doesn\'t match manager\'s investment');
+    assert.equal(parseInt(dataFeedValue, 10), parseInt(managerBalance, 10), 'Manager\'s account balance doesn\'t match investment');
+    assert.equal(parseInt(totalSupply, 10), parseInt(managerBalance, 10), 'Total supply doesn\'t match manager\'s investment');
   }));
-
 });

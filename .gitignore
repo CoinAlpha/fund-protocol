@@ -6,3 +6,5 @@ package-lock.json
 bin/
 deployed/
 migrations/config/datafeed.js
+testnet/
+yarn.lock

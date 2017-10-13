@@ -7,11 +7,9 @@ const NavCalculator = artifacts.require('./NavCalculator.sol');
   Test contract behavior when there is a large lists of investors.
   To customize the number of investors, run `testrpc -b 1 -a <NUM_OF_INVESTORS>`
   To customize testrpc gas limit, run `testrpc -b 1 -l <GAS_LIMIT_IN_HEX>`
-
   Default # of investor accounts:         10
   Default gas limit:                      0x47E7C4 (4712388)
   Default gas price:                      20000000000
-
   Tests currently fail at maximum of 11 investors
 */
 
