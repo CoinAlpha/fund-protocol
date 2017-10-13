@@ -110,15 +110,14 @@ contract('Fund Actions', (accounts) => {
     let allocation;
 
     describe(`Investor subscription: ${name}`, () => {
-      it('should get investor information from investor address', () =>
-        fund.getInvestor(investor)
-          .then((_info) => {
-            assert.equal(weiToNum(_info[0]), 0, 'Incorrect ethTotalAllocation amount');
-            assert.equal(weiToNum(_info[1]), 0, 'Incorrect ethPendingSubscription amount');
-            assert.equal(weiToNum(_info[2]), 0, 'Incorrect balance amount');
-            assert.equal(weiToNum(_info[3]), 0, 'Incorrect sharesPendingRedemption amount');
-            assert.equal(weiToNum(_info[4]), 0, 'Incorrect ethPendingWithdrawal amount');
-          }));
+      it('should get investor information from investor address', () => fund.getInvestor(investor)
+        .then((_info) => {
+          assert.equal(weiToNum(_info[0]), 0, 'Incorrect ethTotalAllocation amount');
+          assert.equal(weiToNum(_info[1]), 0, 'Incorrect ethPendingSubscription amount');
+          assert.equal(weiToNum(_info[2]), 0, 'Incorrect balance amount');
+          assert.equal(weiToNum(_info[3]), 0, 'Incorrect sharesPendingRedemption amount');
+          assert.equal(weiToNum(_info[4]), 0, 'Incorrect ethPendingWithdrawal amount');
+        }));
 
       // MANAGER ACTION: Modify allocation
       it('should add input amount to ethTotalAllocation', () => {
@@ -168,18 +167,14 @@ contract('Fund Actions', (accounts) => {
     describe(`handle subscription life cycle: ${name}`, () => {
       const amt = INVESTOR_ALLOCATION;
 
-      it('should make subscription request given valid amount', () => {
-        fund.requestSubscription({ from: investor, value: ethToWei(amt), gas: GAS_AMT })
-          .then(() => fund.getInvestor(investor))
-          .then(_info => assert.equal(weiToNum(_info[1]), amt, 'Subscription rejected on valid subscription requests'));
-      });
+      it('should make subscription request given valid amount', () => fund.requestSubscription({ from: investor, value: ethToWei(amt), gas: GAS_AMT })
+        .then(() => fund.getInvestor(investor))
+        .then(_info => assert.equal(weiToNum(_info[1]), amt, 'Subscription rejected on valid subscription requests')));
 
       // INVESTOR ACTION: Cancel Subscription Requests
-      it('should allow canceling existing subscription request', () => {
-        fund.cancelSubscription({ from: investor })
-          .then(() => fund.getInvestor(investor))
-          .then(_info => assert.equal(weiToNum(_info[1]), 0, 'Subscription rejected on valid subscription requests'));
-      });
+      it('should allow canceling existing subscription request', () => fund.cancelSubscription({ from: investor })
+        .then(() => fund.getInvestor(investor))
+        .then(_info => assert.equal(weiToNum(_info[1]), 0, 'Subscription rejected on valid subscription requests')));
 
       // INVESTOR ACTION: Withdraw payments
       it('should allow withdrawal of payments', () => {
@@ -221,13 +216,11 @@ contract('Fund Actions', (accounts) => {
     });
 
     // INVESTOR ACTION: Cancel Subscription Requests
-    it('should allow canceling existing subscription request', () => {
-      fund.cancelSubscription.call({ from: INVESTOR1 })
-        .then(success => assert.isTrue(success))
-        .then(() => fund.cancelSubscription({ from: INVESTOR1 }))
-        .then(() => fund.getInvestor(INVESTOR1))
-        .then(_info => assert.equal(weiToNum(_info[1]), 0, 'Cancel request did not change amount'));
-    });
+    it('should allow canceling existing subscription request', () => fund.cancelSubscription.call({ from: INVESTOR1 })
+      .then(success => assert.isTrue(success))
+      .then(() => fund.cancelSubscription({ from: INVESTOR1 }))
+      .then(() => fund.getInvestor(INVESTOR1))
+      .then(_info => assert.equal(weiToNum(_info[1]), 0, 'Cancel request did not change amount')));
   });
 
 
@@ -246,10 +239,8 @@ contract('Fund Actions', (accounts) => {
     });
 
     // MANAGER ACTION: Get total subscriptions
-    it('should get correct amount of total subscription requests', () => {
-      fund.totalEthPendingSubscription()
-        .then(_finalBal => assert.equal(weiToNum(_finalBal), added, 'Outputs incorrect amount of total subscription'));
-    });
+    it('should get correct amount of total subscription requests', () => fund.totalEthPendingSubscription()
+      .then(_finalBal => assert.equal(weiToNum(_finalBal), added, 'Outputs incorrect amount of total subscription')));
   });
 
   describe('Manager: Subscribe Investors', () => {
@@ -373,16 +364,14 @@ contract('Fund Actions', (accounts) => {
     });
 
     // INVESTOR ACTION: Cancel redemption request
-    it('should allow canceling existing redemption requests', () => {
-      fund.cancelRedemption.call({ from: MIN_INVESTOR })
-        .then((success) => {
-          assert.isTrue(success);
-          return fund.cancelRedemption({ from: MIN_INVESTOR });
-        })
-        .then(() => { fund.getInvestor(MIN_INVESTOR); })
-        .then(_info => assert.equal(weiToNum(_info[3]), 0, 'Cancellation rejected on valid requests'))
-        .catch(console.warn);
-    });
+    it('should allow canceling existing redemption requests', () => fund.cancelRedemption.call({ from: MIN_INVESTOR })
+      .then((success) => {
+        assert.isTrue(success);
+        return fund.cancelRedemption({ from: MIN_INVESTOR });
+      })
+      .then(() => { fund.getInvestor(MIN_INVESTOR); })
+      .then(_info => assert.equal(weiToNum(_info[3]), 0, 'Cancellation rejected on valid requests'))
+      .catch(console.warn));
   });
 
 
@@ -598,33 +587,25 @@ contract('Fund Actions', (accounts) => {
 
   describe('Contract Maintenance', () => {
     // Contract Maintenance
-    it('should fetch a list of investor addresses', () => {
-      fund.getInvestorAddresses()
-        .then(_addresses => assert.equal(_addresses.length, INVESTOR_COUNT, 'list does not include all investors'));
-    });
+    it('should fetch a list of investor addresses', () => fund.getInvestorAddresses()
+      .then(_addresses => assert.equal(_addresses.length, INVESTOR_COUNT, 'list does not include all investors')));
 
-    it('should modify exchange address', (done) => {
-      fund.setExchange(accounts[9])
-        .then(() => fund.exchange.call())
-        .then(_exchange => assert.equal(_exchange, accounts[9], 'wrong exchange address'))
-        .then(() => fund.setExchange(EXCHANGE))
-        .then(() => done());
-    });
+    it('should modify exchange address', done => fund.setExchange(accounts[9])
+      .then(() => fund.exchange.call())
+      .then(_exchange => assert.equal(_exchange, accounts[9], 'wrong exchange address'))
+      .then(() => fund.setExchange(EXCHANGE))
+      .then(() => done()));
 
-    it('should modify navCalculator address', (done) => {
-      fund.setNavCalculator(accounts[9])
-        .then(() => fund.navCalculator.call())
-        .then(_calculator => assert.equal(_calculator, accounts[9], 'wrong navCalculator address'))
-        .then(() => fund.setNavCalculator(navCalculator.address))
-        .then(() => done());
-    });
+    it('should modify navCalculator address', done => fund.setNavCalculator(accounts[9])
+      .then(() => fund.navCalculator.call())
+      .then(_calculator => assert.equal(_calculator, accounts[9], 'wrong navCalculator address'))
+      .then(() => fund.setNavCalculator(navCalculator.address))
+      .then(() => done()));
 
-    it('should modify investorActions address', (done) => {
-      fund.setInvestorActions(accounts[9])
-        .then(() => fund.investorActions.call())
-        .then(_investorActions => assert.equal(_investorActions, accounts[9], 'wrong investorActions address'))
-        .then(() => fund.setInvestorActions(investorActions.address))
-        .then(() => done());
-    });
+    it('should modify investorActions address', done => fund.setInvestorActions(accounts[9])
+      .then(() => fund.investorActions.call())
+      .then(_investorActions => assert.equal(_investorActions, accounts[9], 'wrong investorActions address'))
+      .then(() => fund.setInvestorActions(investorActions.address))
+      .then(() => done()));
   });
 });
