@@ -218,7 +218,7 @@ contract Fund is DestructiblePausable {
 
   // [INVESTOR METHOD] Issue a subscription request by transferring ether into the fund
   // Delegates logic to the InvestorActions module
-  // usdEthBasis is in units of "wei": USDETH basis of 300 will be input as (= 300e18)
+  // usdEthBasis is expressed in USD cents.  For example, for a rate of 300.01, _usdEthBasis = 30001
   function requestSubscription(uint _usdEthBasis)
     whenNotPaused
     payable
