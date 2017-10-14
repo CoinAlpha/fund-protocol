@@ -52,14 +52,13 @@ contract DataFeed is usingOraclize, DestructibleModified {
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
     usdEth = _initialExchangeRate;
-    gasLimit = 300000;                                // Adjust this value depending on code length
+    gasLimit = 300000;              // Adjust this value depending on code length
+    gasPrice = 20000000000;         // 20 GWei, Oraclize default
 
     if (useOraclize) {
-      oraclize_setCustomGasPrice(20000000000 wei);    // 20 GWei, Oraclize default
+      oraclize_setCustomGasPrice(gasPrice);    
       oraclize_setProof(proofType_NONE);
       updateWithOraclize();
-    } else {
-      updateWithExchange(100);
     }
   }
 

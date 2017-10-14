@@ -13,7 +13,7 @@ owner = web3.eth.accounts[0]
 exchange = web3.eth.accounts[1]
 investor1 = web3.eth.accounts[2]
 investor2 = web3.eth.accounts[3]
-manager = web3.eth.accounts[4]
+manager = web3.eth.accounts[0]
 
 // (IF TESTNET) Unlock accounts
 web3.personal.unlockAccount(owner, '<INSERT PASSWORD>', 15000)
