@@ -142,20 +142,17 @@ contract Fund is DestructiblePausable {
     lastCalcDate = now;
     navPerShare = 10 ** decimals;
 
-    // Treat funds sent and exchange balance at fund inception as the manager's own investment
-    // These amounts are included in fee calculations since it's assumed that the fees are going to the
-    // manager anyway
-    uint managerInvestment = exchange.balance;
-    totalSupply = ethToShares(managerInvestment);
-    investors[manager].ethTotalAllocation = managerInvestment;
-    investors[manager].sharesOwned = totalSupply;
+    // Treat existing funds in the exchange relay and the portfolio as the manager's own investment
+    // Amounts are included in fee calculations since the fees are going to the manager anyway.
+    // TestRPC: dataFeed.value should be zero
+    // TestNet: ensure that the exchange account balance is zero or near zero
+    uint managerShares = ethToShares(exchange.balance) + dataFeed.value();
+    totalSupply = managerShares;
+    investors[manager].ethTotalAllocation = sharesToEth(managerShares);
+    investors[manager].sharesOwned = managerShares;
 
-    // Send any funds in  to exchange address
-    exchange.transfer(msg.value);
-
-    LogAllocationModification(manager, managerInvestment);
-    LogSubscription(manager, totalSupply, navPerShare, _managerUsdEthBasis);
-    LogTransferToExchange(managerInvestment);
+    LogAllocationModification(manager, sharesToEth(managerShares));
+    LogSubscription(manager, managerShares, navPerShare, _managerUsdEthBasis);
   }
 
   // [INVESTOR METHOD] Returns the variables contained in the Investor struct for a given address

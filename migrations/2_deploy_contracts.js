@@ -27,51 +27,89 @@ const PERFORM_FEE                   = 20;
 
 module.exports = function(deployer, network, accounts) {
 
-  const useOraclize = network == "ropsten" ? true : false;
-  const dataFeedReserve = network == "ropsten" ? ethToWei(DATA_FEED_GAS_RESERVE) : 0;
-  const navServiceUrl = dataFeedInfo[network].navServiceUrl;
-
   // Accounts
   const ADMINISTRATOR = accounts[0];
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
   
-  deployer.deploy(
-    DataFeed,
-    useOraclize,                      // _useOraclize
-    navServiceUrl,                    // _queryUrl
-    SECONDS_BETWEEN_QUERIES,          // _secondsBetweenQueries
-    USD_ETH_EXCHANGE_RATE * 100,      // _initialExchangeRate
-    EXCHANGE,                         // _exchange
-    { from: ADMINISTRATOR, value: dataFeedReserve }
-  ).then(() =>
+  // 
+  const useOraclize = network == "ropsten" ? true : false;
+  const dataFeedReserve = network == "ropsten" ? ethToWei(DATA_FEED_GAS_RESERVE) : 0;
+
+  if (network == "development") {
+    deployer.deploy(
+      DataFeed,
+      false,                            // _useOraclize
+      "[NOT USED]",                     // _queryUrl
+      SECONDS_BETWEEN_QUERIES,          // _secondsBetweenQueries
+      USD_ETH_EXCHANGE_RATE * 100,      // _initialExchangeRate
+      EXCHANGE,                         // _exchange
+      { from: ADMINISTRATOR, value: dataFeedReserve }
+    ).then(() =>
+      deployer.deploy(
+        NavCalculator, 
+        DataFeed.address,
+        { from: ADMINISTRATOR }
+      )).then(() =>
+      deployer.deploy(
+        InvestorActions,
+        DataFeed.address,
+        { from: ADMINISTRATOR }
+      )).then(() =>
+      deployer.deploy(
+        Fund,
+        MANAGER,                        // _manager
+        EXCHANGE,                       // _exchange
+        NavCalculator.address,          // _navCalculator
+        InvestorActions.address,        // _investorActions
+        DataFeed.address,               // _dataFeed
+        FUND_NAME,                      // _name
+        FUND_SYMBOL,                    // _symbol
+        FUND_DECIMALS,                  // _decimals
+        ethToWei(MIN_INITIAL_SUBSCRIPTION_ETH), // _minInitialSubscriptionEth
+        ethToWei(MIN_SUBSCRIPTION_ETH), // _minSubscriptionEth
+        MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
+        ADMIN_FEE * 100,                // _adminFeeBps
+        MGMT_FEE * 100,                 // _mgmtFeeBps
+        PERFORM_FEE * 100,              // _performFeeBps
+        MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
+        { from: ADMINISTRATOR }
+    ));
+  } else {
+
+    // Network-specific variables
+    const NAV_SERVICE_URL = dataFeedInfo[network].navServiceUrl;
+    const DATA_FEED_ADDRESS = dataFeedInfo[network].dataFeedAddress;
+ 
+    // assume that DataFeed has already been deployed and has an updated value() property
     deployer.deploy(
       NavCalculator, 
-      DataFeed.address,
+      DATA_FEED_ADDRESS,
       { from: ADMINISTRATOR }
-    )).then(() =>
-    deployer.deploy(
-      InvestorActions,
-      DataFeed.address,
-      { from: ADMINISTRATOR }
-    )).then(() =>
-    deployer.deploy(
-      Fund,
-      MANAGER,                        // _manager
-      EXCHANGE,                       // _exchange
-      NavCalculator.address,          // _navCalculator
-      InvestorActions.address,        // _investorActions
-      DataFeed.address,               // _dataFeed
-      FUND_NAME,                      // _name
-      FUND_SYMBOL,                    // _symbol
-      FUND_DECIMALS,                  // _decimals
-      ethToWei(MIN_INITIAL_SUBSCRIPTION_ETH), // _minInitialSubscriptionEth
-      ethToWei(MIN_SUBSCRIPTION_ETH), // _minSubscriptionEth
-      MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
-      ADMIN_FEE * 100,                // _adminFeeBps
-      MGMT_FEE * 100,                 // _mgmtFeeBps
-      PERFORM_FEE * 100,              // _performFeeBps
-      MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
-      { from: ADMINISTRATOR }
-  ));
+    ).then(() =>
+      deployer.deploy(
+        InvestorActions,
+        DATA_FEED_ADDRESS,
+        { from: ADMINISTRATOR }
+      )).then(() =>
+      deployer.deploy(
+        Fund,
+        MANAGER,                        // _manager
+        EXCHANGE,                       // _exchange
+        NavCalculator.address,          // _navCalculator
+        InvestorActions.address,        // _investorActions
+        DATA_FEED_ADDRESS,              // _dataFeed
+        FUND_NAME,                      // _name
+        FUND_SYMBOL,                    // _symbol
+        FUND_DECIMALS,                  // _decimals
+        ethToWei(MIN_INITIAL_SUBSCRIPTION_ETH), // _minInitialSubscriptionEth
+        ethToWei(MIN_SUBSCRIPTION_ETH), // _minSubscriptionEth
+        MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
+        ADMIN_FEE * 100,                // _adminFeeBps
+        MGMT_FEE * 100,                 // _mgmtFeeBps
+        PERFORM_FEE * 100,              // _performFeeBps
+        MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
+        { from: ADMINISTRATOR }
+    ));
+  }
 };
