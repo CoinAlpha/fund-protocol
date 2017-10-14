@@ -5,28 +5,33 @@ const allArtifacts = {
   OwnableModified: artifacts.require('./OwnableModified.sol'),
   Fund: artifacts.require('./Fund.sol'),
   NavCalculator: artifacts.require('./NavCalculator.sol'),
-  InvestorActions: artifacts.require('./InvestorActions.sol')
+  InvestorActions: artifacts.require('./InvestorActions.sol'),
+  DataFeed: artifacts.require('./DataFeed.sol'),
 };
 
 const constructors = {
   OwnableModified: owner => allArtifacts.OwnableModified.new({ from: owner }),
-  Fund: (owner, exchange, navCalculator, investorActions) =>
+  Fund: (owner, exchange, navCalculator, investorActions, dataFeed) =>
     allArtifacts.OwnableModified.new(
+      owner,                    // _manager
       exchange,                 // _exchange
       navCalculator,            // _navCalculator
-      investorActions,          // investorActions
+      investorActions,          // _investorActions
+      dataFeed,                 // _dataFeed
       'FundName',               // _name
       'SYMB',                   // _symbol
       4,                        // _decimals
       20e18,                    // _minInitialSubscriptionEth
       5e18,                     // _minSubscriptionEth
-      5e18,                     // _minRedemptionShares,
+      5000,                     // _minRedemptionShares,
+      100,                      // _adminFeeBps
       100,                      // _mgmtFeeBps
       0,                        // _performFeeBps
+      30000,                    // _managerUsdEthBasis
       { from: owner }
     ),
   NavCalculator: (owner, dataFeed) => allArtifacts.NavCalculator.new(dataFeed, { from: owner }),
-  InvestorActions: owner => allArtifacts.InvestorActions.new({ from: owner })
+  InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner })
 };
 
 contract('OwnableModified', (accounts) => {

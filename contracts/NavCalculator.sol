@@ -46,6 +46,7 @@ contract NavCalculator is DestructibleModified {
     uint grossAssetValue,
     uint netAssetValue,
     uint totalSupply,
+    uint adminFeeInPeriod,
     uint mgmtFeeInPeriod,
     uint performFeeInPeriod,
     uint lossPaybackInPeriod
@@ -110,7 +111,7 @@ contract NavCalculator is DestructibleModified {
       lossCarryforward = lossCarryforward.add(uint(-1 * netGainLossAfterPerformFee));
     }
 
-    LogNavCalculation(lastCalcDate, elapsedTime, grossAssetValue, netAssetValue, fund.totalSupply(), mgmtFee, performFee, lossPayback);
+    LogNavCalculation(lastCalcDate, elapsedTime, grossAssetValue, netAssetValue, fund.totalSupply(), adminFee, mgmtFee, performFee, lossPayback);
 
     return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
   }
@@ -147,7 +148,7 @@ contract NavCalculator is DestructibleModified {
     constant 
     returns (uint performFee)  
   {
-    return fund.performFeeBps().mul(_usdGain).div(10000);
+    return fund.performFeeBps().mul(_usdGain).div(10 ** fund.decimals());
   }
 
   // Converts shares to a corresponding amount of USD based on the current nav per share
@@ -156,7 +157,7 @@ contract NavCalculator is DestructibleModified {
     constant 
     returns (uint usd) 
   {
-    return _shares.mul(fund.navPerShare()).div(10000);
+    return _shares.mul(fund.navPerShare()).div(10 ** fund.decimals());
   }
 
   function ethToUsd(uint _eth) 
@@ -172,6 +173,6 @@ contract NavCalculator is DestructibleModified {
     internal 
     constant 
     returns (uint) {
-    return _balance.mul(10000).div(fund.totalSupply());
+    return _balance.mul(10 ** fund.decimals()).div(fund.totalSupply());
   }
 }

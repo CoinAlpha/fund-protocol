@@ -22,6 +22,7 @@ const gasToWei = gas => gas * 1e11;
 
 contract('Advanced', (accounts) => {
 
+  const OWNER = accounts[0];
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
 
@@ -31,8 +32,10 @@ contract('Advanced', (accounts) => {
   const MIN_INITIAL_SUBSCRIPTION = 5;
   const MIN_SUBSCRIPTION = 5;
   const MIN_REDEMPTION_SHARES = 1000;
-  const MGMT_FEE = 1;
+  const ADMIN_FEE = 1;
+  const MGMT_FEE = 0;
   const PERFORM_FEE = 20;
+  const USD_ETH_BASIS = 30000;
   const SECONDS_IN_YEAR = 31536000;
   
   const investors = accounts.slice(2);
@@ -41,24 +44,24 @@ contract('Advanced', (accounts) => {
   let dataFeed, fund, navCalculator, investorActions;
 
   before(() => DataFeed.new(
-    'nav-service',                          // _name
     false,                                  // _useOraclize
     '[NOT USED]',                           // _queryUrl
     300,                                    // _secondsBetweenQueries
     USD_ETH * 100,                          // _initialExchangeRate
     EXCHANGE,                               // _exchange
-    { from: MANAGER, value: 0 }
+    { from: OWNER, value: 0 }
   )
     .then(instance => {
       dataFeed = instance;
       return Promise.all([
-        NavCalculator.new(dataFeed.address, { from: MANAGER }),
-        InvestorActions.new(dataFeed.address, { from: MANAGER })
+        NavCalculator.new(dataFeed.address, { from: OWNER }),
+        InvestorActions.new(dataFeed.address, { from: OWNER })
       ]);
     })
     .then((contractInstances) => {
       [navCalculator, investorActions] = contractInstances;
       return Fund.new(
+        MANAGER,                            // _manager
         EXCHANGE,                           // _exchange
         navCalculator.address,              // _navCalculator
         investorActions.address,            // investorActions
@@ -69,9 +72,11 @@ contract('Advanced', (accounts) => {
         ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
         ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
         MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
+        ADMIN_FEE * 100,                    // _adminFeeBps
         MGMT_FEE * 100,                     // _mgmtFeeBps
         PERFORM_FEE * 100,                  // _performFeeBps
-        { from: MANAGER }
+        USD_ETH_BASIS,                      // _managerUsdEthBasis
+        { from: OWNER }
       );
     })
     .then((fundInstance) => {
@@ -82,8 +87,8 @@ contract('Advanced', (accounts) => {
       ]);
     })
     .then(() => Promise.all([
-      navCalculator.fundAddress.call({ from: MANAGER }),
-      investorActions.fundAddress.call({ from: MANAGER }),
+      navCalculator.fundAddress.call({ from: OWNER }),
+      investorActions.fundAddress.call({ from: OWNER }),
       dataFeed.updateWithExchange(100)
     ]))
     .then(() => {
@@ -93,7 +98,7 @@ contract('Advanced', (accounts) => {
 
   beforeEach((done) => {
     console.log('**** Resetting subscription ****');
-    Promise.all(investors.map(acct => fund.requestSubscription({ from: acct, value: ethToWei(MIN_INITIAL_SUBSCRIPTION) })))
+    Promise.all(investors.map(acct => fund.requestSubscription(USD_ETH_BASIS, { from: acct, value: ethToWei(MIN_INITIAL_SUBSCRIPTION) })))
       .then(() => {
         // Gas for subscribing a single investor ~=81800
         return Promise.all(investors.map(acct => fund.getInvestor(acct)));

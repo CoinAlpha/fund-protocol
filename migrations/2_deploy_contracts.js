@@ -17,7 +17,6 @@ const DATA_FEED_GAS_RESERVE         = 1;
 const FUND_NAME                     = "CoinAlpha Falcon";
 const FUND_SYMBOL                   = "FALC";
 const FUND_DECIMALS                 = 4;
-const MANAGER_INVESTMENT            = 0;
 const MANAGER_USD_ETH_BASIS         = 300;
 const MIN_INITIAL_SUBSCRIPTION_ETH  = 20;
 const MIN_SUBSCRIPTION_ETH          = 5;
@@ -32,28 +31,34 @@ module.exports = function(deployer, network, accounts) {
   const dataFeedReserve = network == "ropsten" ? ethToWei(DATA_FEED_GAS_RESERVE) : 0;
   const navServiceUrl = dataFeedInfo[network].navServiceUrl;
 
+  // Accounts
+  const ADMINISTRATOR = accounts[0];
+  const MANAGER = accounts[0];
+  const EXCHANGE = accounts[1];
+  
   deployer.deploy(
     DataFeed,
-    "nav-service",                    // _name
     useOraclize,                      // _useOraclize
     navServiceUrl,                    // _queryUrl
     SECONDS_BETWEEN_QUERIES,          // _secondsBetweenQueries
     USD_ETH_EXCHANGE_RATE * 100,      // _initialExchangeRate
-    accounts[0],                      // _manager
-    accounts[1],                      // _exchange
-    {from: accounts[0], value: dataFeedReserve}
+    EXCHANGE,                         // _exchange
+    { from: ADMINISTRATOR, value: dataFeedReserve }
   ).then(() =>
     deployer.deploy(
       NavCalculator, 
-      DataFeed.address
-  )).then(() =>
+      DataFeed.address,
+      { from: ADMINISTRATOR }
+    )).then(() =>
     deployer.deploy(
       InvestorActions,
-      DataFeed.address
-  )).then(() =>
+      DataFeed.address,
+      { from: ADMINISTRATOR }
+    )).then(() =>
     deployer.deploy(
       Fund,
-      accounts[1],                    // _exchange
+      MANAGER,                        // _manager
+      EXCHANGE,                       // _exchange
       NavCalculator.address,          // _navCalculator
       InvestorActions.address,        // _investorActions
       DataFeed.address,               // _dataFeed
@@ -63,9 +68,10 @@ module.exports = function(deployer, network, accounts) {
       ethToWei(MIN_INITIAL_SUBSCRIPTION_ETH), // _minInitialSubscriptionEth
       ethToWei(MIN_SUBSCRIPTION_ETH), // _minSubscriptionEth
       MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
+      ADMIN_FEE * 100,                // _adminFeeBps
       MGMT_FEE * 100,                 // _mgmtFeeBps
       PERFORM_FEE * 100,              // _performFeeBps
       MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
-      {from: accounts[0], value: MANAGER_INVESTMENT}
+      { from: ADMINISTRATOR }
   ));
 };

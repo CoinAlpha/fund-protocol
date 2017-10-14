@@ -14,13 +14,14 @@ contract('NavCalculator', (accounts) => {
   let MANAGER = accounts[0];
   let EXCHANGE = accounts[1];
   const GAS_AMT = 500000;
-  const MGMT_FEE_BPS = 100;
+  const MGMT_FEE_BPS = 0;
+  const ADMIN_FEE_BPS = 100;
   const SECONDS_IN_YEAR = 31536000;
   const PERFORM_FEE_BPS = 2000;
   const TIMEDIFF = 60*60*24*30;
 
   let fund, calculator, dataFeed;
-  let totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal, navPerShare, accumulatedMgmtFees, accumulatedPerformFees, lossCarryforward, usdEth;
+  let totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal, navPerShare, accumulatedMgmtFees, accumulatedAdminFees, lossCarryforward, usdEth;
 
   // Helpers
   const getBalancePromise = address => web3.eth.getBalancePromise(address);
@@ -43,10 +44,10 @@ contract('NavCalculator', (accounts) => {
     fund.navPerShare.call(),
     fund.lossCarryforward.call(),
     fund.accumulatedMgmtFees.call(),
-    fund.accumulatedPerformFees.call()
+    fund.accumulatedAdminFees.call()
   ]);
 
-  const checkRoughEqual = (vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees) => {
+  const checkRoughEqual = (vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees) => {
     [ansNAV, ansLCF, ansAMF, ansAPF] = vals;
     // console.log('navPerShare', parseInt(navPerShare));
     // console.log('ansNAV', ansNAV);
@@ -58,11 +59,11 @@ contract('NavCalculator', (accounts) => {
     if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
     else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
 
-    console.log(parseInt(accumulatedPerformFees));
+    console.log(parseInt(accumulatedAdminFees));
     console.log(ansAPF);
 
-    if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedPerformFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedPerformFees');
-    else assert.equal(parseInt(accumulatedPerformFees), 0, 'incorrect accumulatedPerformFees');
+    if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedAdminFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedAdminFees');
+    else assert.equal(parseInt(accumulatedAdminFees), 0, 'incorrect accumulatedAdminFees');
   };
 
   const calc = (elapsedTime) => {
@@ -76,10 +77,11 @@ contract('NavCalculator', (accounts) => {
           let nav = ts * navPerShare / 10000;
           // console.log('nav', nav);
           let mgmtFee = Math.trunc(navPerShare * MGMT_FEE_BPS / 10000 * elapsedTime / SECONDS_IN_YEAR * ts / 10000);
+          let adminFee = Math.trunc(navPerShare * ADMIN_FEE_BPS / 10000 * elapsedTime / SECONDS_IN_YEAR * ts / 10000);
           // console.log('mgmtFee', mgmtFee);
-          let gpvlessFees = gav - accumulatedMgmtFees - accumulatedPerformFees;
+          let gpvlessFees = gav - accumulatedMgmtFees - accumulatedAdminFees;
           // console.log('gpvlessFees', gpvlessFees);
-          let gainLoss = gpvlessFees - nav - mgmtFee;
+          let gainLoss = gpvlessFees - nav - mgmtFee - adminFee;
           // console.log('gainLoss', gainLoss);
           let lossPayback = gainLoss > 0 ? Math.min(gainLoss, lossCarryforward) : 0;
           // console.log('lossPayback', lossPayback);
@@ -94,9 +96,9 @@ contract('NavCalculator', (accounts) => {
 
           navPerShare = Math.trunc(nav * 10000 / totalSupply);
           lossCarryforward -= lossPayback;
-          accumulatedMgmtFees += mgmtFee;
-          accumulatedPerformFees += performFee;
-          resolve([navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees]);
+          accumulatedMgmtFees += mgmtFee + performFee;
+          accumulatedAdminFees += adminFee;
+          resolve([navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees]);
         })
         .catch(reject);
     });
@@ -114,14 +116,14 @@ contract('NavCalculator', (accounts) => {
           fund.totalEthPendingSubscription(),
           fund.totalEthPendingWithdrawal(),
           fund.accumulatedMgmtFees(),
-          fund.accumulatedPerformFees(),
+          fund.accumulatedAdminFees(),
           fund.lossCarryforward(),
           dataFeed.usdEth(),
         ]);
       })
       .then((_vals) => {
         [totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal,
-          accumulatedMgmtFees, accumulatedPerformFees, lossCarryforward, usdEth] = _vals.map(parseInt);
+          accumulatedMgmtFees, accumulatedAdminFees, lossCarryforward, usdEth] = _vals.map(parseInt);
         totalEthPendingSubscription = totalEthPendingSubscription || 0;
         return fund.navPerShare();
       })
@@ -152,7 +154,7 @@ contract('NavCalculator', (accounts) => {
   });
 
   it('should calculate the navPerShare correctly (base case)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
+    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
     fund.lastCalcDate.call()
       .then(_date => date1 = _date)
@@ -160,19 +162,19 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
+        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
       })
       .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
         done();
       })
       .catch(console.error);
   });
 
   it('should calculate the navPerShare correctly (portfolio goes down)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
+    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
     Promise.resolve(changeExchangeValue(75))
       .then(() => fund.lastCalcDate.call())
@@ -181,12 +183,12 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
+        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
       })
       .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
         done();
       })
       .catch(console.error);
@@ -194,7 +196,7 @@ contract('NavCalculator', (accounts) => {
 
 
   it('should calculate the navPerShare correctly (portfolio recovers from loss)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
+    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
     Promise.resolve(changeExchangeValue(150))
       .then(() => fund.lastCalcDate.call())
@@ -203,19 +205,19 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
+        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
       })
       .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
         done();
       })
       .catch(console.error);
   });
 
   it('should calculate the navPerShare correctly (portfolio loses its gains, goes down 10x)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
+    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
     Promise.resolve(changeExchangeValue(15))
       .then(() => fund.lastCalcDate.call())
@@ -224,19 +226,19 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
+        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
       })
       .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
         done();
       })
       .catch(console.error);
   });
 
   it('should calculate the navPerShare correctly (portfolio goes up 50x)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
+    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
     Promise.resolve(changeExchangeValue(5000))
       .then(() => fund.lastCalcDate.call())
@@ -245,12 +247,12 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
+        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
       })
       .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
         done();
       })
       .catch(console.error);
@@ -258,7 +260,7 @@ contract('NavCalculator', (accounts) => {
 
   // Error: VM Exception while processing transaction: invalid opcode
   // it('should calculate the navPerShare correctly (portfolio goes down 10x)', (done) => {
-  //   let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees;
+  //   let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
   //   Promise.resolve(changeExchangeValue(10))
   //     .then(() => fund.lastCalcDate.call())
@@ -267,12 +269,12 @@ contract('NavCalculator', (accounts) => {
   //     .then(() => fund.calcNav())
   //     .then(() => retrieveFundParams())
   //     .then((_values) => {
-  //       [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees] = _values;
+  //       [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
   //       assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
   //       return calc(date2 - date1);
   //     })
   //     .then((_vals) => {
-  //       checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+  //       checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
   //       done();
   //     })
   //     .catch(console.error);

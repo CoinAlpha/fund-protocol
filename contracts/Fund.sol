@@ -26,7 +26,7 @@ contract Fund is DestructiblePausable {
   // Constants set at contract inception
   string  public name;                         // fund name
   string  public symbol;                       // Ethereum token symbol
-  uint8   public decimals;                     // number of decimals used to display number of tokens owned
+  uint    public decimals;                     // number of decimals used to display navPerShare
   uint    public minInitialSubscriptionEth;    // minimum amount of ether that a new investor can subscribe
   uint    public minSubscriptionEth;           // minimum amount of ether that an existing investor can subscribe
   uint    public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
@@ -103,13 +103,14 @@ contract Fund is DestructiblePausable {
   * This function is payable and treats any ether sent as part of the manager's own investment in the fund.
   */
   function Fund(
+    address _manager,
     address _exchange,
     address _navCalculator,
     address _investorActions,
     address _dataFeed,
     string  _name,
     string  _symbol,
-    uint8   _decimals,
+    uint    _decimals,
     uint    _minInitialSubscriptionEth,
     uint    _minSubscriptionEth,
     uint    _minRedemptionShares,
@@ -118,7 +119,6 @@ contract Fund is DestructiblePausable {
     uint    _performFeeBps,
     uint    _managerUsdEthBasis
   )
-    payable
   {
     // Constants
     name = _name;
@@ -132,6 +132,7 @@ contract Fund is DestructiblePausable {
     performFeeBps = _performFeeBps;
 
     // Set the addresses of other wallets/contracts with which this contract interacts
+    manager = _manager;
     exchange = _exchange;
     navCalculator = NavCalculator(_navCalculator);
     investorActions = InvestorActions(_investorActions);
@@ -139,12 +140,12 @@ contract Fund is DestructiblePausable {
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
-    navPerShare = 10000;
+    navPerShare = 10 ** decimals;
 
     // Treat funds sent and exchange balance at fund inception as the manager's own investment
     // These amounts are included in fee calculations since it's assumed that the fees are going to the
     // manager anyway
-    uint managerInvestment = exchange.balance.add(msg.value);
+    uint managerInvestment = exchange.balance;
     totalSupply = ethToShares(managerInvestment);
     investors[manager].ethTotalAllocation = managerInvestment;
     investors[manager].sharesOwned = totalSupply;
@@ -212,8 +213,9 @@ contract Fund is DestructiblePausable {
 
   // Non-payable fallback function so that any attempt to send ETH directly to the contract is thrown
   function ()
-    whenNotPaused
-  { }
+    payable
+    onlyFromExchange
+  { remitFromExchange(); }
 
   // [INVESTOR METHOD] Issue a subscription request by transferring ether into the fund
   // Delegates logic to the InvestorActions module
@@ -260,6 +262,7 @@ contract Fund is DestructiblePausable {
 
     exchange.transfer(transferAmount);
     LogSubscription(_addr, shares, navPerShare, dataFeed.usdEth());
+    LogTransferToExchange(transferAmount);
     return true;
   }
   function subscribeInvestor(address _addr)
@@ -592,7 +595,7 @@ contract Fund is DestructiblePausable {
     constant
     returns (uint shares)
   {
-    return ethToUsd(_eth).mul(10000).div(navPerShare);
+    return ethToUsd(_eth).mul(10 ** decimals).div(navPerShare);
   }
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
@@ -600,7 +603,7 @@ contract Fund is DestructiblePausable {
     constant
     returns (uint ethAmount)
   {
-    return usdToEth(_shares.mul(navPerShare).div(10000));
+    return usdToEth(_shares.mul(navPerShare).div(10 ** decimals));
   }
 
   function usdToEth(uint _usd) 
