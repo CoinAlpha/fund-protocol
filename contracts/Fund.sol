@@ -5,7 +5,6 @@ import "./InvestorActions.sol";
 import "./DataFeed.sol";
 import "./math/SafeMath.sol";
 import "./zeppelin/DestructiblePausable.sol";
-import './zeppelin/ERC20.sol';
 
 /**
  * @title Fund
@@ -21,32 +20,34 @@ import './zeppelin/ERC20.sol';
  * in traditional funds, while maximizing transparency and mitigating fraud risk for investors.
  */
 
-contract Fund is ERC20, DestructiblePausable {
+contract Fund is DestructiblePausable {
   using SafeMath for uint;
 
   // Constants set at contract inception
   string  public name;                         // fund name
   string  public symbol;                       // Ethereum token symbol
-  uint8   public decimals;                     // number of decimals used to display number of tokens owned
+  uint    public decimals;                     // number of decimals used to display navPerShare
   uint    public minInitialSubscriptionEth;    // minimum amount of ether that a new investor can subscribe
   uint    public minSubscriptionEth;           // minimum amount of ether that an existing investor can subscribe
   uint    public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
-  uint    public mgmtFeeBps;                   // annual base management fee, in basis points
+  uint    public adminFeeBps;                  // annual administrative fee, if any, in basis points
+  uint    public mgmtFeeBps;                   // annual base management fee, if any, in basis points
   uint    public performFeeBps;                // performance management fee earned on gains, in basis points
+  address public manager;                      // address of the manager account allowed to withdraw base and performance management fees
   address public exchange;                     // address of the exchange account where the manager conducts trading.
 
   // Variables that are updated after each call to the calcNav function
   uint    public lastCalcDate;
   uint    public navPerShare;
   uint    public accumulatedMgmtFees;
-  uint    public accumulatedPerformFees;
+  uint    public accumulatedAdminFees;
   uint    public lossCarryforward;
 
   // Fund Balances
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
   uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
   uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
-  // uint public totalSupply;                    // (ERC20 variable) total number of shares outstanding
+  uint    public totalSupply;                    // total number of shares outstanding
 
   // Modules: where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
   NavCalculator   public navCalculator;         // calculating net asset value
@@ -66,7 +67,7 @@ contract Fund is ERC20, DestructiblePausable {
 
   // Events
   event LogAllocationModification(address indexed investor, uint eth);
-  event LogSubscriptionRequest(address indexed investor, uint eth);
+  event LogSubscriptionRequest(address indexed investor, uint eth, uint usdEthBasis);
   event LogSubscriptionCancellation(address indexed investor);
   event LogSubscription(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogRedemptionRequest(address indexed investor, uint shares);
@@ -74,8 +75,9 @@ contract Fund is ERC20, DestructiblePausable {
   event LogRedemption(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogLiquidation(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogWithdrawal(address indexed investor, uint eth);
-  event LogWithdrawalForInvestor(address indexed investor, uint eth);
-  event LogNavSnapshot(uint indexed timestamp, uint navPerShare, uint lossCarryforward, uint accumulatedMgmtFees, uint accumulatedPerformFees);
+  event LogNavSnapshot(uint indexed timestamp, uint navPerShare, uint lossCarryforward, uint accumulatedMgmtFees, uint accumulatedAdminFees);
+  event LogAdminFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
+  event LogManagerAddressChanged(address oldAddress, address newAddress);
   event LogExchangeAddressChanged(address oldAddress, address newAddress);
   event LogNavCalculatorModuleChanged(address oldAddress, address newAddress);
   event LogInvestorActionsModuleChanged(address oldAddress, address newAddress);
@@ -83,10 +85,16 @@ contract Fund is ERC20, DestructiblePausable {
   event LogTransferToExchange(uint amount);
   event LogTransferFromExchange(uint amount);
   event LogManagementFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
+  event LogAdminFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
 
   // Modifiers
   modifier onlyFromExchange {
     require(msg.sender == exchange);
+    _;
+  }
+
+  modifier onlyManager {
+    require(msg.sender == manager);
     _;
   }
 
@@ -95,20 +103,22 @@ contract Fund is ERC20, DestructiblePausable {
   * This function is payable and treats any ether sent as part of the manager's own investment in the fund.
   */
   function Fund(
+    address _manager,
     address _exchange,
     address _navCalculator,
     address _investorActions,
     address _dataFeed,
     string  _name,
     string  _symbol,
-    uint8   _decimals,
+    uint    _decimals,
     uint    _minInitialSubscriptionEth,
     uint    _minSubscriptionEth,
     uint    _minRedemptionShares,
+    uint    _adminFeeBps,
     uint    _mgmtFeeBps,
-    uint    _performFeeBps
+    uint    _performFeeBps,
+    uint    _managerUsdEthBasis
   )
-    payable
   {
     // Constants
     name = _name;
@@ -117,10 +127,12 @@ contract Fund is ERC20, DestructiblePausable {
     minSubscriptionEth = _minSubscriptionEth;
     minInitialSubscriptionEth = _minInitialSubscriptionEth;
     minRedemptionShares = _minRedemptionShares;
+    adminFeeBps = _adminFeeBps;
     mgmtFeeBps = _mgmtFeeBps;
     performFeeBps = _performFeeBps;
 
     // Set the addresses of other wallets/contracts with which this contract interacts
+    manager = _manager;
     exchange = _exchange;
     navCalculator = NavCalculator(_navCalculator);
     investorActions = InvestorActions(_investorActions);
@@ -128,21 +140,19 @@ contract Fund is ERC20, DestructiblePausable {
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
-    navPerShare = 10000;
-    lossCarryforward = 0;
-    accumulatedMgmtFees = 0;
-    accumulatedPerformFees = 0;
+    navPerShare = 10 ** decimals;
 
-    // Treat funds sent and exchange balance at fund inception as the manager's own investment
-    // These amounts are included in fee calculations since it's assumed that the fees are going to the
-    // manager anyway
-    uint managerInvestment = exchange.balance.add(msg.value);
-    totalSupply = ethToShares(managerInvestment);
-    balances[msg.sender] = ethToShares(managerInvestment);
-    LogTransferToExchange(managerInvestment);
+    // Treat existing funds in the exchange relay and the portfolio as the manager's own investment
+    // Amounts are included in fee calculations since the fees are going to the manager anyway.
+    // TestRPC: dataFeed.value should be zero
+    // TestNet: ensure that the exchange account balance is zero or near zero
+    uint managerShares = ethToShares(exchange.balance) + dataFeed.value();
+    totalSupply = managerShares;
+    investors[manager].ethTotalAllocation = sharesToEth(managerShares);
+    investors[manager].sharesOwned = managerShares;
 
-    // Send any funds in  to exchange address
-    exchange.transfer(msg.value);
+    LogAllocationModification(manager, sharesToEth(managerShares));
+    LogSubscription(manager, managerShares, navPerShare, _managerUsdEthBasis);
   }
 
   // [INVESTOR METHOD] Returns the variables contained in the Investor struct for a given address
@@ -199,15 +209,16 @@ contract Fund is ERC20, DestructiblePausable {
     return investorActions.getAvailableAllocation(_addr);
   }
 
-  // Fallback function which calls the requestSubscription function.
+  // Non-payable fallback function so that any attempt to send ETH directly to the contract is thrown
   function ()
-    whenNotPaused
     payable
-  { requestSubscription(); }
+    onlyFromExchange
+  { remitFromExchange(); }
 
   // [INVESTOR METHOD] Issue a subscription request by transferring ether into the fund
   // Delegates logic to the InvestorActions module
-  function requestSubscription()
+  // usdEthBasis is expressed in USD cents.  For example, for a rate of 300.01, _usdEthBasis = 30001
+  function requestSubscription(uint _usdEthBasis)
     whenNotPaused
     payable
     returns (bool success)
@@ -216,7 +227,7 @@ contract Fund is ERC20, DestructiblePausable {
     investors[msg.sender].ethPendingSubscription = _ethPendingSubscription;
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
-    LogSubscriptionRequest(msg.sender, msg.value);
+    LogSubscriptionRequest(msg.sender, msg.value, _usdEthBasis);
     return true;
   }
 
@@ -244,12 +255,13 @@ contract Fund is ERC20, DestructiblePausable {
   {
     var (ethPendingSubscription, sharesOwned, shares, transferAmount, _totalSupply, _totalEthPendingSubscription) = investorActions.subscribe(_addr);
     investors[_addr].ethPendingSubscription = ethPendingSubscription;
-    investors[_addr].sharesOwned = balances[_addr] = sharesOwned;
+    investors[_addr].sharesOwned = sharesOwned;
     totalSupply = _totalSupply;
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
     exchange.transfer(transferAmount);
     LogSubscription(_addr, shares, navPerShare, dataFeed.usdEth());
+    LogTransferToExchange(transferAmount);
     return true;
   }
   function subscribeInvestor(address _addr)
@@ -321,7 +333,7 @@ contract Fund is ERC20, DestructiblePausable {
     returns (bool success)
   {
     var (sharesOwned, sharesPendingRedemption, ethPendingWithdrawal, shares, _totalSupply, _totalSharesPendingRedemption, _totalEthPendingWithdrawal) = investorActions.redeem(_addr);
-    investors[_addr].sharesOwned = balances[_addr] = sharesOwned;
+    investors[_addr].sharesOwned = sharesOwned;
     investors[_addr].sharesPendingRedemption = sharesPendingRedemption;
     investors[_addr].ethPendingWithdrawal = ethPendingWithdrawal;
     totalSupply = _totalSupply;
@@ -369,7 +381,7 @@ contract Fund is ERC20, DestructiblePausable {
 
     investors[_addr].ethTotalAllocation = 0;
     investors[_addr].ethPendingSubscription = 0;
-    investors[_addr].sharesOwned = balances[_addr] = 0;
+    investors[_addr].sharesOwned = 0;
     investors[_addr].sharesPendingRedemption = 0;
     investors[_addr].ethPendingWithdrawal = ethPendingWithdrawal;
     totalEthPendingSubscription = _totalEthPendingSubscription;
@@ -433,43 +445,52 @@ contract Fund is ERC20, DestructiblePausable {
       _navPerShare,
       _lossCarryforward,
       _accumulatedMgmtFees,
-      _accumulatedPerformFees
+      _accumulatedAdminFees
     ) = navCalculator.calculate();
 
     lastCalcDate = _lastCalcDate;
     navPerShare = _navPerShare;
     lossCarryforward = _lossCarryforward;
     accumulatedMgmtFees = _accumulatedMgmtFees;
-    accumulatedPerformFees = _accumulatedPerformFees;
+    accumulatedAdminFees = _accumulatedAdminFees;
 
-    LogNavSnapshot(lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+    LogNavSnapshot(lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
     return true;
   }
 
   // ********* FEES *********
 
-  function getTotalFees()
-    constant
-    returns (uint)
+  // Withdraw management fees from the contract
+  function withdrawMgmtFees()
+    whenNotPaused
+    onlyManager
+    returns (bool success)
   {
-    return accumulatedMgmtFees + accumulatedPerformFees;
+    uint ethWithdrawal = usdToEth(accumulatedMgmtFees);
+    require(ethWithdrawal <= getBalance());
+
+    address payee = msg.sender;
+
+    accumulatedMgmtFees = 0;
+    payee.transfer(ethWithdrawal);
+    LogManagementFeeWithdrawal(ethWithdrawal, dataFeed.usdEth());
+    return true;
   }
 
   // Withdraw management fees from the contract
-  function withdrawFees()
+  function withdrawAdminFees()
+    whenNotPaused
     onlyOwner
     returns (bool success)
   {
-    uint totalFees = usdToEth(accumulatedMgmtFees + accumulatedPerformFees);
-    require(totalFees <= getBalance());
+    uint ethWithdrawal = usdToEth(accumulatedAdminFees);
+    require(ethWithdrawal <= getBalance());
 
     address payee = msg.sender;
-    uint ethPendingWithdrawal = totalFees;
 
     accumulatedMgmtFees = 0;
-    accumulatedPerformFees = 0;
-    payee.transfer(ethPendingWithdrawal);
-    LogManagementFeeWithdrawal(totalFees, dataFeed.usdEth());
+    payee.transfer(ethWithdrawal);
+    LogAdminFeeWithdrawal(ethWithdrawal, dataFeed.usdEth());
     return true;
   }
 
@@ -482,6 +503,19 @@ contract Fund is ERC20, DestructiblePausable {
     returns (address[])
   {
     return investorAddresses;
+  }
+
+  // Update the address of the manager account
+  function setManager(address _addr)
+    whenNotPaused
+    onlyManager
+    returns (bool success)
+  {
+    require(_addr != address(0));
+    address old = manager;
+    manager = _addr;
+    LogManagerAddressChanged(old, _addr);
+    return true;
   }
 
   // Update the address of the exchange account
@@ -560,7 +594,7 @@ contract Fund is ERC20, DestructiblePausable {
     constant
     returns (uint shares)
   {
-    return ethToUsd(_eth).mul(10000).div(navPerShare);
+    return ethToUsd(_eth).mul(10 ** decimals).div(navPerShare);
   }
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
@@ -568,18 +602,20 @@ contract Fund is ERC20, DestructiblePausable {
     constant
     returns (uint ethAmount)
   {
-    return usdToEth(_shares.mul(navPerShare).div(10000));
+    return usdToEth(_shares.mul(navPerShare).div(10 ** decimals));
   }
 
   function usdToEth(uint _usd) 
     constant 
-    returns (uint eth) {
+    returns (uint eth)
+  {
     return _usd.mul(1e20).div(dataFeed.usdEth());
   }
 
   function ethToUsd(uint _eth) 
     constant 
-    returns (uint usd) {
+    returns (uint usd)
+  {
     return _eth.mul(dataFeed.usdEth()).div(1e20);
   }
 
@@ -590,85 +626,4 @@ contract Fund is ERC20, DestructiblePausable {
   {
     return this.balance.sub(totalEthPendingSubscription).sub(totalEthPendingWithdrawal);
   }
-
-  // ********* ERC20 METHODS *********
-  // These ERC20 methods are based on the OpenZeppelin StandardToken library:
-  // https://github.com/OpenZeppelin/zeppelin-solidity/blob/master/contracts/token/StandardToken.sol
-  // They are have modified so that:
-  // 1) transfer and transferFrom check that the recipient is eligible based on their allocation
-  // 2) the sharesOwned variable in the Investor struct is identical to balances
-
-  mapping(address => uint) balances;
-  mapping (address => mapping (address => uint)) allowed;
-
-  function transfer(address _to, uint _value)
-    whenNotPaused
-    returns (bool success)
-  {
-    require(_to != address(0));
-    require(_value <= balances[msg.sender]);
-    require(_value <= investors[msg.sender].sharesOwned);
-    require(_value <= ethToShares(investorActions.getAvailableAllocation(_to)));
-    investors[msg.sender].sharesOwned = investors[msg.sender].sharesOwned.sub(_value);
-    balances[msg.sender] = balances[msg.sender].sub(_value);
-    investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
-    balances[_to] = balances[_to].add(_value);
-    Transfer(msg.sender, _to, _value);
-    return true;
-  }
-
-  function transferFrom(address _from, address _to, uint _value)
-    whenNotPaused
-    returns (bool)
-  {
-    require(_to != address(0));
-    require(_value <= allowed[_from][msg.sender]);
-    require(_value <= balances[_from]);
-    require(_value <= investors[_from].sharesOwned);
-    require(_value <= ethToShares(investorActions.getAvailableAllocation(_to)));
-    
-    uint _allowance = allowed[_from][msg.sender];
-
-    // Check is not needed because sub(_allowance, _value) will already throw if this condition is not met
-    // require (_value <= _allowance);
-
-    investors[_to].sharesOwned = investors[_to].sharesOwned.add(_value);
-    balances[_to] = balances[_to].add(_value);
-    investors[_from].sharesOwned = investors[_from].sharesOwned.sub(_value);
-    balances[_from] = balances[_from].sub(_value);
-    allowed[_from][msg.sender] = _allowance.sub(_value);
-    Transfer(_from, _to, _value);
-    return true;
-  }
-
-  function approve(address _spender, uint256 _value)
-    whenNotPaused
-    returns (bool success)
-  {
-
-    // To change the approve amount you first have to reduce the addresses`
-    //  allowance to zero by calling `approve(_spender, 0)` if it is not
-    //  already 0 to mitigate the race condition described here:
-    //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-    require((_value == 0) || (allowed[msg.sender][_spender] == 0));
-
-    allowed[msg.sender][_spender] = _value;
-    Approval(msg.sender, _spender, _value);
-    return true;
-  }
-
-  function balanceOf(address _owner)
-    constant
-    returns (uint256 balance)
-  {
-    return balances[_owner];
-  }
-
-  function allowance(address _owner, address _spender)
-    constant
-    returns (uint256 remaining)
-  {
-    return allowed[_owner][_spender];
-  }
-
 }

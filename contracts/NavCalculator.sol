@@ -33,9 +33,7 @@ contract NavCalculator is DestructibleModified {
     _;
   }
 
-  function NavCalculator(
-    address _dataFeed
-  )
+  function NavCalculator(address _dataFeed)
   {
     dataFeed = DataFeed(_dataFeed);
   }
@@ -46,19 +44,24 @@ contract NavCalculator is DestructibleModified {
     uint grossAssetValue,
     uint netAssetValue,
     uint totalSupply,
+    uint adminFeeInPeriod,
     uint mgmtFeeInPeriod,
     uint performFeeInPeriod,
     uint lossPaybackInPeriod
   );
 
   // Calculate nav and allocate fees
-  function calculate() onlyFund constant returns (
-    uint lastCalcDate,
-    uint navPerShare,
-    uint lossCarryforward,
-    uint accumulatedMgmtFees,
-    uint accumulatedPerformFees
-  ) {
+  function calculate()
+    onlyFund
+    constant
+    returns (
+      uint lastCalcDate,
+      uint navPerShare,
+      uint lossCarryforward,
+      uint accumulatedMgmtFees,
+      uint accumulatedAdminFees
+    )
+  {
 
     // Set the initial value of the variables below from the last NAV calculation
     uint netAssetValue = sharesToUsd(fund.totalSupply());
@@ -71,13 +74,14 @@ contract NavCalculator is DestructibleModified {
     uint grossAssetValue = dataFeed.value().add(ethToUsd(fund.getBalance()));
 
     // Removes the accumulated management fees from grossAssetValue
-    uint gpvlessFees = grossAssetValue.sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedPerformFees());
+    uint gpvLessFees = grossAssetValue.sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedAdminFees());
 
     // Calculates the base management fee accrued since the last NAV calculation
-    uint mgmtFee = getMgmtFee(elapsedTime);
+    uint mgmtFee = getAnnualFee(elapsedTime, fund.mgmtFeeBps());
+    uint adminFee = getAnnualFee(elapsedTime, fund.adminFeeBps());
 
     // Calculate the gain/loss based on the new grossAssetValue and the old netAssetValue
-    int gainLoss = int(gpvlessFees) - int(netAssetValue) - int(mgmtFee);
+    int gainLoss = int(gpvLessFees) - int(netAssetValue) - int(mgmtFee) - int(adminFee);
 
     // If there's a loss carried forward, apply any gains to it before earning any performance fees
     uint lossPayback = gainLoss > 0
@@ -93,50 +97,55 @@ contract NavCalculator is DestructibleModified {
 
     // Apply the net gain/losses to the old netAssetValue
     if (netGainLossAfterPerformFee > 0) {
-        netAssetValue = netAssetValue.add(uint(netGainLossAfterPerformFee));
+      netAssetValue = netAssetValue.add(uint(netGainLossAfterPerformFee));
     } else {
-        netAssetValue = netAssetValue.sub(uint(-1 * netGainLossAfterPerformFee));
+      netAssetValue = netAssetValue.sub(uint(-1 * netGainLossAfterPerformFee));
     }
 
     // Update the state variables and return them to the fund contract
     lastCalcDate = now;
     navPerShare = toNavPerShare(netAssetValue);
-    accumulatedMgmtFees = fund.accumulatedMgmtFees().add(mgmtFee);
-    accumulatedPerformFees = fund.accumulatedPerformFees().add(performFee);
+    accumulatedMgmtFees = fund.accumulatedMgmtFees().add(mgmtFee).add(performFee);
+    accumulatedAdminFees = fund.accumulatedAdminFees().add(adminFee);
 
     lossCarryforward = lossCarryforward.sub(lossPayback);
     if (netGainLossAfterPerformFee < 0) {
       lossCarryforward = lossCarryforward.add(uint(-1 * netGainLossAfterPerformFee));
     }
 
-    LogNavCalculation(lastCalcDate, elapsedTime, grossAssetValue, netAssetValue, fund.totalSupply(), mgmtFee, performFee, lossPayback);
+    LogNavCalculation(lastCalcDate, elapsedTime, grossAssetValue, netAssetValue, fund.totalSupply(), adminFee, mgmtFee, performFee, lossPayback);
 
-    return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedPerformFees);
+    return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
   }
 
   // ********* ADMIN *********
 
   // Update the address of the Fund contract
-  function setFund(address _address) onlyOwner {
+  function setFund(address _address)
+    onlyOwner
+  {
     fund = Fund(_address);
     fundAddress = _address;
   }
 
   // Update the address of the data feed contract
-  function setDataFeed(address _address) onlyOwner {
+  function setDataFeed(address _address)
+    onlyOwner
+  {
     dataFeed = DataFeed(_address);
   }
 
   // ********* HELPERS *********
 
-  // Returns the management fee accumulated given time elapsed
-  // Equivalent to: annual fee percentage * total portfolio value in ether * (seconds elapsed / seconds in a year)
-  function getMgmtFee(uint elapsedTime) 
+  // Returns the fee amount associated with an annual fee accumulated given time elapsed and the annual fee rate
+  // Equivalent to: annual fee percentage * fund totalSupply * (seconds elapsed / seconds in a year)
+  // Has the same denomination as the fund totalSupply
+  function getAnnualFee(uint elapsedTime, uint annualFeeBps) 
     internal 
     constant 
-    returns (uint mgmtFee) 
+    returns (uint feePayment) 
   {
-    return fund.mgmtFeeBps().mul(sharesToUsd(fund.totalSupply())).div(10000).mul(elapsedTime).div(31536000);
+    return annualFeeBps.mul(sharesToUsd(fund.totalSupply())).div(10000).mul(elapsedTime).div(31536000);
   }
 
   // Returns the performance fee for a given gain in portfolio value
@@ -145,7 +154,7 @@ contract NavCalculator is DestructibleModified {
     constant 
     returns (uint performFee)  
   {
-    return fund.performFeeBps().mul(_usdGain).div(10000);
+    return fund.performFeeBps().mul(_usdGain).div(10 ** fund.decimals());
   }
 
   // Converts shares to a corresponding amount of USD based on the current nav per share
@@ -154,7 +163,7 @@ contract NavCalculator is DestructibleModified {
     constant 
     returns (uint usd) 
   {
-    return _shares.mul(fund.navPerShare()).div(10000);
+    return _shares.mul(fund.navPerShare()).div(10 ** fund.decimals());
   }
 
   function ethToUsd(uint _eth) 
@@ -169,7 +178,8 @@ contract NavCalculator is DestructibleModified {
   function toNavPerShare(uint _balance) 
     internal 
     constant 
-    returns (uint) {
-    return _balance.mul(10000).div(fund.totalSupply());
+    returns (uint) 
+  {
+    return _balance.mul(10 ** fund.decimals()).div(fund.totalSupply());
   }
 }

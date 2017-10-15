@@ -261,7 +261,7 @@ contract InvestorActions is DestructibleModified {
     constant
     returns (uint shares)
   {
-    return ethToUsd(_eth).mul(10000).div(fund.navPerShare());
+    return ethToUsd(_eth).mul(10 ** fund.decimals()).div(fund.navPerShare());
   }
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
@@ -270,7 +270,7 @@ contract InvestorActions is DestructibleModified {
     constant
     returns (uint ethAmount)
   {
-    return usdToEth(_shares.mul(fund.navPerShare()).div(10000));
+    return usdToEth(_shares.mul(fund.navPerShare()).div(10 ** fund.decimals()));
   }
 
   function usdToEth(uint _usd) 

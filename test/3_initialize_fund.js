@@ -15,44 +15,46 @@ contract('Initialize Fund', (accounts) => {
   const weiToNum = wei => web3.fromWei(wei, 'ether').toNumber();
   const ethToWei = eth => web3.toWei(eth, 'ether');
 
+  const OWNER = accounts[0];
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
   const INITIAL_NAV = web3.toWei(1, 'ether');
-  const MANAGER_INVESTMENT = 1; // 1 ether
 
   const USD_ETH = 300;
   const MIN_INITIAL_SUBSCRIPTION = 20;
   const INVESTOR_ALLOCATION = 21;
   const MIN_SUBSCRIPTION = 5;
   const MIN_REDEMPTION_SHARES = 5000;
-  const MGMT_FEE = 1;
+  const ADMIN_FEE = 1;
+  const MGMT_FEE = 0;
   const PERFORM_FEE = 20;
-
+  const MANAGER_USD_ETH_BASIS = 30000;
+  
   let fund;
   let navCalculator;
   let investorActions;
   let INITIAL_BALANCE;
 
   before(() => DataFeed.new(
-    'nav-service',                          // _name
     false,                                  // _useOraclize
     '[NOT USED]',                           // _queryUrl
     300,                                    // _secondsBetweenQueries
     USD_ETH * 100,                          // _initialExchangeRate
     EXCHANGE,                               // _exchange
-    { from: MANAGER, value: 0 }
+    { from: OWNER, value: 0 }
   )
     .then((instance) => {
       dataFeed = instance;
       return Promise.all([
-        NavCalculator.new(dataFeed.address, { from: MANAGER }),
-        InvestorActions.new(dataFeed.address, { from: MANAGER }),
+        NavCalculator.new(dataFeed.address, { from: OWNER }),
+        InvestorActions.new(dataFeed.address, { from: OWNER }),
         getBalancePromise(EXCHANGE)
       ]);
     })
     .then((results) => {
       [navCalculator, investorActions, INITIAL_BALANCE] = results;
       return Fund.new(
+        MANAGER,                            // _manager
         EXCHANGE,                           // _exchange
         navCalculator.address,              // _navCalculator
         investorActions.address,            // _investorActions
@@ -63,9 +65,11 @@ contract('Initialize Fund', (accounts) => {
         ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
         ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
         MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
+        ADMIN_FEE * 100,                    // _adminFeeBps
         MGMT_FEE * 100,                     // _mgmtFeeBps
         PERFORM_FEE * 200,                  // _performFeeBps
-        { from: MANAGER, value: ethToWei(MANAGER_INVESTMENT) }
+        MANAGER_USD_ETH_BASIS,              // _managerUsdEthBasis
+        { from: OWNER }
       );
     })
     .then((fundInstance) => {
@@ -88,7 +92,10 @@ contract('Initialize Fund', (accounts) => {
 
 
   it('should instantiate with the right owner address', () => fund.getOwners()
-    .then(_owners => assert.equal(_owners[0], MANAGER, 'Manager addresses don\'t match')));
+    .then(_owners => assert.equal(_owners[0], OWNER, 'Owner addresses don\'t match')));
+
+    it('should instantiate with the right manager address', () => fund.manager.call()
+    .then(_manager => assert.equal(_manager, MANAGER, 'Manager addresses don\'t match')));
 
   it('should instantiate with the right exchange address', () => fund.exchange.call()
     .then(_exchange => assert.equal(_exchange, EXCHANGE, 'Exchange addresses don\'t match')));
@@ -107,10 +114,10 @@ contract('Initialize Fund', (accounts) => {
 
   it('should instantiate with the right balance', () => Promise.all([
     dataFeed.value(),
-    fund.balanceOf.call(MANAGER),
+    fund.getInvestor(MANAGER),
     fund.totalSupply()
-  ]).then(([dataFeedValue, managerBalance, totalSupply]) => {
-    assert.equal(parseInt(dataFeedValue, 10), parseInt(managerBalance, 10), 'Manager\'s account balance doesn\'t match investment');
-    assert.equal(parseInt(totalSupply, 10), parseInt(managerBalance, 10), 'Total supply doesn\'t match manager\'s investment');
+  ]).then(([dataFeedValue, managerStruct, totalSupply]) => {
+    assert.equal(parseInt(dataFeedValue, 10), parseInt(managerStruct[2], 10), 'Manager\'s account balance doesn\'t match investment');
+    assert.equal(parseInt(totalSupply, 10), parseInt(managerStruct[2], 10), 'Total supply doesn\'t match manager\'s investment');
   }));
 });

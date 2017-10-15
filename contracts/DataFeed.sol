@@ -17,9 +17,8 @@ contract DataFeed is usingOraclize, DestructibleModified {
   using JsmnSolLib for string;
 
   // Global variables
-  string  public name;                   // To differentiate in case there are multiple feeds
-  bool    public useOraclize;            // True: use Oraclize (on testnet).  False: use testRPC address.
-  uint    public value;                  // API value
+  bool    public useOraclize;            // True: use Oraclize.  False: use testRPC address.
+  uint    public value;                  // Total portfolio value in USD
   uint    public usdEth;                 // USD/ETH exchange rate
   uint    public timestamp;              // Timestamp of last update
 
@@ -39,7 +38,6 @@ contract DataFeed is usingOraclize, DestructibleModified {
   event LogDataFeedError(string rawResult);
 
   function DataFeed(
-    string  _name,
     bool    _useOraclize,
     string  _queryUrl,
     uint    _secondsBetweenQueries,
@@ -49,20 +47,18 @@ contract DataFeed is usingOraclize, DestructibleModified {
     payable
   {
     // Constants
-    name = _name;
     useOraclize = _useOraclize;
     queryUrl = _queryUrl;
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
     usdEth = _initialExchangeRate;
-    gasLimit = 300000;                                // Adjust this value depending on code length
+    gasLimit = 300000;              // Adjust this value depending on code length
+    gasPrice = 20000000000;         // 20 GWei, Oraclize default
 
     if (useOraclize) {
-      oraclize_setCustomGasPrice(20000000000 wei);    // 20 GWei, Oraclize default
+      oraclize_setCustomGasPrice(gasPrice);    
       oraclize_setProof(proofType_NONE);
       updateWithOraclize();
-    } else {
-      updateWithExchange(100);
     }
   }
 
