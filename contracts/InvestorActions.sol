@@ -58,7 +58,7 @@ contract InvestorActions is DestructibleModified {
   {
     var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
 
-    uint ethFilledAllocation = ethPendingSubscription.add(sharesToEth(sharesOwned));
+    uint ethFilledAllocation = ethPendingSubscription.add(fund.sharesToEth(sharesOwned));
 
     if (ethTotalAllocation > ethFilledAllocation) {
       return ethTotalAllocation.sub(ethFilledAllocation);
@@ -82,7 +82,7 @@ contract InvestorActions is DestructibleModified {
     } else {
       require(_amount >= fund.minSubscriptionEth());
     }
-    require(ethTotalAllocation >= _amount.add(ethPendingSubscription).add(sharesToEth(sharesOwned)));
+    require(ethTotalAllocation >= _amount.add(ethPendingSubscription).add(fund.sharesToEth(sharesOwned)));
 
     return (ethPendingSubscription.add(_amount),                                 // new investor.ethPendingSubscription
             fund.totalEthPendingSubscription().add(_amount)                      // new totalEthPendingSubscription
@@ -123,7 +123,7 @@ contract InvestorActions is DestructibleModified {
     // to the exchange account upon function return
     uint otherPendingSubscriptions = fund.totalEthPendingSubscription().sub(ethPendingSubscription);
     require(ethPendingSubscription <= fund.balance.sub(fund.totalEthPendingWithdrawal()).sub(otherPendingSubscriptions));
-    uint shares = ethToShares(ethPendingSubscription);
+    uint shares = fund.ethToShares(ethPendingSubscription);
 
     return (0,                                                                  // new investor.ethPendingSubscription
             sharesOwned.add(shares),                                            // new investor.sharesOwned
@@ -179,7 +179,7 @@ contract InvestorActions is DestructibleModified {
 
     // Check that the fund balance has enough ether because after this function is processed, the ether
     // equivalent amount can be withdrawn by the investor
-    uint amount = sharesToEth(sharesPendingRedemption);
+    uint amount = fund.sharesToEth(sharesPendingRedemption);
     require(amount <= fund.balance.sub(fund.totalEthPendingSubscription()).sub(fund.totalEthPendingWithdrawal()));
 
     return (sharesOwned.sub(sharesPendingRedemption),                           // new investor.sharesOwned
@@ -204,7 +204,7 @@ contract InvestorActions is DestructibleModified {
     // equivalent amount can be withdrawn by the investor.  The fund balance less total withdrawals and other
     // investors' pending subscriptions should be larger than or equal to the liquidated amount.
     uint otherPendingSubscriptions = fund.totalEthPendingSubscription().sub(ethPendingSubscription);
-    uint amount = sharesToEth(sharesOwned).add(ethPendingSubscription);
+    uint amount = fund.sharesToEth(sharesOwned).add(ethPendingSubscription);
     require(amount <= fund.balance.sub(fund.totalEthPendingWithdrawal()).sub(otherPendingSubscriptions));
 
     return (ethPendingWithdrawal.add(amount),                                   // new investor.ethPendingWithdrawal
@@ -253,39 +253,4 @@ contract InvestorActions is DestructibleModified {
     dataFeed = DataFeed(_address);
   }
 
-  // ********* HELPERS *********
-
-  // Converts ether to a corresponding number of shares based on the current nav per share
-  function ethToShares(uint _eth)
-    internal
-    constant
-    returns (uint shares)
-  {
-    return ethToUsd(_eth).mul(10 ** fund.decimals()).div(fund.navPerShare());
-  }
-
-  // Converts shares to a corresponding amount of ether based on the current nav per share
-  function sharesToEth(uint _shares)
-    internal
-    constant
-    returns (uint ethAmount)
-  {
-    return usdToEth(_shares.mul(fund.navPerShare()).div(10 ** fund.decimals()));
-  }
-
-  function usdToEth(uint _usd) 
-    internal
-    constant 
-    returns (uint eth) 
-  {
-    return _usd.mul(1e20).div(dataFeed.usdEth());
-  }
-
-  function ethToUsd(uint _eth) 
-    internal
-    constant 
-    returns (uint usd) 
-  {
-    return _eth.mul(dataFeed.usdEth()).div(1e20);
-  }
 }

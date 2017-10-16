@@ -2,6 +2,7 @@ const DataFeed  = artifacts.require("./DataFeed.sol");
 const NavCalculator  = artifacts.require("./NavCalculator.sol");
 const InvestorActions = artifacts.require("./InvestorActions.sol");
 const Fund = artifacts.require("./Fund.sol");
+const FundHelpers = artifacts.require("./FundHelpers.sol");
 
 const dataFeedInfo = require('./config/datafeed.js');
 
@@ -37,6 +38,7 @@ module.exports = function(deployer, network, accounts) {
   const dataFeedReserve = network == "ropsten" ? ethToWei(DATA_FEED_GAS_RESERVE) : 0;
 
   if (network == "development") {
+    deployer.deploy(FundHelpers);
     deployer.deploy(
       DataFeed,
       false,                            // _useOraclize
@@ -55,6 +57,10 @@ module.exports = function(deployer, network, accounts) {
         InvestorActions,
         DataFeed.address,
         { from: ADMINISTRATOR }
+      )).then(() =>
+      deployer.link(
+        FundHelpers,
+        Fund
       )).then(() =>
       deployer.deploy(
         Fund,

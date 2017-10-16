@@ -3,6 +3,7 @@ pragma solidity ^0.4.13;
 import "./NavCalculator.sol";
 import "./InvestorActions.sol";
 import "./DataFeed.sol";
+import "./FundHelpers.sol";
 import "./math/SafeMath.sol";
 import "./zeppelin/DestructiblePausable.sol";
 
@@ -22,6 +23,9 @@ import "./zeppelin/DestructiblePausable.sol";
 
 contract Fund is DestructiblePausable {
   using SafeMath for uint;
+  using FundHelpers for FundHelpers.Accounts;
+  
+  FundHelpers.Accounts public accounts;
 
   // Constants set at contract inception
   string  public name;                         // fund name
@@ -33,8 +37,6 @@ contract Fund is DestructiblePausable {
   uint    public adminFeeBps;                  // annual administrative fee, if any, in basis points
   uint    public mgmtFeeBps;                   // annual base management fee, if any, in basis points
   uint    public performFeeBps;                // performance management fee earned on gains, in basis points
-  address public manager;                      // address of the manager account allowed to withdraw base and performance management fees
-  address public exchange;                     // address of the exchange account where the manager conducts trading.
 
   // Variables that are updated after each call to the calcNav function
   uint    public lastCalcDate;
@@ -89,12 +91,12 @@ contract Fund is DestructiblePausable {
 
   // Modifiers
   modifier onlyFromExchange {
-    require(msg.sender == exchange);
+    require(msg.sender == accounts.exchange);
     _;
   }
 
   modifier onlyManager {
-    require(msg.sender == manager);
+    require(msg.sender == accounts.manager);
     _;
   }
 
@@ -132,8 +134,8 @@ contract Fund is DestructiblePausable {
     performFeeBps = _performFeeBps;
 
     // Set the addresses of other wallets/contracts with which this contract interacts
-    manager = _manager;
-    exchange = _exchange;
+    accounts.manager = _manager;
+    accounts.exchange = _exchange;
     navCalculator = NavCalculator(_navCalculator);
     investorActions = InvestorActions(_investorActions);
     dataFeed = DataFeed(_dataFeed);
@@ -146,13 +148,13 @@ contract Fund is DestructiblePausable {
     // Amounts are included in fee calculations since the fees are going to the manager anyway.
     // TestRPC: dataFeed.value should be zero
     // TestNet: ensure that the exchange account balance is zero or near zero
-    uint managerShares = ethToShares(exchange.balance) + dataFeed.value();
+    uint managerShares = ethToShares(accounts.exchange.balance) + dataFeed.value();
     totalSupply = managerShares;
-    investors[manager].ethTotalAllocation = sharesToEth(managerShares);
-    investors[manager].sharesOwned = managerShares;
+    investors[accounts.manager].ethTotalAllocation = sharesToEth(managerShares);
+    investors[accounts.manager].sharesOwned = managerShares;
 
-    LogAllocationModification(manager, sharesToEth(managerShares));
-    LogSubscription(manager, managerShares, navPerShare, _managerUsdEthBasis);
+    LogAllocationModification(accounts.manager, sharesToEth(managerShares));
+    LogSubscription(accounts.manager, managerShares, navPerShare, _managerUsdEthBasis);
   }
 
   // [INVESTOR METHOD] Returns the variables contained in the Investor struct for a given address
@@ -259,7 +261,7 @@ contract Fund is DestructiblePausable {
     totalSupply = _totalSupply;
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
-    exchange.transfer(transferAmount);
+    accounts.exchange.transfer(transferAmount);
     LogSubscription(_addr, shares, navPerShare, dataFeed.usdEth());
     LogTransferToExchange(transferAmount);
     return true;
@@ -431,35 +433,6 @@ contract Fund is DestructiblePausable {
     return true;
   }
 
-  // ********* NAV CALCULATION *********
-
-  // Calculate and update NAV per share, lossCarryforward (the amount of losses that the fund to make up in order to start earning performance fees),
-  // and accumulated management fee balaces.
-  // Delegates logic to the NavCalculator module
-  function calcNav()
-    onlyOwner
-    returns (bool success)
-  {
-    var (
-      _lastCalcDate,
-      _navPerShare,
-      _lossCarryforward,
-      _accumulatedMgmtFees,
-      _accumulatedAdminFees
-    ) = navCalculator.calculate();
-
-    lastCalcDate = _lastCalcDate;
-    navPerShare = _navPerShare;
-    lossCarryforward = _lossCarryforward;
-    accumulatedMgmtFees = _accumulatedMgmtFees;
-    accumulatedAdminFees = _accumulatedAdminFees;
-
-    LogNavSnapshot(lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
-    return true;
-  }
-
-  // ********* FEES *********
-
   // Withdraw management fees from the contract
   function withdrawMgmtFees()
     whenNotPaused
@@ -494,6 +467,33 @@ contract Fund is DestructiblePausable {
     return true;
   }
 
+  // ********* NAV CALCULATION *********
+
+  // Calculate and update NAV per share, lossCarryforward (the amount of losses that the fund to make up in order to start earning performance fees),
+  // and accumulated management fee balaces.
+  // Delegates logic to the NavCalculator module
+  function calcNav()
+    onlyOwner
+    returns (bool success)
+  {
+    var (
+      _lastCalcDate,
+      _navPerShare,
+      _lossCarryforward,
+      _accumulatedMgmtFees,
+      _accumulatedAdminFees
+    ) = navCalculator.calculate();
+
+    lastCalcDate = _lastCalcDate;
+    navPerShare = _navPerShare;
+    lossCarryforward = _lossCarryforward;
+    accumulatedMgmtFees = _accumulatedMgmtFees;
+    accumulatedAdminFees = _accumulatedAdminFees;
+
+    LogNavSnapshot(lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
+    return true;
+  }
+
   // ********* CONTRACT MAINTENANCE *********
 
   // Returns a list of all investor addresses
@@ -511,11 +511,8 @@ contract Fund is DestructiblePausable {
     onlyManager
     returns (bool success)
   {
-    require(_addr != address(0));
-    address old = manager;
-    manager = _addr;
-    LogManagerAddressChanged(old, _addr);
-    return true;
+    LogManagerAddressChanged(accounts.manager, _addr);
+    return accounts.setManager(_addr);
   }
 
   // Update the address of the exchange account
@@ -524,8 +521,8 @@ contract Fund is DestructiblePausable {
     returns (bool success)
   {
     require(_addr != address(0));
-    address old = exchange;
-    exchange = _addr;
+    address old = accounts.exchange;
+    accounts.exchange = _addr;
     LogExchangeAddressChanged(old, _addr);
     return true;
   }
@@ -582,7 +579,7 @@ contract Fund is DestructiblePausable {
     returns (bool success)
   {
     require(amount <= this.balance.sub(totalEthPendingSubscription).sub(totalEthPendingWithdrawal));
-    exchange.transfer(amount);
+    accounts.exchange.transfer(amount);
     LogTransferToExchange(amount);
     return true;
   }
