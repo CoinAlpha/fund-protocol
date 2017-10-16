@@ -49,8 +49,6 @@ contract('NavCalculator', (accounts) => {
 
   const checkRoughEqual = (vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees) => {
     [ansNAV, ansLCF, ansAMF, ansAPF] = vals;
-    // console.log('navPerShare', parseInt(navPerShare));
-    // console.log('ansNAV', ansNAV);
     assert(Math.abs(parseInt(navPerShare) / ansNAV - 1) < 0.0001, 'incorrect navPerShare');
 
     if (ansLCF !== 0) assert(Math.abs(parseInt(lossCarryforward) / ansLCF - 1) < 0.0001, 'incorrect lossCarryforward');
@@ -58,9 +56,6 @@ contract('NavCalculator', (accounts) => {
 
     if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
     else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
-
-    console.log(parseInt(accumulatedAdminFees));
-    console.log(ansAPF);
 
     if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedAdminFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedAdminFees');
     else assert.equal(parseInt(accumulatedAdminFees), 0, 'incorrect accumulatedAdminFees');
@@ -156,7 +151,8 @@ contract('NavCalculator', (accounts) => {
   it('should calculate the navPerShare correctly (base case)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
-    fund.lastCalcDate.call()
+    Promise.resolve(changeExchangeValue(100))
+      .then(() => fund.lastCalcDate.call())
       .then(_date => date1 = _date)
       .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
       .then(() => fund.calcNav())
