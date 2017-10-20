@@ -72,7 +72,12 @@ contract DataFeed is usingOraclize, DestructibleModified {
         LogDataFeedQuery("Oraclize query was NOT sent, please add some ETH to cover for the query fee");
       } else {
         LogDataFeedQuery("Oraclize query was sent, standing by for the answer..");
-        bytes32 queryId = oraclize_query(secondsBetweenQueries, "URL", queryUrl, gasLimit);
+        bytes32 queryId;
+        if (secondsBetweenQueries > 0) {
+          queryId = oraclize_query(secondsBetweenQueries, "URL", queryUrl, gasLimit);
+        } else {
+          queryId = oraclize_query("URL", queryUrl, gasLimit);
+        }
         validIds[queryId] = true;
       }
     }
@@ -102,7 +107,9 @@ contract DataFeed is usingOraclize, DestructibleModified {
       timestamp = now;
 
       LogDataFeedResponse(_result, value, usdEth, timestamp);
-      updateWithOraclize();
+      if (secondsBetweenQueries > 0) {
+        updateWithOraclize();
+      }
     } else {
       LogDataFeedError(_result);
     }
