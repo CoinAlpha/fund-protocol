@@ -71,7 +71,7 @@ contract NavCalculator is DestructibleModified {
     // The new grossAssetValue equals the updated value, denominated in ether, of the exchange account,
     // plus any amounts that sit in the fund contract, excluding unprocessed subscriptions
     // and unwithdrawn investor payments.
-    uint grossAssetValue = dataFeed.value().add(ethToUsd(fund.getBalance()));
+    uint grossAssetValue = dataFeed.value().add(fund.ethToUsd(fund.getBalance()));
 
     // Removes the accumulated management fees from grossAssetValue
     uint gpvLessFees = grossAssetValue.sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedAdminFees());
@@ -164,14 +164,6 @@ contract NavCalculator is DestructibleModified {
     returns (uint usd) 
   {
     return _shares.mul(fund.navPerShare()).div(10 ** fund.decimals());
-  }
-
-  function ethToUsd(uint _eth) 
-    internal 
-    constant 
-    returns (uint usd) 
-  {
-    return _eth.mul(dataFeed.usdEth()).div(1e20);
   }
 
   // Converts total fund NAV to NAV per share
