@@ -47,35 +47,28 @@ dataFeed.updateWithExchange(100)
 fund.modifyAllocation(investor1, ethToWei(20))
 fund.modifyAllocation(investor2, ethToWei(20))
 
-// Change exchange account balance to simulate trading P&L
-web3.eth.sendTransaction({from:exchange, to: manager, value: ethToWei(1), gas:gasAmt})
-web3.eth.sendTransaction({from:manager, to:exchange, value: ethToWei(1), gas:gasAmt})
+// Investors invest
+fund.requestSubscription(30000, {from:investor1, value: ethToWei(20), gas:gasAmt})
+fund.requestSubscription(30000, {from:investor2, value: ethToWei(20), gas:gasAmt})
 
-// Investors invest (fallback and subscribe function)
-web3.eth.sendTransaction({from:investor1, to:fund.address, value: ethToWei(20), gas:gasAmt})
-fund.requestSubscription({from:investor2, value: ethToWei(20), gas:gasAmt})
+// Update datafeed value, and re-calculate NAV
+dataFeed.updateWithExchange(100);
+fund.calcNav();
 
-// Calc NAV, then process all subscription requests
-fund.calcNav().then(() => fund.fillAllSubscriptionRequests());
-
-// ======== ERC20 tests ==========
-// investor2 transfers one token to investor1
-fund.transfer(investor1, ethToWei(1), {from:investor2});
-
-// investor1 tries to transfer two tokens back to investor2 (fails since it exceeds the ethTotalAllocation)
-fund.transfer(investor2, ethToWei(2), {from:investor1});
-
-// investor1 approves investor2 to spend one token
-fund.approve(investor2, ethToWei(1), {from:investor1});
-
-// investor2 pulls one token from investor1
-fund.transferFrom(investor1, investor2, ethToWei(1), {from:investor2});
+// Process subscription requests
+fund.fillAllSubscriptionRequests();
 
 // Investor requests redemption
-fund.requestRedemption(6000,{from:investor2})
+fund.requestRedemption(600000,{from:investor2})
 
 // Fulfill all sharesPendingRedemption requests
 fund.totalEthPendingRedemption().then(amount => fund.remitFromExchange({from:exchange, value:amount, gas:gasAmt}));
+
+// Update datafeed value, and re-calculate NAV
+dataFeed.updateWithExchange(100);
+fund.calcNav();
+
+// Process redemption requests
 fund.fillAllRedemptionRequests();
 
 // Investor withdraws ethPendingWithdrawal

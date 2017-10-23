@@ -99,7 +99,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     // Check for the success return code and that the object is not an error string
     if (returnValue == 0 && actualNum > 4) {
       string memory valueRaw = JsmnSolLib.getBytes(_result, tokens[2].start, tokens[2].end);
-      value = parseInt(valueRaw);
+      value = parseInt(valueRaw, 2);
 
       string memory usdEthRaw = JsmnSolLib.getBytes(_result, tokens[4].start, tokens[4].end);
       usdEth = parseInt(usdEthRaw, 2);
@@ -121,8 +121,9 @@ contract DataFeed is usingOraclize, DestructibleModified {
     returns (bool success)
   {
     if (!useOraclize) {
-      value = exchange.balance.mul(usdEth).mul(_percent).div(1e22);
+      value = exchange.balance.mul(usdEth).mul(_percent).div(1e20);
       timestamp = now;
+      LogDataFeedResponse("mock", value, usdEth, timestamp);
       return true;
     }
   }
