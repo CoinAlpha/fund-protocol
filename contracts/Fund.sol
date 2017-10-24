@@ -609,14 +609,14 @@ contract Fund is DestructiblePausable {
     constant 
     returns (uint eth)
   {
-    return _usd.mul(1e20).div(dataFeed.usdEth());
+    return _usd.mul(1e18).div(dataFeed.usdEth());
   }
 
   function ethToUsd(uint _eth) 
     constant 
     returns (uint usd)
   {
-    return _eth.mul(dataFeed.usdEth()).div(1e20);
+    return _eth.mul(dataFeed.usdEth()).div(1e18);
   }
 
   // Returns the fund's balance less pending subscriptions and withdrawals
