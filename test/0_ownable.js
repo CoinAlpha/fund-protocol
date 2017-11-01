@@ -11,9 +11,8 @@ const allArtifacts = {
 
 const constructors = {
   OwnableModified: owner => allArtifacts.OwnableModified.new({ from: owner }),
-  Fund: (owner, exchange, navCalculator, investorActions, dataFeed) =>
-    allArtifacts.OwnableModified.new(
-      owner,                    // _manager
+  Fund: (owner, exchange, navCalculator, investorActions) =>
+    allArtifacts.Fund.new(
       exchange,                 // _exchange
       navCalculator,            // _navCalculator
       investorActions,          // _investorActions

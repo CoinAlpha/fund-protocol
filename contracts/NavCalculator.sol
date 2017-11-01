@@ -63,9 +63,11 @@ contract NavCalculator is DestructibleModified {
     )
   {
 
+    uint _now = now;
+
     // Set the initial value of the variables below from the last NAV calculation
     uint netAssetValue = sharesToUsd(fund.totalSupply());
-    uint elapsedTime = now - fund.lastCalcDate();
+    uint elapsedTime = _now - fund.lastCalcDate();
     lossCarryforward = fund.lossCarryforward();
 
     // The new grossAssetValue equals the updated value, denominated in ether, of the exchange account,
@@ -103,7 +105,7 @@ contract NavCalculator is DestructibleModified {
     }
 
     // Update the state variables and return them to the fund contract
-    lastCalcDate = now;
+    lastCalcDate = _now;
     navPerShare = toNavPerShare(netAssetValue);
     accumulatedMgmtFees = fund.accumulatedMgmtFees().add(mgmtFee).add(performFee);
     accumulatedAdminFees = fund.accumulatedAdminFees().add(adminFee);
