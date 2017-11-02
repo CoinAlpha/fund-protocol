@@ -108,7 +108,7 @@ contract NavCalculator is DestructibleModified {
       } else {
         performFee = getPerformFee(uint(gainLoss).sub(lossCarryforward));
         netAssetValue = netAssetValue.add(uint(gainLoss)).sub(performFee);
-        lossCarryForward = 0;
+        lossCarryforward = 0;
         accumulatedMgmtFees = performFee;
       }
 
