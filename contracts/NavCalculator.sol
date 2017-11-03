@@ -71,12 +71,14 @@ contract NavCalculator is DestructibleModified {
     uint netAssetValue = sharesToUsd(fund.totalSupply());
     uint elapsedTime = lastCalcDate - fund.lastCalcDate();
     lossCarryforward = fund.lossCarryforward();
+    accumulatedMgmtFees = fund.accumulatedMgmtFees();
+    accumulatedAdminFees = fund.accumulatedAdminFees();
 
     // The new grossAssetValue equals the updated value, denominated in ether, of the exchange account,
     // plus any amounts that sit in the fund contract, excluding unprocessed subscriptions
     // and unwithdrawn investor payments.
     // Removes the accumulated management and administrative fees from grossAssetValue
-    uint grossAssetValueLessFees = dataFeed.value().add(fund.ethToUsd(fund.getBalance())).sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedAdminFees());
+    uint grossAssetValueLessFees = dataFeed.value().add(fund.ethToUsd(fund.getBalance())).sub(accumulatedMgmtFees).sub(accumulatedAdminFees);
 
     // Calculates the base management fee accrued since the last NAV calculation
     uint mgmtFee = getAnnualFee(elapsedTime, fund.mgmtFeeBps());
@@ -96,7 +98,7 @@ contract NavCalculator is DestructibleModified {
 
       // Update the lossCarryforward and netAssetValue variables
       lossCarryforward = lossCarryforward.sub(lossPayback);
-      netAssetValue = netAssetValue.add(uint(gainLoss)).sub(lossPayback).sub(performFee);
+      netAssetValue = netAssetValue.add(uint(gainLoss)).sub(performFee);
     
     // if current period loss
     } else {
@@ -107,7 +109,7 @@ contract NavCalculator is DestructibleModified {
     }
 
     // Update the remaining state variables and return them to the fund contract
-    accumulatedAdminFees = fund.accumulatedAdminFees().add(adminFee);
+    accumulatedAdminFees = accumulatedAdminFees.add(adminFee);
     accumulatedMgmtFees = accumulatedMgmtFees.add(performFee).sub(performFeeOffset);
     navPerShare = toNavPerShare(netAssetValue);
 
