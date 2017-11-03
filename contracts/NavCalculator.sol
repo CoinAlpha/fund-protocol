@@ -41,12 +41,13 @@ contract NavCalculator is DestructibleModified {
   event LogNavCalculation(
     uint indexed timestamp,
     uint elapsedTime,
-    uint grossAssetValue,
+    uint grossAssetValueLessFees,
     uint netAssetValue,
     uint totalSupply,
     uint adminFeeInPeriod,
     uint mgmtFeeInPeriod,
     uint performFeeInPeriod,
+    uint performFeeOffsetInPeriod,
     uint lossPaybackInPeriod
   );
 
@@ -63,7 +64,7 @@ contract NavCalculator is DestructibleModified {
     )
   {
 
-    // setting lasCalcDate for use as "now" for this function
+    // setting lastCalcDate for use as "now" for this function
     lastCalcDate = now;
 
     // Set the initial value of the variables below from the last NAV calculation
@@ -74,77 +75,43 @@ contract NavCalculator is DestructibleModified {
     // The new grossAssetValue equals the updated value, denominated in ether, of the exchange account,
     // plus any amounts that sit in the fund contract, excluding unprocessed subscriptions
     // and unwithdrawn investor payments.
-    uint grossAssetValue = dataFeed.value().add(fund.ethToUsd(fund.getBalance()));
-
-    // Removes the accumulated management fees from grossAssetValue
-    uint gpvLessFees = grossAssetValue.sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedAdminFees());
+    // Removes the accumulated management and administrative fees from grossAssetValue
+    uint grossAssetValueLessFees = dataFeed.value().add(fund.ethToUsd(fund.getBalance())).sub(fund.accumulatedMgmtFees()).sub(fund.accumulatedAdminFees());
 
     // Calculates the base management fee accrued since the last NAV calculation
     uint mgmtFee = getAnnualFee(elapsedTime, fund.mgmtFeeBps());
     uint adminFee = getAnnualFee(elapsedTime, fund.adminFeeBps());
 
     // Calculate the gain/loss based on the new grossAssetValue and the old netAssetValue
-    int gainLoss = int(gpvLessFees) - int(netAssetValue) - int(mgmtFee) - int(adminFee);
+    int gainLoss = int(grossAssetValueLessFees) - int(netAssetValue) - int(mgmtFee) - int(adminFee);
 
     uint performFee = 0;
-    accumulatedMgmtFees = 0;
+    uint performFeeOffset = 0;
 
     // if current period gain
     if (gainLoss >= 0) {
       performFee = getPerformFee(uint(gainLoss));
+      uint lossPayback = Math.min256(uint(gainLoss), lossCarryforward);
+      performFee = getPerformFee(uint(gainLoss).sub(lossPayback));
 
-      // if there is no loss carry forward
-      if (lossCarryforward == 0) {
-        // then just add effects of gain
-        netAssetValue = netAssetValue.add(uint(gainLoss)).sub(performFee);
-        accumulatedMgmtFees = fund.accumulatedMgmtFees().add(mgmtFee).add(performFee);
-
-      // if there is a loss carry forward > gainLoss
-      } else if (lossCarryforward > gainLoss) {
-        lossCarryforward = lossCarryforward.sub(gainLoss);
-        netAssetValue = netAssetValue.add(uint(gainLoss));
-
-      // loss carry forward < gainLoss
-      } else {
-        performFee = getPerformFee(uint(gainLoss).sub(lossCarryforward));
-        netAssetValue = netAssetValue.add(uint(gainLoss)).sub(performFee);
-        lossCarryforward = 0;
-        accumulatedMgmtFees = performFee;
-      }
-
-    // if current period loss and existing loss carry forward
-    } else if (lossCarryforward >= 0) {
-      lossCarryforward = lossCarryforward.add(uint(-1 * gainLoss));
-      netAssetValue = netAssetValue.sub(uint(-1 * gainLoss));
+      // Update the lossCarryforward and netAssetValue variables
+      lossCarryforward = lossCarryforward.sub(lossPayback);
+      netAssetValue = netAssetValue.add(uint(gainLoss)).sub(lossPayback).sub(performFee);
     
-    // if no loss carry forward
+    // if current period loss
     } else {
-      // magnitude of performance fee
-      performFee = getPerformFee(uint(-1 * gainLoss));
-
-      // Since currently the fixed component of management fee is 0, accumulated
-      // management fees are only attributed to performance fees.
-      // Therefore, cumulative gain net of fixed fees can be derived from accumulated mgmt fees
-      // cumulativeUsdGain is analagous to lossCarryForward
-      uint cumulativeUsdGain = fund.accumulatedMgmtFees().div(fund.performFeeBps()).mul(10 ** fund.decimals());
-
-      // if current period loss is less than cumulative gain
-      if (uint(-1 * gainLoss) < cumulativeUsdGain) {
-        accumulatedMgmtFees = fund.accumulatedMgmtFees().add(mgmtFee).sub(performFee);
-        netAssetValue = netAssetValue.sub(uint(-1 * gainLoss)).add(performFee);
-
-      // if current loss is more than cumulative gain
-      } else {
-        netAssetValue = netAssetValue.sub(uint(-1 * gainLoss)).add(fund.accumulatedMgmtFees());
-        lossCarryForward = uint(-1 * gainLoss).sub(cumulativeUsdGain);
-      }
+      performFeeOffset = Math.min256(getPerformFee(uint(-1 * gainLoss)), accumulatedMgmtFees);
+      // Update the lossCarryforward and netAssetValue variables
+      lossCarryforward = lossCarryforward.add(uint(-1 * gainLoss)).sub(getGainGivenPerformFee(performFeeOffset));
+      netAssetValue = netAssetValue.sub(uint(-1 * gainLoss)).add(performFeeOffset);
     }
 
-    // Update the state variables and return them to the fund contract
-    navPerShare = toNavPerShare(netAssetValue);
+    // Update the remaining state variables and return them to the fund contract
     accumulatedAdminFees = fund.accumulatedAdminFees().add(adminFee);
+    accumulatedMgmtFees = accumulatedMgmtFees.add(performFee).sub(performFeeOffset);
+    navPerShare = toNavPerShare(netAssetValue);
 
-    LogNavCalculation(lastCalcDate, elapsedTime, grossAssetValue, netAssetValue, fund.totalSupply(), adminFee, mgmtFee, performFee, lossPayback);
+    LogNavCalculation(lastCalcDate, elapsedTime, grossAssetValueLessFees, netAssetValue, fund.totalSupply(), adminFee, mgmtFee, performFee, performFeeOffset, lossPayback);
 
     return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
   }
@@ -186,6 +153,15 @@ contract NavCalculator is DestructibleModified {
     returns (uint performFee)  
   {
     return fund.performFeeBps().mul(_usdGain).div(10 ** fund.decimals());
+  }
+
+  // Returns the gain in portfolio value for a given performance fee
+  function getGainGivenPerformFee(uint _performFee) 
+    internal 
+    constant 
+    returns (uint usdGain)  
+  {
+    return _performFee.mul(10 ** fund.decimals()).div(fund.performFeeBps());
   }
 
   // Converts shares to a corresponding amount of USD based on the current nav per share

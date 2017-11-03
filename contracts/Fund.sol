@@ -76,7 +76,6 @@ contract Fund is DestructiblePausable {
   event LogLiquidation(address indexed investor, uint shares, uint navPerShare, uint usdEthExchangeRate);
   event LogWithdrawal(address indexed investor, uint eth);
   event LogNavSnapshot(uint indexed timestamp, uint navPerShare, uint lossCarryforward, uint accumulatedMgmtFees, uint accumulatedAdminFees);
-  event LogAdminFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
   event LogManagerAddressChanged(address oldAddress, address newAddress);
   event LogExchangeAddressChanged(address oldAddress, address newAddress);
   event LogNavCalculatorModuleChanged(address oldAddress, address newAddress);
