@@ -36,7 +36,7 @@ module.exports = function(deployer, network, accounts) {
   const useOraclize = network == "ropsten" ? true : false;
   const dataFeedReserve = network == "ropsten" ? ethToWei(DATA_FEED_GAS_RESERVE) : 0;
 
-  if (network == "development") {
+  if (network == "development" || network == "test") {
     deployer.deploy(
       DataFeed,
       false,                            // _useOraclize
