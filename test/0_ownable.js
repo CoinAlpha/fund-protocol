@@ -1,3 +1,5 @@
+const path = require('path');
+
 const expectedExceptionPromise = require('../utils/expectedException.js');
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
 
@@ -9,10 +11,14 @@ const allArtifacts = {
   DataFeed: artifacts.require('./DataFeed.sol'),
 };
 
+const scriptName = path.basename(__filename);
+console.log(`****** START TEST [ ${scriptName} ]*******`);
+
 const constructors = {
   OwnableModified: owner => allArtifacts.OwnableModified.new({ from: owner }),
-  Fund: (owner, exchange, navCalculator, investorActions) =>
+  Fund: (owner, exchange, navCalculator, investorActions, dataFeed) =>
     allArtifacts.Fund.new(
+      owner,                    // _owner
       exchange,                 // _exchange
       navCalculator,            // _navCalculator
       investorActions,          // _investorActions
@@ -22,10 +28,10 @@ const constructors = {
       4,                        // _decimals
       20e18,                    // _minInitialSubscriptionEth
       5e18,                     // _minSubscriptionEth
-      5000,                     // _minRedemptionShares,
+      100000,                   // _minRedemptionShares,
       100,                      // _adminFeeBps
       100,                      // _mgmtFeeBps
-      0,                        // _performFeeBps
+      2000,                     // _performFeeBps
       30000,                    // _managerUsdEthBasis
       { from: owner }
     ),
@@ -63,7 +69,7 @@ contract('OwnableModified', (accounts) => {
 
   Object.keys(constructors).forEach((name) => {
     describe(name, () => {
-      beforeEach(`should deploy a new ${name}`, () => constructors[name](owner0, notOwnerAddress0, notOwnerAddress1, notOwnerAddress2)
+      beforeEach(`should deploy a new ${name}`, () => constructors[name](owner0, notOwnerAddress0, notOwnerAddress1, notOwnerAddress2, notOwnerAddress3)
         .then(instance => owned = instance));
 
       describe('getOwners', () => {
@@ -96,31 +102,24 @@ contract('OwnableModified', (accounts) => {
         it('should not be possible to add a third owner', () => owned.addOwner(owner1, { from: owner0 })
           .then(txObj => web3.eth.getTransactionReceiptMined(txObj.tx))
           .then((receipt) => {
-            console.log(receipt.logs);
             assert.strictEqual(receipt.logs.length, 1);
             return owned.addOwner(owner2, { from: owner0 });
           })
-          .then(
-            () => assert.throw('should not have reached here; do not add 3rd owner'),
-            e => assert.isAtLeast(e.message.indexOf('invalid opcode'), 0)
-          ));
+          .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should not have reached here; do not add 3rd owner')));
       });
 
       describe('transferOwnership', () => {
-        it('should not be possible to set owner if asking from wrong owner', () => expectedExceptionPromise(
-          () => owned.transferOwnership(owner2, { from: notOwner0, gas: 3000000 }),
-          3000000
-        ));
+        it('should not be possible to set owner if asking from wrong owner', () =>
+          owned.transferOwnership(owner2, { from: notOwner0, gas: 3000000 })
+            .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should not allow nonOwner to transfer ownership')));
 
-        it('should not be possible to set owner if to 0', () => expectedExceptionPromise(
-          () => owned.transferOwnership(addressZero, { from: owner0, gas: 3000000 }),
-          3000000
-        ));
-
-        it('should not be possible to set owner if no change', () => expectedExceptionPromise(
-          () => owned.transferOwnership(owner0, { from: owner0, gas: 3000000 }),
-          3000000
-        ));
+        it('should not be possible to set owner if to 0', () =>
+          owned.transferOwnership(addressZero, { from: owner0, gas: 3000000 })
+          .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should be able to transfer owner to address(0)')));
+          
+        it('should not be possible to set owner if no change', () =>
+          owned.transferOwnership(owner0, { from: owner0, gas: 3000000 })
+          .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should be able to transfer owner to address(0)')));
 
         it('should not be possible to set owner if pass value', () => owned.transferOwnership(owner2, { from: owner0, value: 1 })
           .then(
