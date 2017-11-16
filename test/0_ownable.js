@@ -40,36 +40,28 @@ const constructors = {
 };
 
 contract('OwnableModified', (accounts) => {
-  let owner0;
-  let owner1;
-  let owner2;
-  let owner3;
-  let notOwner0;
-  let notOwnerAddress0;
-  let notOwnerAddress1;
-  let notOwnerAddress2;
-  let notOwnerAddress3;
   let owned;
+  const [
+    owner0,
+    owner1,
+    owner2,
+    owner3,
+    notOwner0,
+    notOwnerAddress0,
+    notOwnerAddress1,
+    notOwnerAddress2,
+    notOwnerAddress3
+  ] = accounts;
+  
   const addressZero = '0x0000000000000000000000000000000000000000';
-
+  
   before('should prepare', () => {
-    assert.isAtLeast(accounts.length, 2);
-    [
-      owner0,
-      owner1,
-      owner2,
-      owner3,
-      notOwner0,
-      notOwnerAddress0,
-      notOwnerAddress1,
-      notOwnerAddress2,
-      notOwnerAddress3
-    ] = accounts;
+    assert.isAtLeast(accounts.length, 5);
   });
 
   Object.keys(constructors).forEach((name) => {
     describe(name, () => {
-      beforeEach(`should deploy a new ${name}`, () => constructors[name](owner0, notOwnerAddress0, notOwnerAddress1, notOwnerAddress2, notOwnerAddress3)
+      before(`should deploy a new ${name}`, () => constructors[name](owner0, notOwnerAddress0, notOwnerAddress1, notOwnerAddress2, notOwnerAddress3)
         .then(instance => owned = instance));
 
       describe('getOwners', () => {
@@ -99,12 +91,7 @@ contract('OwnableModified', (accounts) => {
           .then(() => owned.getOwners())
           .then(owners => assert.strictEqual(owners[1], owner1)));
 
-        it('should not be possible to add a third owner', () => owned.addOwner(owner1, { from: owner0 })
-          .then(txObj => web3.eth.getTransactionReceiptMined(txObj.tx))
-          .then((receipt) => {
-            assert.strictEqual(receipt.logs.length, 1);
-            return owned.addOwner(owner2, { from: owner0 });
-          })
+        it('should not be possible to add a third owner', () => owned.addOwner(owner2, { from: owner0 })
           .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should not have reached here; do not add 3rd owner')));
       });
 
@@ -117,7 +104,7 @@ contract('OwnableModified', (accounts) => {
           owned.transferOwnership(addressZero, { from: owner0, gas: 3000000 })
           .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should be able to transfer owner to address(0)')));
           
-        it('should not be possible to set owner if no change', () =>
+        it('should not be possible to transfer ownership to sender account', () =>
           owned.transferOwnership(owner0, { from: owner0, gas: 3000000 })
           .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should be able to transfer owner to address(0)')));
 
@@ -127,26 +114,24 @@ contract('OwnableModified', (accounts) => {
             e => assert.isAtLeast(e.message.indexOf('non-payable function'), 0)
           ));
 
-        it('should be possible to transfer ownership', () => owned.transferOwnership.call(owner1, { from: owner0 })
+        it('should be possible to transfer ownership', () => owned.transferOwnership.call(owner2, { from: owner0 })
           .then(success => assert.isTrue(success))
           // owner0 transfers ownership to owner1
-          .then(() => owned.transferOwnership(owner1, { from: owner0 }))
+          .then(() => owned.transferOwnership(owner2, { from: owner0 }))
           .then((tx) => {
             assert.strictEqual(tx.receipt.logs.length, 1);
             assert.strictEqual(tx.logs.length, 1);
             const logChanged = tx.logs[0];
             assert.strictEqual(logChanged.event, 'LogOwnershipTransferred');
             assert.strictEqual(logChanged.args.previousOwner, owner0);
-            assert.strictEqual(logChanged.args.newOwner, owner1);
-            // owner1 adds owner2
-            return owned.addOwner(owner2, { from: owner1 });
+            assert.strictEqual(logChanged.args.newOwner, owner2);
           })
           // owner2 transfers to owner3
           .then(() => owned.transferOwnership(owner3, { from: owner2 }))
           .then(tx => owned.getOwners())
           .then((owners) => {
-            assert.strictEqual(owners[0], owner1);
-            assert.strictEqual(owners[1], owner3);
+            assert.strictEqual(owners[0], owner3);
+            assert.strictEqual(owners[1], owner1);
           }));
       });
     });
