@@ -5,42 +5,53 @@ web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMin
 
 const allArtifacts = {
   OwnableModified: artifacts.require('./OwnableModified.sol'),
-  Fund: artifacts.require('./Fund.sol'),
   NavCalculator: artifacts.require('./NavCalculator.sol'),
   InvestorActions: artifacts.require('./InvestorActions.sol'),
   DataFeed: artifacts.require('./DataFeed.sol'),
+  Fund: artifacts.require('./Fund.sol'),
 };
 
 const scriptName = path.basename(__filename);
 console.log(`****** START TEST [ ${scriptName} ]*******`);
 
+
+const ethToWei = eth => web3.toWei(eth, 'ether');
+
 const constructors = {
   OwnableModified: owner => allArtifacts.OwnableModified.new({ from: owner }),
+  DataFeed: (owner, exchange) => allArtifacts.DataFeed.new(
+    false,                        // _useOraclize
+    '[NOT USED]',                 // _queryUrl
+    300,                          // _secondsBetweenQueries
+    300 * 100,                    // _initialExchangeRate
+    exchange,                     // _exchange
+    { from: owner, value: 0 }
+  ),
+  NavCalculator: (owner, dataFeed) => allArtifacts.NavCalculator.new(dataFeed, { from: owner }),
+  InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner }),
   Fund: (owner, exchange, navCalculator, investorActions, dataFeed) =>
     allArtifacts.Fund.new(
-      owner,                    // _owner
-      exchange,                 // _exchange
-      navCalculator,            // _navCalculator
-      investorActions,          // _investorActions
-      dataFeed,                 // _dataFeed
-      'FundName',               // _name
-      'SYMB',                   // _symbol
-      4,                        // _decimals
-      20e18,                    // _minInitialSubscriptionEth
-      5e18,                     // _minSubscriptionEth
-      100000,                   // _minRedemptionShares,
-      100,                      // _adminFeeBps
-      100,                      // _mgmtFeeBps
-      2000,                     // _performFeeBps
-      30000,                    // _managerUsdEthBasis
+      owner,                     // _manager
+      exchange,                  // _exchange
+      navCalculator.address,     // _navCalculator
+      investorActions.address,   // _investorActions
+      dataFeed.address,          // _dataFeed
+      'TestFund',                // _name
+      'TEST',                    // _symbol
+      4,                         // _decimals
+      ethToWei(20),              // _minInitialSubscriptionEth
+      ethToWei(5),               // _minSubscriptionEth
+      100000,                    // _minRedemptionShares,
+      100,                       // _adminFeeBps
+      100,                       // _mgmtFeeBps
+      2000,                      // _performFeeBps
+      30000,                     // _managerUsdEthBasis
       { from: owner }
     ),
-  NavCalculator: (owner, dataFeed) => allArtifacts.NavCalculator.new(dataFeed, { from: owner }),
-  InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner })
 };
 
 contract('OwnableModified', (accounts) => {
-  let owned;
+  let owned, dataFeed, navCalculator, investorActions;
   const [
     owner0,
     owner1,
@@ -61,8 +72,37 @@ contract('OwnableModified', (accounts) => {
 
   Object.keys(constructors).forEach((name) => {
     describe(name, () => {
-      before(`should deploy a new ${name}`, () => constructors[name](owner0, notOwnerAddress0, notOwnerAddress1, notOwnerAddress2, notOwnerAddress3)
-        .then(instance => owned = instance));
+
+      before(`should deploy a new ${name}`, () => {
+        if (name === 'OwnableModified') {
+          return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed)
+            .then(instance => owned = instance);
+        } else if (name === 'DataFeed') {
+          return constructors[name](owner0, notOwnerAddress0)
+            .then((instance) => {
+              owned = instance;
+              dataFeed = instance;
+            });
+        } else if (name === 'Fund') {
+          return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed)
+            .then(instance => owned = instance);
+        } else {
+          return constructors[name](owner0, dataFeed.address)
+            .then((instance) => {
+              owned = instance;
+              switch (name) {
+                case 'NavCalculator':
+                  navCalculator = instance;
+                  break;
+                case 'InvestorActions':
+                  investorActions = instance;
+                  break;
+                default:
+                  break;
+              }
+            });
+        }
+      })
 
       describe('getOwners', () => {
         it('should have correct initial value', () => owned.getOwners()
