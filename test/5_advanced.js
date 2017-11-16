@@ -1,7 +1,12 @@
+const path = require('path');
+
 const DataFeed = artifacts.require('./DataFeed.sol');
 const Fund = artifacts.require('./Fund.sol');
 const InvestorActions = artifacts.require('./InvestorActions.sol');
 const NavCalculator = artifacts.require('./NavCalculator.sol');
+
+const scriptName = path.basename(__filename);
+console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 /*
   Test contract behavior when there is a large lists of investors.

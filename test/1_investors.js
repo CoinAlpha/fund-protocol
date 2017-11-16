@@ -1,6 +1,11 @@
+const path = require('path');
+
 const Fund = artifacts.require('./Fund.sol');
 const InvestorActions = artifacts.require('./InvestorActions.sol');
 const NavCalculator = artifacts.require('./NavCalculator.sol');
+
+const scriptName = path.basename(__filename);
+console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 contract('Investors', () => {
   let fund;

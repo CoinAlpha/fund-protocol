@@ -1,3 +1,4 @@
+const path = require('path');
 const Promise = require('bluebird');
 
 const Fund = artifacts.require('./Fund.sol');
@@ -5,6 +6,9 @@ const NavCalculator = artifacts.require('./NavCalculator.sol');
 const DataFeed = artifacts.require('./DataFeed.sol');
 
 const { increaseTime, sendTransaction } = require('../js/helpers');
+
+const scriptName = path.basename(__filename);
+console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 if (typeof web3.eth.getAccountsPromise === "undefined") {
   Promise.promisifyAll(web3.eth, { suffix: "Promise" });
