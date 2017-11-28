@@ -9,8 +9,10 @@ const dataFeedInfo = require('./config/datafeed.js');
 const ethToWei = (eth) => eth * 1e18;
 
 // DataFeed settings
-const SECONDS_BETWEEN_QUERIES       = 300;
-const USD_ETH_EXCHANGE_RATE         = 300;
+const SECONDS_BETWEEN_QUERIES = 300;
+
+//TODO: Changed to $1000 for testing of nav calc
+const USD_ETH_EXCHANGE_RATE         = 1000;
 const DATA_FEED_GAS_RESERVE         = 1;
 
 // Fund settings
@@ -36,7 +38,7 @@ module.exports = function(deployer, network, accounts) {
   const useOraclize = network == "ropsten" ? true : false;
   const dataFeedReserve = network == "ropsten" ? ethToWei(DATA_FEED_GAS_RESERVE) : 0;
 
-  if (network == "development") {
+  if (network == "development" || network == "test") {
     deployer.deploy(
       DataFeed,
       false,                            // _useOraclize
