@@ -5,10 +5,12 @@ const Fund = artifacts.require('./Fund.sol');
 const NavCalculator = artifacts.require('./NavCalculator.sol');
 const DataFeed = artifacts.require('./DataFeed.sol');
 
-const { increaseTime, sendTransaction } = require('../js/helpers');
+const { increaseTime, sendTransaction, arrayToObject } = require('../js/helpers');
 
 const scriptName = path.basename(__filename);
 console.log(`****** START TEST [ ${scriptName} ]*******`);
+
+const keys = ['date2', 'navPerShare', 'lossCarryforward', 'accumulatedMgmtFees', 'accumulatedAdminFees'];
 
 if (typeof web3.eth.getAccountsPromise === "undefined") {
   Promise.promisifyAll(web3.eth, { suffix: "Promise" });
@@ -25,7 +27,7 @@ contract('NavCalculator', (accounts) => {
   const TIMEDIFF = 60*60*24*30;
 
   let fund, calculator, dataFeed;
-  let totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal, navPerShare, accumulatedMgmtFees, accumulatedAdminFees, lossCarryforward, usdEth;
+  let totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal, navPerShare, accumulatedMgmtFees, accumulatedAdminFees, accumulatedPerfFees, lossCarryforward, usdEth;
 
   // Helpers
   const getBalancePromise = address => web3.eth.getBalancePromise(address);
@@ -52,7 +54,15 @@ contract('NavCalculator', (accounts) => {
   ]);
 
   const checkRoughEqual = (vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees) => {
-    [ansNAV, ansLCF, ansAMF, ansAPF] = vals;
+    [ansNAV, ansLCF, ansAMF, ansAAF] = vals;
+
+    console.log('** Check rough equals: Field | Actual => Test Values **');
+    console.log(` - NavPerShare: ${navPerShare} => ${ansNAV.toString()} | ${navPerShare == ansNAV.toString()}`);
+    console.log(` - lossCarryforward: ${lossCarryforward} => ${ansLCF.toString()}`);
+    console.log(` - accumulatedMgmtFees: ${accumulatedMgmtFees} => ${ansAMF.toString()}`);
+    console.log(` - accumulatedAdminFees: ${accumulatedAdminFees} => ${ansAAF.toString()}`);
+    console.log(` - accumulatedPerfFees: ${accumulatedPerfFees}`);
+
     assert(Math.abs(parseInt(navPerShare) / ansNAV - 1) < 0.0001, 'incorrect navPerShare');
 
     if (ansLCF !== 0) assert(Math.abs(parseInt(lossCarryforward) / ansLCF - 1) < 0.0001, 'incorrect lossCarryforward');
@@ -61,7 +71,7 @@ contract('NavCalculator', (accounts) => {
     if (ansAMF !== 0) assert(Math.abs(parseInt(accumulatedMgmtFees) / ansAMF - 1) < 0.0001, 'incorrect accumulatedMgmtFees');
     else assert.equal(parseInt(accumulatedMgmtFees), 0, 'incorrect accumulatedMgmtFees');
 
-    if (ansAPF !== 0) assert(Math.abs(parseInt(accumulatedAdminFees) / ansAPF - 1) < 0.0001, 'incorrect accumulatedAdminFees');
+    if (ansAAF !== 0) assert(Math.abs(parseInt(accumulatedAdminFees) / ansAAF - 1) < 0.0001, 'incorrect accumulatedAdminFees');
     else assert.equal(parseInt(accumulatedAdminFees), 0, 'incorrect accumulatedAdminFees');
   };
 
@@ -81,22 +91,33 @@ contract('NavCalculator', (accounts) => {
           let gpvLessFees = gav - accumulatedMgmtFees - accumulatedAdminFees;
           // console.log('gpvlessFees', gpvlessFees);
           let gainLoss = gpvLessFees - nav - mgmtFee - adminFee;
-          // console.log('gainLoss', gainLoss);
+
+          // If there are any accumulated performance fees and if there is a loss in calculation period
+          // return the performance fees first
+          let performFeePayback = (accumulatedPerfFees > 0 && gainLoss < 0) ? Math.min(accumulatedPerfFees, -gainLoss) : 0;
+          console.log('accumulatedPerfFees (before): ', accumulatedPerfFees, ' | gainLoss: ', gainLoss);
+
           let lossPayback = gainLoss > 0 ? Math.min(gainLoss, lossCarryforward) : 0;
-          // console.log('lossPayback', lossPayback);
+          console.log('lossPayback', lossPayback);
           let gainLossAfterPayback = gainLoss - lossPayback;
-          // console.log('gainLossAfterPayback', gainLossAfterPayback);
+          console.log('gainLossAfterPayback', gainLossAfterPayback);
           let performFee = gainLossAfterPayback > 0 ? Math.trunc(gainLossAfterPayback * PERFORM_FEE_BPS / 10000) : 0;
           // console.log('performFee', performFee);
           let netGainLossAfterPerformFee = gainLossAfterPayback + lossPayback - performFee;
           // console.log('netGainLossAfterPerformFee', netGainLossAfterPerformFee);
-          nav += netGainLossAfterPerformFee;
+          nav += netGainLossAfterPerformFee + performFeePayback;
           if (netGainLossAfterPerformFee < 0) lossCarryforward += Math.abs(netGainLossAfterPerformFee);
 
           navPerShare = Math.trunc(nav * 10000 / totalSupply);
-          lossCarryforward -= lossPayback;
-          accumulatedMgmtFees += mgmtFee + performFee;
+
+          console.log('navPerShare: ', navPerShare, nav, totalSupply);
+          
+          console.log(' => lossCarryforward: ', lossCarryforward);
+          lossCarryforward -= lossPayback + performFeePayback / (PERFORM_FEE_BPS / 10000);
+          console.log(lossCarryforward);
+          accumulatedMgmtFees += mgmtFee + performFee - performFeePayback;
           accumulatedAdminFees += adminFee;
+          accumulatedPerfFees += performFee - performFeePayback;
           resolve([navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees]);
         })
         .catch(reject);
@@ -124,6 +145,7 @@ contract('NavCalculator', (accounts) => {
         [totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal,
           accumulatedMgmtFees, accumulatedAdminFees, lossCarryforward, usdEth] = _vals.map(parseInt);
         totalEthPendingSubscription = totalEthPendingSubscription || 0;
+        accumulatedPerfFees = 0;
         return fund.navPerShare();
       })
       .then((_navPerShare) => navPerShare = _navPerShare)
@@ -155,6 +177,8 @@ contract('NavCalculator', (accounts) => {
   it('should calculate the navPerShare correctly (base case)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
+    console.log('**** should calculate the navPerShare correctly (base case)');
+
     Promise.resolve(changeExchangeValue(100))
       .then(() => fund.lastCalcDate.call())
       .then(_date => date1 = _date)
@@ -162,6 +186,7 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
+        console.log(arrayToObject(keys, _values.map(x => x.toString())));
         [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
@@ -176,6 +201,8 @@ contract('NavCalculator', (accounts) => {
   it('should calculate the navPerShare correctly (portfolio goes down)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
+    console.log('**** should calculate the navPerShare correctly(portfolio goes down)');
+
     Promise.resolve(changeExchangeValue(75))
       .then(() => fund.lastCalcDate.call())
       .then(_date => date1 = _date)
@@ -183,6 +210,7 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
+        console.log(arrayToObject(keys, _values.map(x => x.toString())));
         [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
@@ -198,6 +226,8 @@ contract('NavCalculator', (accounts) => {
   it('should calculate the navPerShare correctly (portfolio recovers from loss)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
+    console.log('****should calculate the navPerShare correctly (portfolio recovers from loss)');
+
     Promise.resolve(changeExchangeValue(150))
       .then(() => fund.lastCalcDate.call())
       .then((_date) => date1 = _date)
@@ -205,6 +235,7 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
+        console.log(arrayToObject(keys, _values.map(x => x.toString())));
         [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
@@ -219,6 +250,8 @@ contract('NavCalculator', (accounts) => {
   it('should calculate the navPerShare correctly (portfolio loses its gains, goes down 10x)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
+    console.log('****should calculate the navPerShare correctly (portfolio loses its gains, goes down 10x)');
+
     Promise.resolve(changeExchangeValue(15))
       .then(() => fund.lastCalcDate.call())
       .then(_date => date1 = _date)
@@ -226,6 +259,7 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
+        console.log(arrayToObject(keys, _values.map(x => x.toString())));        
         [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);
@@ -240,6 +274,8 @@ contract('NavCalculator', (accounts) => {
   it('should calculate the navPerShare correctly (portfolio goes up 50x)', (done) => {
     let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
 
+    console.log('**** should calculate the navPerShare correctly (portfolio goes up 50x)');
+
     Promise.resolve(changeExchangeValue(5000))
       .then(() => fund.lastCalcDate.call())
       .then(_date => date1 = _date)
@@ -247,6 +283,7 @@ contract('NavCalculator', (accounts) => {
       .then(() => fund.calcNav())
       .then(() => retrieveFundParams())
       .then((_values) => {
+        console.log(arrayToObject(keys, _values.map(x => x.toString())));
         [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
         assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
         return calc(date2 - date1);

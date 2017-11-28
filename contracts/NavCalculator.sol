@@ -92,12 +92,11 @@ contract NavCalculator is DestructibleModified {
 
     // if current period gain
     if (gainLoss >= 0) {
-      performFee = getPerformFee(uint(gainLoss));
       uint lossPayback = Math.min256(uint(gainLoss), lossCarryforward);
-      performFee = getPerformFee(uint(gainLoss).sub(lossPayback));
 
       // Update the lossCarryforward and netAssetValue variables
       lossCarryforward = lossCarryforward.sub(lossPayback);
+      performFee = getPerformFee(uint(gainLoss).sub(lossPayback));
       netAssetValue = netAssetValue.add(uint(gainLoss)).sub(performFee);
     
     // if current period loss

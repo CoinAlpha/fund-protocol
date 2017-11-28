@@ -46,4 +46,10 @@ const sendTransaction = (from, to, value) => {
   });
 };
 
-module.exports = { increaseTime, sendTransaction };
+const arrayToObject = (keys, vals) => {
+  const result = {};
+  keys.forEach((_key, _index) => result[_key] = vals[_index]);
+  return result;
+}
+
+module.exports = { increaseTime, sendTransaction, arrayToObject };
