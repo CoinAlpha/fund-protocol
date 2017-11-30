@@ -23,7 +23,9 @@ const constructors = {
     false,                        // _useOraclize
     '[NOT USED]',                 // _queryUrl
     300,                          // _secondsBetweenQueries
-    300 * 100,                    // _initialExchangeRate
+    300 * 100,                    // _initialUsdEthRate
+    10000 * 100,                  // _initialUsdBtcRate
+    100 * 100,                    // _initialUsdLtcRate
     exchange,                     // _exchange
     { from: owner, value: 0 }
   ),

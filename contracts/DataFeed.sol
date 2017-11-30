@@ -20,6 +20,8 @@ contract DataFeed is usingOraclize, DestructibleModified {
   bool    public useOraclize;            // True: use Oraclize.  False: use testRPC address.
   uint    public value;                  // Total portfolio value in USD
   uint    public usdEth;                 // USD/ETH exchange rate
+  uint    public usdBtc;                 // USD/BTC exchange rate
+  uint    public usdLtc;                 // USD/BTC exchange rate
   uint    public timestamp;              // Timestamp of last update
 
   // Oraclize-specific variables
@@ -34,14 +36,16 @@ contract DataFeed is usingOraclize, DestructibleModified {
 
   // Only emitted when useOraclize is true
   event LogDataFeedQuery(string description);
-  event LogDataFeedResponse(string rawResult, uint value, uint usdEth, uint timestamp);
+  event LogDataFeedResponse(string rawResult, uint value, uint usdEth, uint usdBtc, uint usdLtc, uint timestamp);
   event LogDataFeedError(string rawResult);
 
   function DataFeed(
     bool    _useOraclize,
     string  _queryUrl,
     uint    _secondsBetweenQueries,
-    uint    _initialExchangeRate,
+    uint    _initialUsdEthRate,
+    uint    _initialUsdBtcRate,
+    uint    _initialUsdLtcRate,
     address _exchange
   )
     payable
@@ -51,7 +55,9 @@ contract DataFeed is usingOraclize, DestructibleModified {
     queryUrl = _queryUrl;
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
-    usdEth = _initialExchangeRate;
+    usdEth = _initialUsdEthRate;
+    usdBtc = _initialUsdBtcRate;
+    usdLtc = _initialUsdLtcRate;
     gasLimit = 300000;              // Adjust this value depending on code length
     gasPrice = 20000000000;         // 20 GWei, Oraclize default
 
@@ -104,9 +110,15 @@ contract DataFeed is usingOraclize, DestructibleModified {
       string memory usdEthRaw = JsmnSolLib.getBytes(_result, tokens[4].start, tokens[4].end);
       usdEth = parseInt(usdEthRaw, 2);
 
+      string memory usdBtcRaw = JsmnSolLib.getBytes(_result, tokens[6].start, tokens[6].end);
+      usdBtc = parseInt(usdBtcRaw, 2);
+
+      string memory usdLtcRaw = JsmnSolLib.getBytes(_result, tokens[8].start, tokens[8].end);
+      usdLtc = parseInt(usdLtcRaw, 2);
+
       timestamp = now;
 
-      LogDataFeedResponse(_result, value, usdEth, timestamp);
+      LogDataFeedResponse(_result, value, usdEth, usdBtc, usdLtc, timestamp);
       if (secondsBetweenQueries > 0) {
         updateWithOraclize();
       }
@@ -123,7 +135,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     if (!useOraclize) {
       value = exchange.balance.mul(usdEth).mul(_percent).div(1e20);
       timestamp = now;
-      LogDataFeedResponse("mock", value, usdEth, timestamp);
+      LogDataFeedResponse("mock", value, usdEth, usdBtc, usdLtc, timestamp);
       return true;
     }
   }
