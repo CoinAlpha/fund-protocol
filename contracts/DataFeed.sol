@@ -142,7 +142,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
 
   // Manager override of values
   // Amounts are in units of 1 cent, i.e. $123.45 corresponds to an input if 12345
-  function updateValues(uint _portfolioValue, uint _usdEth, uint _usdBtc, uint _usdLtc)
+  function updateByManager(uint _portfolioValue, uint _usdEth, uint _usdBtc, uint _usdLtc)
     onlyOwner
     returns (bool success)
   {

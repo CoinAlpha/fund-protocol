@@ -57,7 +57,7 @@ contract('DataFeed', (accounts) => {
       it(`should not update: with invalid input`, () => {
         const updateParams = [value, usdEth, usdBtc, usdLtc];
         updateParams[_index] = 0;
-        return dataFeed.updateValues(
+        return dataFeed.updateByManager(
           updateParams[0],
           updateParams[1],
           updateParams[2],
@@ -74,7 +74,7 @@ contract('DataFeed', (accounts) => {
         const updateParams = originalValues.slice(0);
         const inputValue = 99999;
         updateParams[_index] = inputValue;
-        return dataFeed.updateValues(
+        return dataFeed.updateByManager(
           updateParams[0],
           updateParams[1],
           updateParams[2],
@@ -106,7 +106,7 @@ contract('DataFeed', (accounts) => {
     const notManagers = accounts.slice(-(accounts.length - 1));
     notManagers.forEach((_notManager, _index) => {
       it(`should not be updated by a non-Manager ${_index}`, () => {
-        return dataFeed.updateValues(
+        return dataFeed.updateByManager(
           originalValues[0],
           originalValues[1],
           originalValues[2],
