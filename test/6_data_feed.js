@@ -38,19 +38,19 @@ contract('DataFeed', (accounts) => {
   ]);
 
   before('before: should prepare', () => DataFeed.deployed()
-      .then(_dataFeed => dataFeed = _dataFeed)
-      .then(() => dataFeed.updateWithExchange(100))
-      .then(() => retrieveDataFeedValues())
-      .then((_vals) => {
-        _vals = _vals.map(_val => Number(_val));
-        value = _vals[0];
-        usdEth = _vals[1];
-        usdBtc = _vals[2];
-        usdLtc = _vals[3];
-        originalValues = [value, usdEth, usdBtc, usdLtc];
-        originalValues.forEach((_val, _index) => assert.isDefined(_val, `${fields[_index]} is not defined`));
-      })
-      .catch(err => console.error(`****** BEFORE: ${err.toString()}`)));
+    .then(_dataFeed => dataFeed = _dataFeed)
+    .then(() => dataFeed.updateWithExchange(100))
+    .then(() => retrieveDataFeedValues())
+    .then((_vals) => {
+      _vals = _vals.map(_val => Number(_val));
+      value = _vals[0];
+      usdEth = _vals[1];
+      usdBtc = _vals[2];
+      usdLtc = _vals[3];
+      originalValues = [value, usdEth, usdBtc, usdLtc];
+      originalValues.forEach((_val, _index) => assert.isDefined(_val, `${fields[_index]} is not defined`));
+    })
+    .catch(err => console.error(`****** BEFORE: ${err.toString()}`)));
 
   fields.forEach((_field, _index) => {
     describe(`updateValue: ${_field}`, () => {
@@ -85,7 +85,7 @@ contract('DataFeed', (accounts) => {
             assert.strictEqual(tx.logs.length, 1, 'error: too many events logged');
             assert.strictEqual(tx.logs[0].event, 'LogDataFeedResponse', 'wrong event logged');
             assert.strictEqual(tx.logs[0].args.rawResult, 'manager update', 'event did not log manager update');
-          })  
+          })
           .then(() => retrieveDataFeedValues())
           .then((_vals) => {
             _vals = _vals.map(_val => Number(_val));
@@ -119,6 +119,47 @@ contract('DataFeed', (accounts) => {
           );
       });
     });
+  });
+
+  describe('update USD unsubscribed amount', () => {
+    const notManager = accounts[accounts.length - 1];
+    const usdUnsubscribedAmount = 1000000;
+
+    it('usdUnsubscribedAmount should exist and be initialized to 0', () => {
+      assert.isDefined(dataFeed.usdUnsubscribedAmount, 'variable undefined');
+      return dataFeed.usdUnsubscribedAmount.call()
+        .then(_usdUnsubAmount => assert.strictEqual(Number(_usdUnsubAmount), 0, 'USD unsub was not initialized to 0'))
+        .catch(err => assert.throw(`usdUnsubscribedAmount: check variable error: ${err.toString()}`));
+    });
+
+    it('should not be updated by a non-Manager', () => dataFeed.updateUsdUnsubscribedAmount(usdUnsubscribedAmount, { from: notManager })
+      .then(
+      () => assert.throw('should not have updated USD unsub amount'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+      )
+    );
+
+    it('manager should be able to change', () => dataFeed.usdUnsubscribedAmount.call()
+      .then(_usdUnsubAmount => assert.strictEqual(Number(_usdUnsubAmount), 0, 'USD unsub start amount not equal to zero'))
+      .then(() => dataFeed.updateUsdUnsubscribedAmount(usdUnsubscribedAmount, { from: MANAGER }))
+      .then((tx) => {
+        assert.strictEqual(tx.logs.length, 1, 'error: too many events logged');
+        assert.strictEqual(tx.logs[0].event, 'LogUsdUnsubscribedAmountUpdate', 'wrong event logged');
+        assert.strictEqual(Number(tx.logs[0].args.usdUnsubscribedAmount), usdUnsubscribedAmount, 'incorrect amount logged');
+      })
+      .then(() => dataFeed.usdUnsubscribedAmount.call())
+      .then(_usdUnsubAmount => assert.strictEqual(Number(_usdUnsubAmount), usdUnsubscribedAmount, 'USD unsub was not updated'))
+      .catch(err => assert.throw(`manager update USD unsub amount error: ${err.toString()}`))
+    );
+
+    xit('USD unsubscribed amount should be subtracted from value when updating with oraclize', () => {
+      return dataFeed.updateUsdUnsubscribedAmount(usdUnsubscribedAmount, { from: MANAGER })
+        .then(
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+        );
+    });
+
   });
 
   xdescribe('it should update with Oraclize', () => {

@@ -19,6 +19,9 @@ contract DataFeed is usingOraclize, DestructibleModified {
   // Global variables
   bool    public useOraclize;            // True: use Oraclize.  False: use testRPC address.
   uint    public value;                  // Total portfolio value in USD
+  uint    public usdUnsubscribedAmount;  // Total amount of USD in exchange account/NAV service not yet subscribed
+                                         // to the fund.  When calculating NAV, this amount is to be excluded from
+                                         // portfolio value
   uint    public usdEth;                 // USD/ETH exchange rate
   uint    public usdBtc;                 // USD/BTC exchange rate
   uint    public usdLtc;                 // USD/BTC exchange rate
@@ -38,6 +41,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
   event LogDataFeedQuery(string description);
   event LogDataFeedResponse(string rawResult, uint value, uint usdEth, uint usdBtc, uint usdLtc, uint timestamp);
   event LogDataFeedError(string rawResult);
+  event LogUsdUnsubscribedAmountUpdate(uint usdUnsubscribedAmount);
 
   function DataFeed(
     bool    _useOraclize,
@@ -105,7 +109,9 @@ contract DataFeed is usingOraclize, DestructibleModified {
     // Check for the success return code and that the object is not an error string
     if (returnValue == 0 && actualNum > 4) {
       string memory valueRaw = JsmnSolLib.getBytes(_result, tokens[2].start, tokens[2].end);
-      value = parseInt(valueRaw, 2);
+      uint unadjustedValue = parseInt(valueRaw, 2);
+      require(unadjustedValue > usdUnsubscribedAmount);
+      value = unadjustedValue.sub(usdUnsubscribedAmount);
 
       string memory usdEthRaw = JsmnSolLib.getBytes(_result, tokens[4].start, tokens[4].end);
       usdEth = parseInt(usdEthRaw, 2);
@@ -133,7 +139,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     returns (bool success)
   {
     if (!useOraclize) {
-      value = exchange.balance.mul(usdEth).mul(_percent).div(1e20);
+      value = exchange.balance.mul(usdEth).mul(_percent).div(1e20).sub(usdUnsubscribedAmount);
       timestamp = now;
       LogDataFeedResponse("mock", value, usdEth, usdBtc, usdLtc, timestamp);
       return true;
@@ -153,6 +159,17 @@ contract DataFeed is usingOraclize, DestructibleModified {
     usdLtc = _usdLtc;
     timestamp = now;
     LogDataFeedResponse("manager update", value, usdEth, usdBtc, usdLtc, timestamp);
+    return true;
+  }
+
+  // Amounts are in units of 1 cent, i.e. $123.45 corresponds to an input if 12345
+  function updateUsdUnsubscribedAmount(uint _usdUnsubcribedAmount)
+    onlyOwner
+    returns (bool success)
+  {
+    require(_usdUnsubcribedAmount >= 0);
+    usdUnsubscribedAmount = _usdUnsubcribedAmount;
+    LogUsdUnsubscribedAmountUpdate(usdUnsubscribedAmount);
     return true;
   }
 
