@@ -16,10 +16,12 @@ investor2 = web3.eth.accounts[3]
 manager = web3.eth.accounts[0]
 
 // (IF TESTNET) Unlock accounts
-web3.personal.unlockAccount(owner, '<INSERT PASSWORD>', 15000)
-web3.personal.unlockAccount(exchange, '<INSERT PASSWORD>', 15000)
-web3.personal.unlockAccount(investor1, '<INSERT PASSWORD>', 15000)
-web3.personal.unlockAccount(investor2, '<INSERT PASSWORD>', 15000)
+
+pw = '<INSERT PASSWORD>'
+web3.personal.unlockAccount(owner, pw, 15000)
+web3.personal.unlockAccount(exchange, pw, 15000)
+web3.personal.unlockAccount(investor1, pw, 15000)
+web3.personal.unlockAccount(investor2, pw, 15000)
 
 // Deploy contracts
 truffle migrate --reset                   // TESTRPC ONLY

@@ -68,9 +68,7 @@ contract('OwnableModified', (accounts) => {
   
   const addressZero = '0x0000000000000000000000000000000000000000';
   
-  before('should prepare', () => {
-    assert.isAtLeast(accounts.length, 5);
-  });
+  before('should prepare', () => assert.isAtLeast(accounts.length, 5));
 
   Object.keys(constructors).forEach((name) => {
     describe(name, () => {
