@@ -46,19 +46,19 @@ npm install
 4. Unlock your primary account: `web3.personal.unlockAccount(web3.eth.accounts[0], <INSERT YOUR PASSWORD HERE>, 15000)`
 5. Follow manual testing workflows in `js/Fund-test.js`
 
-### Ethereum Bridge
+### Ethereum Bridge | Oraclize
 Ethereum Bridge is used for connecting to Oraclize from a non-public blockchain instance (e.g. testrpc).  This is used for testing the DataFeed contracts.
 
 1. In a separate folder from this repo, clone the repo: `git clone https://github.com/oraclize/ethereum-bridge`
 2. Setup: `cd ethereum-bridge; npm install`
 3. When running testrpc, use the same mnemonic to keep the OraclizeAddrResolver address constant: `testrpc -l 7000000 -p 7545 --mnemonic "coinalpha"`
 4. Run: `node bridge -a 9 -H localhost:7545 --dev` (`-a 9` uses the 9th testrpc account for deploying oraclize; the 9th account should not be used for any other purposes, and port 7545)
-4. After starting the bridge, take note of this message:
+5. After starting the bridge, take note of this message:
 
-```
-Please add this line to your contract constructor:
+  ```
+  Please add this line to your contract constructor:
 
-OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
-```
+  OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+  ```
 
-5. Add this line into DataFeel.sol
+6. Add this line into DataFeel.sol
