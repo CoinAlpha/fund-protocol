@@ -1,6 +1,6 @@
 pragma solidity ^0.4.13;
 
-import './oraclize/oraclizeAPI.sol';
+import './oraclize/usingOraclize.sol';
 import './zeppelin/DestructibleModified.sol';
 import "./math/SafeMath.sol";
 import "./jsmnsol/JsmnSolLib.sol";
@@ -54,6 +54,10 @@ contract DataFeed is usingOraclize, DestructibleModified {
   )
     payable
   {
+    // Testing Oraclize using Ethereum bridge (see readme for more details)
+    /** ### NOTE:  COMMENT THIS OUT FOR DEPLOYMENT / PRODUCTION ## **/
+    OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+
     // Constants
     useOraclize = _useOraclize;
     queryUrl = _queryUrl;
@@ -63,7 +67,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
     usdBtc = _initialUsdBtcRate;
     usdLtc = _initialUsdLtcRate;
     gasLimit = 300000;              // Adjust this value depending on code length
-    gasPrice = 20000000000;         // 20 GWei, Oraclize default
+    gasPrice = 50000000000;         // 50 GWei, Oraclize default
 
     if (useOraclize) {
       oraclize_setCustomGasPrice(gasPrice);    

@@ -10,6 +10,8 @@ if (typeof web3.eth.getAccountsPromise === "undefined") {
   Promise.promisifyAll(web3.eth, { suffix: "Promise" });
 }
 
+web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
+
 contract('DataFeed', (accounts) => {
   let MANAGER = accounts[0];
   let EXCHANGE = accounts[1];
@@ -19,16 +21,6 @@ contract('DataFeed', (accounts) => {
   let originalValues;
 
   const fields = ['value', 'usdEth', 'usdBtc', 'usdEth'];
-
-  const changeExchangeValue = (_multiplier) => {
-    return new Promise((resolve, reject) => {
-      resolve(
-        dataFeed.updateWithExchange(_multiplier)
-        // .then(() => dataFeed.value())
-        // .then((_val) => console.log("new portfolio value (USD):", parseInt(_val)))
-      );
-    });
-  };
 
   const retrieveDataFeedValues = () => Promise.all([
     dataFeed.value.call(),
@@ -40,6 +32,7 @@ contract('DataFeed', (accounts) => {
   before('before: should prepare', () => DataFeed.deployed()
     .then(_dataFeed => dataFeed = _dataFeed)
     .then(() => dataFeed.updateWithExchange(100))
+    .then(txObj => web3.eth.getTransactionReceiptMined(txObj.tx))
     .then(() => retrieveDataFeedValues())
     .then((_vals) => {
       _vals = _vals.map(_val => Number(_val));
@@ -49,8 +42,29 @@ contract('DataFeed', (accounts) => {
       usdLtc = _vals[3];
       originalValues = [value, usdEth, usdBtc, usdLtc];
       originalValues.forEach((_val, _index) => assert.isDefined(_val, `${fields[_index]} is not defined`));
+      if (value === 0) {
+        value = 10000000;
+        originalValues[0] = value;
+        return dataFeed.updateByManager(
+          value,
+          usdEth,
+          usdBtc,
+          usdLtc,
+          { from: MANAGER }
+        )
+      }
     })
-    .catch(err => console.error(`****** BEFORE: ${err.toString()}`)));
+    .then((txObj) => {
+      if (!txObj) throw 'OK';
+      return web3.eth.getTransactionReceiptMined(txObj.tx);
+    })
+    .then(() => dataFeed.value.call())
+    .then(_val => value = Number(_val))
+    .then(() => assert.isAbove(value, 0, 'initial portfolio value is zero'))
+    .catch((err) => {
+      if (err !== 'OK') assert.throw(`****** BEFORE: ${err.toString()}`);
+    })
+  );
 
   fields.forEach((_field, _index) => {
     describe(`updateValue: ${_field}`, () => {
@@ -81,11 +95,13 @@ contract('DataFeed', (accounts) => {
           updateParams[3],
           { from: MANAGER }
         )
-          .then((tx) => {
-            assert.strictEqual(tx.logs.length, 1, 'error: too many events logged');
-            assert.strictEqual(tx.logs[0].event, 'LogDataFeedResponse', 'wrong event logged');
-            assert.strictEqual(tx.logs[0].args.rawResult, 'manager update', 'event did not log manager update');
+          .then(txObj => {
+            assert.strictEqual(txObj.logs.length, 1, 'error: too many events logged');
+            assert.strictEqual(txObj.logs[0].event, 'LogDataFeedResponse', 'wrong event logged');
+            assert.strictEqual(txObj.logs[0].args.rawResult, 'manager update', 'event did not log manager update');
+            return web3.eth.getTransactionReceiptMined(txObj.tx);
           })
+          .then(receipt => assert.strictEqual(receipt.status, 1, 'function failed'))
           .then(() => retrieveDataFeedValues())
           .then((_vals) => {
             _vals = _vals.map(_val => Number(_val));
@@ -97,7 +113,7 @@ contract('DataFeed', (accounts) => {
               }
             })
           })
-          .catch(err => assert.throw(`test failed: should have updated ${_field} ${err.toString()}`));
+          .catch(err => assert.throw(`failed: should have updated ${_field} ${err.toString()}`));
       }); // it
     }); // describe
   }); // fields.forEach
@@ -142,11 +158,13 @@ contract('DataFeed', (accounts) => {
     it('manager should be able to change', () => dataFeed.usdUnsubscribedAmount.call()
       .then(_usdUnsubAmount => assert.strictEqual(Number(_usdUnsubAmount), 0, 'USD unsub start amount not equal to zero'))
       .then(() => dataFeed.updateUsdUnsubscribedAmount(usdUnsubscribedAmount, { from: MANAGER }))
-      .then((tx) => {
-        assert.strictEqual(tx.logs.length, 1, 'error: too many events logged');
-        assert.strictEqual(tx.logs[0].event, 'LogUsdUnsubscribedAmountUpdate', 'wrong event logged');
-        assert.strictEqual(Number(tx.logs[0].args.usdUnsubscribedAmount), usdUnsubscribedAmount, 'incorrect amount logged');
+      .then((txObj) => {
+        assert.strictEqual(txObj.logs.length, 1, 'error: too many events logged');
+        assert.strictEqual(txObj.logs[0].event, 'LogUsdUnsubscribedAmountUpdate', 'wrong event logged');
+        assert.strictEqual(Number(txObj.logs[0].args.usdUnsubscribedAmount), usdUnsubscribedAmount, 'incorrect amount logged');
+        return web3.eth.getTransactionReceiptMined(txObj.tx);
       })
+      .then(receipt => assert.strictEqual(receipt.status, 1, 'function failed'))
       .then(() => dataFeed.usdUnsubscribedAmount.call())
       .then(_usdUnsubAmount => assert.strictEqual(Number(_usdUnsubAmount), usdUnsubscribedAmount, 'USD unsub was not updated'))
       .catch(err => assert.throw(`manager update USD unsub amount error: ${err.toString()}`))
@@ -162,11 +180,18 @@ contract('DataFeed', (accounts) => {
 
   });
 
-  xdescribe('it should update with Oraclize', () => {
-    it('- should not update if Oraclize error', () => {
+  describe('it should update with Oraclize', () => {
+    xit('- should not update if Oraclize error', () => {
     });
 
     it('- should update', () => {
+      return dataFeed.updateWithOraclize({ from: MANAGER, value: web3.toWei(0.1, 'ether') })
+        .then((txObj) => {
+          console.log(JSON.stringify(txObj));
+          console.log(txObj);
+          console.log(txObj.logs[0].args);
+        })
+        .catch(err => assert.throw(err.toString()));
     });
   });
 
