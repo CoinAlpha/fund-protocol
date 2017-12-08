@@ -153,18 +153,12 @@ contract('DataFeed', (accounts) => {
       .then(_usdUnsubAmount => assert.strictEqual(Number(_usdUnsubAmount), 0, 'USD unsub start amount not equal to zero'))
       .then(() => dataFeed.updateUsdUnsubscribedAmount(usdUnsubscribedAmount, { from: MANAGER }))
       .then((txObj) => {
-        // console.log(txObj);
-        // console.log(JSON.stringify(txObj.receipt));
-        // assert.strictEqual(txObj.logs.length, 1, 'error: incorrect number of events logged');
-        // assert.strictEqual(txObj.logs[0].event, 'LogUsdUnsubscribedAmountUpdate', 'wrong event logged');
-        // assert.strictEqual(Number(txObj.logs[0].args.usdUnsubscribedAmount), usdUnsubscribedAmount, 'incorrect amount logged');
+        assert.strictEqual(txObj.logs.length, 1, 'error: incorrect number of events logged');
+        assert.strictEqual(txObj.logs[0].event, 'LogUsdUnsubscribedAmountUpdate', 'wrong event logged');
+        assert.strictEqual(Number(txObj.logs[0].args.usdUnsubscribedAmount), usdUnsubscribedAmount, 'incorrect amount logged');
         return web3.eth.getTransactionReceiptMined(txObj.tx);
       })
-      .then(receipt => {
-        // console.log(receipt);
-        // console.log(JSON.stringify(receipt));
-        assert.strictEqual(receipt.status, 1, 'function failed');
-      })
+      .then(receipt => assert.strictEqual(receipt.status, 1, 'function failed'))
       .then(() => dataFeed.usdUnsubscribedAmount.call())
       .then(_usdUnsubAmount => assert.strictEqual(Number(_usdUnsubAmount), usdUnsubscribedAmount, 'USD unsub was not updated'))
       .catch(err => assert.throw(`manager update USD unsub amount error: ${err.toString()}`))
@@ -184,12 +178,12 @@ contract('DataFeed', (accounts) => {
     xit('- should not update if Oraclize error', () => {
     });
 
-    it('- should update', () => {
+    it('- should send query', () => {
       return dataFeed.updateWithOraclize({ from: MANAGER, value: web3.toWei(0.1, 'ether') })
         .then((txObj) => {
-          // console.log(JSON.stringify(txObj));
-          // console.log(txObj);
-          // console.log(txObj.logs[0].args);
+          assert.strictEqual(txObj.logs.length, 1, 'error: incorrect number of events logged');
+          assert.strictEqual(txObj.logs[0].event, 'LogDataFeedQuery', 'wrong event logged');
+          assert.include(txObj.logs[0].args.description, 'Oraclize', 'error in description');
         })
         .catch(err => assert.throw(err.toString()));
     });
