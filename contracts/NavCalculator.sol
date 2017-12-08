@@ -23,7 +23,7 @@ contract NavCalculator is DestructibleModified {
   address public fundAddress;
 
   // Modules
-  DataFeed public dataFeed;
+  IDataFeed public dataFeed;
   Fund fund;
 
   // This modifier is applied to all external methods in this contract since only
@@ -35,7 +35,7 @@ contract NavCalculator is DestructibleModified {
 
   function NavCalculator(address _dataFeed)
   {
-    dataFeed = DataFeed(_dataFeed);
+    dataFeed = IDataFeed(_dataFeed);
   }
 
   event LogNavCalculation(
@@ -131,7 +131,7 @@ contract NavCalculator is DestructibleModified {
   function setDataFeed(address _address)
     onlyOwner
   {
-    dataFeed = DataFeed(_address);
+    dataFeed = IDataFeed(_address);
   }
 
   // ********* HELPERS *********

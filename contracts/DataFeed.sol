@@ -12,6 +12,11 @@ import "./jsmnsol/JsmnSolLib.sol";
  * @dev Generic Oraclize data feed contract for data feeds returning an unsigned integer.
  */
 
+contract IDataFeed {
+  uint    public value;                  // Total portfolio value in USD
+  uint    public usdEth;                 // USD/ETH exchange rate
+}
+
 contract DataFeed is usingOraclize, DestructibleModified {
   using SafeMath for uint;
   using JsmnSolLib for string;

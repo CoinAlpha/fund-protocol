@@ -52,7 +52,7 @@ contract Fund is DestructiblePausable {
   // Modules: where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
   NavCalculator   public navCalculator;         // calculating net asset value
   InvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
-  DataFeed        public dataFeed;              // fetching external data like total portfolio value and exchange rates
+  IDataFeed       public dataFeed;              // fetching external data like total portfolio value and exchange rates
 
   // This struct tracks fund-related balances for a specific investor address
   struct Investor {
@@ -135,7 +135,7 @@ contract Fund is DestructiblePausable {
     exchange = _exchange;
     navCalculator = NavCalculator(_navCalculator);
     investorActions = InvestorActions(_investorActions);
-    dataFeed = DataFeed(_dataFeed);
+    dataFeed = IDataFeed(_dataFeed);
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
@@ -560,7 +560,7 @@ contract Fund is DestructiblePausable {
   {
     require(_addr != address(0));
     address old = dataFeed;
-    dataFeed = DataFeed(_addr);
+    dataFeed = IDataFeed(_addr);
     LogDataFeedModuleChanged(old, _addr);
     return true;
   }

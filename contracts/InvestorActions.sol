@@ -22,7 +22,7 @@ contract InvestorActions is DestructibleModified {
   address public fundAddress;
 
   // Modules
-  DataFeed public dataFeed;
+  IDataFeed public dataFeed;
   Fund fund;
 
   // This modifier is applied to all external methods in this contract since only
@@ -36,7 +36,7 @@ contract InvestorActions is DestructibleModified {
     address _dataFeed
   )
   {
-    dataFeed = DataFeed(_dataFeed);
+    dataFeed = IDataFeed(_dataFeed);
   }
 
   // Modifies the max investment limit allowed for an investor and overwrites the past limit
@@ -253,7 +253,7 @@ contract InvestorActions is DestructibleModified {
     onlyOwner 
     returns (bool success)
   {
-    dataFeed = DataFeed(_address);
+    dataFeed = IDataFeed(_address);
     return true;
   }
 }
