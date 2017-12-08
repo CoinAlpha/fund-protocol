@@ -42,6 +42,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
   event LogDataFeedResponse(string rawResult, uint value, uint usdEth, uint usdBtc, uint usdLtc, uint timestamp);
   event LogDataFeedError(string rawResult);
   event LogUsdUnsubscribedAmountUpdate(uint usdUnsubscribedAmount);
+  event LogWithdrawal(address manager, uint eth);
 
   function DataFeed(
     bool    _useOraclize,
@@ -219,6 +220,16 @@ contract DataFeed is usingOraclize, DestructibleModified {
   {
     useOraclize = !useOraclize;
     return useOraclize;
+  }
+
+  function withdrawBalance()
+    onlyOwner
+    returns (bool success)
+  {
+    uint payment = this.balance;
+    msg.sender.transfer(payment);
+    LogWithdrawal(msg.sender, payment);
+    return true;
   }
 
 }

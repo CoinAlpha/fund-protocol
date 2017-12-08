@@ -51,8 +51,8 @@ Ethereum Bridge is used for connecting to Oraclize from a non-public blockchain 
 
 1. In a separate folder from this repo, clone the repo: `git clone https://github.com/oraclize/ethereum-bridge`
 2. Setup: `cd ethereum-bridge; npm install`
-3. When running testrpc, use the same mnemonic to keep the OraclizeAddrResolver address constant: `testrpc -l 7000000 -p 7545 --mnemonic "coinalpha"`
-4. Run: `node bridge -a 9 -H localhost:7545 --dev` (`-a 9` uses the 9th testrpc account for deploying oraclize; the 9th account should not be used for any other purposes, and port 7545)
+3. When running testrpc, use the same mnemonic to keep the OraclizeAddrResolver address constant: `testrpc -l 7000000 -p 7545 -a 50 --mnemonic "coinalpha"`
+4. Run: `node bridge -a 49 -H localhost:7545 --dev` (`-a 49` uses the 49th testrpc account for deploying oraclize; the 9th account should not be used for any other purposes, and port 7545)
 5. After starting the bridge, take note of this message:
 
   ```
