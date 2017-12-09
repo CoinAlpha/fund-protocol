@@ -50,7 +50,6 @@ contract DataFeed is usingOraclize, DestructibleModified {
   event LogWithdrawal(address manager, uint eth);
 
   function DataFeed(
-    bool    _useOraclize,
     string  _queryUrl,
     uint    _secondsBetweenQueries,
     uint    _initialUsdEthRate,
@@ -65,7 +64,6 @@ contract DataFeed is usingOraclize, DestructibleModified {
     OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
 
     // Constants
-    useOraclize = _useOraclize;
     queryUrl = _queryUrl;
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
@@ -75,11 +73,8 @@ contract DataFeed is usingOraclize, DestructibleModified {
     gasLimit = 300000;              // Adjust this value depending on code length
     gasPrice = 50000000000;         // 50 GWei, Oraclize default
 
-    if (useOraclize) {
-      oraclize_setCustomGasPrice(gasPrice);    
-      oraclize_setProof(proofType_NONE);
-      updateWithOraclize();
-    }
+    oraclize_setCustomGasPrice(gasPrice);    
+    oraclize_setProof(proofType_NONE);
   }
 
   // Updates the value variable by fetching the queryUrl via Oraclize.

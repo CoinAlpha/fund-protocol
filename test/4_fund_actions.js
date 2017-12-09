@@ -63,7 +63,6 @@ contract('Fund Actions', (accounts) => {
   let investorActions;
 
   before(() => DataFeed.new(
-    false,                                  // _useOraclize
     '[NOT USED]',                           // _queryUrl
     SECONDS_BETWEEN_QUERIES,                // _secondsBetweenQueries
     USD_ETH_EXCHANGE_RATE * 100,            // _initialUsdEthRate

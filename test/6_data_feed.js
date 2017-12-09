@@ -179,18 +179,27 @@ contract('DataFeed', (accounts) => {
     });
 
     it('- should send query', () => {
-      return dataFeed.updateWithOraclize({ from: MANAGER, value: web3.toWei(0.1, 'ether') })
+      return dataFeed.useOraclize.call()
+        .then((_useOraclize) => {
+          if (_useOraclize) throw 'already using Oraclize';
+          return dataFeed.toggleUseOraclize({ from: MANAGER });
+        })
+        .then(txObj => web3.eth.getTransactionReceiptMined(txObj.tx))
+        .then(() => dataFeed.useOraclize.call())
+        .catch((err) => {
+          if (err !== 'already using Oraclize') assert.throw(err.toString());
+        })
+        .then(() => dataFeed.updateWithOraclize({ from: MANAGER, value: web3.toWei(0.5, 'ether') }))
         .then((txObj) => {
           assert.strictEqual(txObj.logs.length, 1, 'error: incorrect number of events logged');
           assert.strictEqual(txObj.logs[0].event, 'LogDataFeedQuery', 'wrong event logged');
           assert.include(txObj.logs[0].args.description, 'Oraclize', 'error in description');
         })
-        .catch(err => assert.throw(err.toString()));
+        .catch(err => assert.throw(`here ${err.toString()}`));
     });
   });
 
   describe('withdrawBalance', () => {
-
     let managerBalance = 0;
     let dataFeedBalance = 0;
     const amount = web3.toWei(0.5, 'ether');

@@ -42,7 +42,6 @@ module.exports = function(deployer, network, accounts) {
   if (network == "development" || network == "test") {
     deployer.deploy(
       DataFeed,
-      useOraclize,                            // _useOraclize
       dataFeedInfo[network].navServiceUrl,    // _queryUrl
       SECONDS_BETWEEN_QUERIES,                // _secondsBetweenQueries
       USD_ETH_EXCHANGE_RATE * 100,            // _initialUsdEthRate

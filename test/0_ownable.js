@@ -20,7 +20,6 @@ const ethToWei = eth => web3.toWei(eth, 'ether');
 const constructors = {
   OwnableModified: owner => allArtifacts.OwnableModified.new({ from: owner }),
   DataFeed: (owner, exchange) => allArtifacts.DataFeed.new(
-    false,                        // _useOraclize
     '[NOT USED]',                 // _queryUrl
     300,                          // _secondsBetweenQueries
     300 * 100,                    // _initialUsdEthRate
