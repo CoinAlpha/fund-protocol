@@ -7,13 +7,12 @@ const InvestorActions = artifacts.require('./InvestorActions.sol');
 const DataFeed = artifacts.require('./DataFeed.sol');
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
-contract('Initialize Fund', (accounts) => {
+contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
   // helpers
   const getBalancePromise = address => web3.eth.getBalancePromise(address);
   const weiToNum = wei => web3.fromWei(wei, 'ether').toNumber();

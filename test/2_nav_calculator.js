@@ -8,7 +8,6 @@ const DataFeed = artifacts.require('./DataFeed.sol');
 const { increaseTime, sendTransaction, arrayToObject } = require('../js/helpers');
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 const keys = ['date2', 'navPerShare', 'lossCarryforward', 'accumulatedMgmtFees', 'accumulatedAdminFees'];
 
@@ -16,7 +15,7 @@ if (typeof web3.eth.getAccountsPromise === "undefined") {
   Promise.promisifyAll(web3.eth, { suffix: "Promise" });
 }
 
-contract('NavCalculator', (accounts) => {
+contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
   let MANAGER = accounts[0];
   let EXCHANGE = accounts[1];
   const GAS_AMT = 500000;

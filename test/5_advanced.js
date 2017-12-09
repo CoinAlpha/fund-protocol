@@ -6,7 +6,6 @@ const InvestorActions = artifacts.require('./InvestorActions.sol');
 const NavCalculator = artifacts.require('./NavCalculator.sol');
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 /*
   Test contract behavior when there is a large lists of investors.
@@ -25,7 +24,7 @@ const ethToWei = eth => web3.toWei(eth, 'ether');
 const diffInWei = (a, b) => weiToNum(a) - weiToNum(b);
 const gasToWei = gas => gas * 1e11;
 
-contract('Advanced', (accounts) => {
+contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
 
   const OWNER = accounts[0];
   const MANAGER = accounts[0];

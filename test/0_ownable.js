@@ -12,8 +12,6 @@ const allArtifacts = {
 };
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
-
 
 const ethToWei = eth => web3.toWei(eth, 'ether');
 
@@ -51,7 +49,7 @@ const constructors = {
     ),
 };
 
-contract('OwnableModified', (accounts) => {
+contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
   let owned, dataFeed, navCalculator, investorActions;
   const [
     owner0,

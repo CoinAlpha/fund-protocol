@@ -4,7 +4,6 @@ const Promise = require('bluebird');
 const DataFeed = artifacts.require('./DataFeed.sol');
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 if (typeof web3.eth.getAccountsPromise === "undefined") {
   Promise.promisifyAll(web3.eth, { suffix: "Promise" });
@@ -12,7 +11,7 @@ if (typeof web3.eth.getAccountsPromise === "undefined") {
 
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
 
-contract('DataFeed', (accounts) => {
+contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
   let MANAGER = accounts[0];
   let EXCHANGE = accounts[1];
 
