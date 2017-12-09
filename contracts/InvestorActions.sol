@@ -15,6 +15,16 @@ import "./math/SafeMath.sol";
  * may be upgraded after the inception of the Fund contract.
  */
 
+contract IInvestorActions {
+  function modifyAllocation(address _addr, uint _allocation)
+    returns (uint _ethTotalAllocation) {}
+
+  function getAvailableAllocation(address _addr)
+    returns (uint ethAvailableAllocation) {}
+
+  function requestSubscription(address _addr, uint _amount)
+    returns (uint, uint) {}
+}
 
 contract InvestorActions is DestructibleModified {
   using SafeMath for uint;

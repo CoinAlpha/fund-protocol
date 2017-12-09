@@ -16,6 +16,17 @@ import "./zeppelin/DestructibleModified.sol";
  * time elapsed and changes in the value of the portfolio, as provided by the data feed.
  */
 
+contract INavCalculator {
+  function calculate()
+    returns (
+      uint lastCalcDate,
+      uint navPerShare,
+      uint lossCarryforward,
+      uint accumulatedMgmtFees,
+      uint accumulatedAdminFees
+    ) {}
+}
+
 contract NavCalculator is DestructibleModified {
   using SafeMath for uint;
   using Math for uint;
