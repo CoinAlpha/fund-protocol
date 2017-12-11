@@ -24,6 +24,28 @@ contract IInvestorActions {
 
   function requestSubscription(address _addr, uint _amount)
     returns (uint, uint) {}
+
+  function cancelSubscription(address _addr)
+    returns (uint, uint, uint, uint) {}
+  
+  function subscribe(address _addr)
+    returns (uint, uint, uint, uint, uint, uint) {}
+  
+  function requestRedemption(address _addr, uint _shares)
+    returns (uint, uint) {}
+
+  function cancelRedemption(address addr)
+    returns (uint, uint) {}
+
+  function redeem(address _addr)
+    returns (uint, uint, uint, uint, uint, uint, uint) {}
+  
+  function liquidate(address _addr)
+    returns (uint, uint, uint, uint, uint, uint) {}
+
+  function withdraw(address _addr)
+    returns (uint, uint, uint) {}
+
 }
 
 contract InvestorActions is DestructibleModified {
@@ -168,7 +190,11 @@ contract InvestorActions is DestructibleModified {
   // Handles an investor's redemption cancellation, after checking that
   // the fund balance has enough ether to cover the withdrawal.
   // The amount is then moved from sharesPendingRedemption
-  function cancelRedemption(address addr) onlyFund constant returns (uint, uint) {
+  function cancelRedemption(address addr)
+    onlyFund
+    constant
+    returns (uint, uint)
+  {
     var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(addr);
 
     // Check that the total shares pending redemption is greator than the investor's shares pending redemption
