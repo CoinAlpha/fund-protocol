@@ -55,7 +55,7 @@ contract InvestorActions is DestructibleModified {
 
   // Modules
   IDataFeed public dataFeed;
-  Fund fund;
+  IFund fund;
 
   // This modifier is applied to all external methods in this contract since only
   // the primary Fund contract can use this module
@@ -279,7 +279,7 @@ contract InvestorActions is DestructibleModified {
     onlyOwner
     returns (bool success)
   {
-    fund = Fund(_fund);
+    fund = IFund(_fund);
     fundAddress = _fund;
     return true;
   }

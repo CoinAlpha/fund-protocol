@@ -20,6 +20,51 @@ import "./zeppelin/DestructiblePausable.sol";
  * in traditional funds, while maximizing transparency and mitigating fraud risk for investors.
  */
 
+contract IFund {
+  uint    public decimals;
+  uint    public minInitialSubscriptionEth;
+  uint    public minSubscriptionEth;
+  uint    public minRedemptionShares;
+  uint    public totalEthPendingSubscription;
+  uint    public totalEthPendingWithdrawal;
+  uint    public totalSharesPendingRedemption;
+  uint    public totalSupply;
+
+  uint    public adminFeeBps;
+  uint    public mgmtFeeBps;
+  uint    public performFeeBps;
+
+  uint    public lastCalcDate;
+  uint    public navPerShare;
+  uint    public accumulatedMgmtFees;
+  uint    public accumulatedAdminFees;
+  uint    public lossCarryforward;
+
+  function getInvestor(address _addr)
+    returns (
+      uint ethTotalAllocation,
+      uint ethPendingSubscription,
+      uint sharesOwned,
+      uint sharesPendingRedemption,
+      uint ethPendingWithdrawal
+    ) {}
+
+  function usdToEth(uint _usd) 
+    returns (uint eth) {}
+
+  function ethToUsd(uint _eth) 
+    returns (uint usd) {}
+
+  function ethToShares(uint _eth)
+    returns (uint shares) {}
+
+  function sharesToEth(uint _shares)
+    returns (uint ethAmount) {}
+
+  function getBalance()
+    returns (uint ethAmount) {}
+}
+
 contract Fund is DestructiblePausable {
   using SafeMath for uint;
 

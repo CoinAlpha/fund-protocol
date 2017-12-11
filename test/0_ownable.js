@@ -49,7 +49,7 @@ const constructors = {
     ),
 };
 
-contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
+contract('OwnableModified', (accounts) => {
   let owned, dataFeed, navCalculator, investorActions;
   const [
     owner0,
@@ -65,7 +65,10 @@ contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
   
   const addressZero = '0x0000000000000000000000000000000000000000';
   
-  before('should prepare', () => assert.isAtLeast(accounts.length, 5));
+  before('should prepare', () => {
+    console.log(`  ****** START TEST [ ${scriptName} ]*******`);
+    assert.isAtLeast(accounts.length, 5);
+  });
 
   Object.keys(constructors).forEach((name) => {
     describe(name, () => {

@@ -15,7 +15,7 @@ if (typeof web3.eth.getAccountsPromise === "undefined") {
   Promise.promisifyAll(web3.eth, { suffix: "Promise" });
 }
 
-contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
+contract('NavCalculator', (accounts) => {
   let MANAGER = accounts[0];
   let EXCHANGE = accounts[1];
   const GAS_AMT = 500000;
@@ -110,6 +110,7 @@ contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
   }
 
   before(() => {
+    console.log(`  ****** START TEST [ ${scriptName} ] *******`);
     return Promise.all([Fund.deployed(), NavCalculator.deployed(), DataFeed.deployed()])
       .then(_values => {
         [fund, navCalculator, dataFeed] = _values;

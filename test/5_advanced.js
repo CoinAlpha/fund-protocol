@@ -24,7 +24,7 @@ const ethToWei = eth => web3.toWei(eth, 'ether');
 const diffInWei = (a, b) => weiToNum(a) - weiToNum(b);
 const gasToWei = gas => gas * 1e11;
 
-contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
+contract('Advanced', (accounts) => {
 
   const OWNER = accounts[0];
   const MANAGER = accounts[0];
@@ -46,7 +46,7 @@ contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
   const USD_ETH_BASIS = 30000;
   const SECONDS_IN_YEAR = 31536000;
   
-  const investors = accounts.slice(2);
+  const investors = accounts.slice(-2);
 
   // contract instances
   let dataFeed, fund, navCalculator, investorActions;
@@ -61,6 +61,7 @@ contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
     { from: OWNER, value: 0 }
   )
     .then(instance => {
+      console.log(`  ****** START TEST [ ${scriptName} ] *******`);
       dataFeed = instance;
       return Promise.all([
         NavCalculator.new(dataFeed.address, { from: OWNER }),

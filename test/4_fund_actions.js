@@ -19,7 +19,7 @@ const ethToWei = eth => web3.toWei(eth, 'ether');
 const diffInWei = (a, b) => weiToNum(a) - weiToNum(b);
 const gasToWei = gas => gas * 1e11;
 
-contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
+contract('FundActions', (accounts) => {
   const OWNER = accounts[0];
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
@@ -71,6 +71,7 @@ contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
     { from: OWNER, value: 0 }
   )
     .then((instance) => {
+      console.log(`  ****** START TEST [ ${scriptName} ]  *******`);
       dataFeed = instance;
       return Promise.all([
         NavCalculator.new(dataFeed.address, { from: OWNER }),

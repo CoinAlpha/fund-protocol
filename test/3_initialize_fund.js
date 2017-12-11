@@ -12,7 +12,7 @@ if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
-contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
+contract('Initialize Fund', (accounts) => {
   // helpers
   const getBalancePromise = address => web3.eth.getBalancePromise(address);
   const weiToNum = wei => web3.fromWei(wei, 'ether').toNumber();
@@ -53,6 +53,7 @@ contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
     { from: OWNER, value: 0 }
   )
     .then((instance) => {
+      console.log(`  ****** START TEST [ ${scriptName} ] *******`);
       dataFeed = instance;
       return Promise.all([
         NavCalculator.new(dataFeed.address, { from: OWNER }),

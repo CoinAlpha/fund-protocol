@@ -35,7 +35,7 @@ contract NavCalculator is DestructibleModified {
 
   // Modules
   IDataFeed public dataFeed;
-  Fund fund;
+  IFund fund;
 
   // This modifier is applied to all external methods in this contract since only
   // the primary Fund contract can use this module
@@ -134,7 +134,7 @@ contract NavCalculator is DestructibleModified {
   function setFund(address _address)
     onlyOwner
   {
-    fund = Fund(_address);
+    fund = IFund(_address);
     fundAddress = _address;
   }
 
