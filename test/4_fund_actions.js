@@ -7,7 +7,6 @@ const NavCalculator = artifacts.require('./NavCalculator.sol');
 const InvestorActions = artifacts.require('./InvestorActions.sol');
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
@@ -20,7 +19,7 @@ const ethToWei = eth => web3.toWei(eth, 'ether');
 const diffInWei = (a, b) => weiToNum(a) - weiToNum(b);
 const gasToWei = gas => gas * 1e11;
 
-contract('Fund Actions', (accounts) => {
+contract('FundActions', (accounts) => {
   const OWNER = accounts[0];
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
@@ -33,7 +32,11 @@ contract('Fund Actions', (accounts) => {
 
   // test parameters
   const GAS_AMT = 500000;
-  const USD_ETH = 300;
+  const USD_ETH_EXCHANGE_RATE = 450;
+  const USD_BTC_EXCHANGE_RATE = 10000;
+  const USD_LTC_EXCHANGE_RATE = 100;
+  const SECONDS_BETWEEN_QUERIES = 300;
+
   const MIN_INITIAL_SUBSCRIPTION = 20;
   const INVESTOR_ALLOCATION = 21;
   const MIN_SUBSCRIPTION = 5;
@@ -59,14 +62,16 @@ contract('Fund Actions', (accounts) => {
   let investorActions;
 
   before(() => DataFeed.new(
-    false,                                  // _useOraclize
     '[NOT USED]',                           // _queryUrl
-    USD_ETH * 100,                          // _secondsBetweenQueries
-    30000,                                  // _initialExchangeRate
+    SECONDS_BETWEEN_QUERIES,                // _secondsBetweenQueries
+    USD_ETH_EXCHANGE_RATE * 100,            // _initialUsdEthRate
+    USD_BTC_EXCHANGE_RATE * 100,            // _initialUsdBtcRate
+    USD_LTC_EXCHANGE_RATE * 100,            // _initialUsdLtcRate
     EXCHANGE,                               // _exchange
     { from: OWNER, value: 0 }
   )
     .then((instance) => {
+      console.log(`  ****** START TEST [ ${scriptName} ]  *******`);
       dataFeed = instance;
       return Promise.all([
         NavCalculator.new(dataFeed.address, { from: OWNER }),

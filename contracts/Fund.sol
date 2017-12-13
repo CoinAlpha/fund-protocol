@@ -20,6 +20,51 @@ import "./zeppelin/DestructiblePausable.sol";
  * in traditional funds, while maximizing transparency and mitigating fraud risk for investors.
  */
 
+contract IFund {
+  uint    public decimals;
+  uint    public minInitialSubscriptionEth;
+  uint    public minSubscriptionEth;
+  uint    public minRedemptionShares;
+  uint    public totalEthPendingSubscription;
+  uint    public totalEthPendingWithdrawal;
+  uint    public totalSharesPendingRedemption;
+  uint    public totalSupply;
+
+  uint    public adminFeeBps;
+  uint    public mgmtFeeBps;
+  uint    public performFeeBps;
+
+  uint    public lastCalcDate;
+  uint    public navPerShare;
+  uint    public accumulatedMgmtFees;
+  uint    public accumulatedAdminFees;
+  uint    public lossCarryforward;
+
+  function getInvestor(address _addr)
+    returns (
+      uint ethTotalAllocation,
+      uint ethPendingSubscription,
+      uint sharesOwned,
+      uint sharesPendingRedemption,
+      uint ethPendingWithdrawal
+    ) {}
+
+  function usdToEth(uint _usd) 
+    returns (uint eth) {}
+
+  function ethToUsd(uint _eth) 
+    returns (uint usd) {}
+
+  function ethToShares(uint _eth)
+    returns (uint shares) {}
+
+  function sharesToEth(uint _shares)
+    returns (uint ethAmount) {}
+
+  function getBalance()
+    returns (uint ethAmount) {}
+}
+
 contract Fund is DestructiblePausable {
   using SafeMath for uint;
 
@@ -50,9 +95,9 @@ contract Fund is DestructiblePausable {
   uint    public totalSupply;                    // total number of shares outstanding
 
   // Modules: where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
-  NavCalculator   public navCalculator;         // calculating net asset value
-  InvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
-  DataFeed        public dataFeed;              // fetching external data like total portfolio value and exchange rates
+  INavCalculator   public navCalculator;         // calculating net asset value
+  IInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
+  IDataFeed       public dataFeed;              // fetching external data like total portfolio value and exchange rates
 
   // This struct tracks fund-related balances for a specific investor address
   struct Investor {
@@ -133,9 +178,9 @@ contract Fund is DestructiblePausable {
     // Set the addresses of other wallets/contracts with which this contract interacts
     manager = _manager;
     exchange = _exchange;
-    navCalculator = NavCalculator(_navCalculator);
-    investorActions = InvestorActions(_investorActions);
-    dataFeed = DataFeed(_dataFeed);
+    navCalculator = INavCalculator(_navCalculator);
+    investorActions = IInvestorActions(_investorActions);
+    dataFeed = IDataFeed(_dataFeed);
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
@@ -536,7 +581,7 @@ contract Fund is DestructiblePausable {
   {
     require(_addr != address(0));
     address old = navCalculator;
-    navCalculator = NavCalculator(_addr);
+    navCalculator = INavCalculator(_addr);
     LogNavCalculatorModuleChanged(old, _addr);
     return true;
   }
@@ -548,7 +593,7 @@ contract Fund is DestructiblePausable {
   {
     require(_addr != address(0));
     address old = investorActions;
-    investorActions = InvestorActions(_addr);
+    investorActions = IInvestorActions(_addr);
     LogInvestorActionsModuleChanged(old, _addr);
     return true;
   }
@@ -560,7 +605,7 @@ contract Fund is DestructiblePausable {
   {
     require(_addr != address(0));
     address old = dataFeed;
-    dataFeed = DataFeed(_addr);
+    dataFeed = IDataFeed(_addr);
     LogDataFeedModuleChanged(old, _addr);
     return true;
   }

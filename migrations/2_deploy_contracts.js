@@ -11,8 +11,9 @@ const ethToWei = (eth) => eth * 1e18;
 // DataFeed settings
 const SECONDS_BETWEEN_QUERIES = 300;
 
-//TODO: Changed to $1000 for testing of nav calc
-const USD_ETH_EXCHANGE_RATE         = 1000;
+const USD_ETH_EXCHANGE_RATE         = 450;
+const USD_BTC_EXCHANGE_RATE         = 10000;
+const USD_LTC_EXCHANGE_RATE         = 100;
 const DATA_FEED_GAS_RESERVE         = 1;
 
 // Fund settings
@@ -35,17 +36,18 @@ module.exports = function(deployer, network, accounts) {
   const EXCHANGE = accounts[1];
   
   // 
-  const useOraclize = network == "ropsten" ? true : false;
-  const dataFeedReserve = network == "ropsten" ? ethToWei(DATA_FEED_GAS_RESERVE) : 0;
+  const useOraclize = true;
+  const dataFeedReserve = ethToWei(DATA_FEED_GAS_RESERVE);
 
   if (network == "development" || network == "test") {
     deployer.deploy(
       DataFeed,
-      false,                            // _useOraclize
-      "[NOT USED]",                     // _queryUrl
-      SECONDS_BETWEEN_QUERIES,          // _secondsBetweenQueries
-      USD_ETH_EXCHANGE_RATE * 100,      // _initialExchangeRate
-      EXCHANGE,                         // _exchange
+      dataFeedInfo[network].navServiceUrl,    // _queryUrl
+      SECONDS_BETWEEN_QUERIES,                // _secondsBetweenQueries
+      USD_ETH_EXCHANGE_RATE * 100,            // _initialUsdEthRate
+      USD_BTC_EXCHANGE_RATE * 100,            // _initialUsdBtcRate
+      USD_LTC_EXCHANGE_RATE * 100,            // _initialUsdLtcRate
+      EXCHANGE,                               // _exchange
       { from: ADMINISTRATOR, value: dataFeedReserve }
     ).then(() =>
       deployer.deploy(

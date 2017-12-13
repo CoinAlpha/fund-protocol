@@ -6,7 +6,6 @@ const InvestorActions = artifacts.require('./InvestorActions.sol');
 const NavCalculator = artifacts.require('./NavCalculator.sol');
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 /*
   Test contract behavior when there is a large lists of investors.
@@ -33,7 +32,11 @@ contract('Advanced', (accounts) => {
 
   // test parameters
   const GAS_AMT = 500000;
-  const USD_ETH = 300;
+  const USD_ETH_EXCHANGE_RATE = 450;
+  const USD_BTC_EXCHANGE_RATE = 10000;
+  const USD_LTC_EXCHANGE_RATE = 100;
+  const SECONDS_BETWEEN_QUERIES = 300;
+  
   const MIN_INITIAL_SUBSCRIPTION = 5;
   const MIN_SUBSCRIPTION = 5;
   const MIN_REDEMPTION_SHARES = 100000;
@@ -43,20 +46,22 @@ contract('Advanced', (accounts) => {
   const USD_ETH_BASIS = 30000;
   const SECONDS_IN_YEAR = 31536000;
   
-  const investors = accounts.slice(2);
+  const investors = accounts.slice(-2);
 
   // contract instances
   let dataFeed, fund, navCalculator, investorActions;
 
   before(() => DataFeed.new(
-    false,                                  // _useOraclize
     '[NOT USED]',                           // _queryUrl
-    300,                                    // _secondsBetweenQueries
-    USD_ETH * 100,                          // _initialExchangeRate
+    SECONDS_BETWEEN_QUERIES,                // _secondsBetweenQueries
+    USD_ETH_EXCHANGE_RATE * 100,            // _initialUsdEthRate
+    USD_BTC_EXCHANGE_RATE * 100,            // _initialUsdBtcRate
+    USD_LTC_EXCHANGE_RATE * 100,            // _initialUsdLtcRate
     EXCHANGE,                               // _exchange
     { from: OWNER, value: 0 }
   )
     .then(instance => {
+      console.log(`  ****** START TEST [ ${scriptName} ] *******`);
       dataFeed = instance;
       return Promise.all([
         NavCalculator.new(dataFeed.address, { from: OWNER }),

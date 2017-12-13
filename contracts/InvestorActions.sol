@@ -15,6 +15,38 @@ import "./math/SafeMath.sol";
  * may be upgraded after the inception of the Fund contract.
  */
 
+contract IInvestorActions {
+  function modifyAllocation(address _addr, uint _allocation)
+    returns (uint _ethTotalAllocation) {}
+
+  function getAvailableAllocation(address _addr)
+    returns (uint ethAvailableAllocation) {}
+
+  function requestSubscription(address _addr, uint _amount)
+    returns (uint, uint) {}
+
+  function cancelSubscription(address _addr)
+    returns (uint, uint, uint, uint) {}
+  
+  function subscribe(address _addr)
+    returns (uint, uint, uint, uint, uint, uint) {}
+  
+  function requestRedemption(address _addr, uint _shares)
+    returns (uint, uint) {}
+
+  function cancelRedemption(address addr)
+    returns (uint, uint) {}
+
+  function redeem(address _addr)
+    returns (uint, uint, uint, uint, uint, uint, uint) {}
+  
+  function liquidate(address _addr)
+    returns (uint, uint, uint, uint, uint, uint) {}
+
+  function withdraw(address _addr)
+    returns (uint, uint, uint) {}
+
+}
 
 contract InvestorActions is DestructibleModified {
   using SafeMath for uint;
@@ -22,8 +54,8 @@ contract InvestorActions is DestructibleModified {
   address public fundAddress;
 
   // Modules
-  DataFeed public dataFeed;
-  Fund fund;
+  IDataFeed public dataFeed;
+  IFund fund;
 
   // This modifier is applied to all external methods in this contract since only
   // the primary Fund contract can use this module
@@ -36,7 +68,7 @@ contract InvestorActions is DestructibleModified {
     address _dataFeed
   )
   {
-    dataFeed = DataFeed(_dataFeed);
+    dataFeed = IDataFeed(_dataFeed);
   }
 
   // Modifies the max investment limit allowed for an investor and overwrites the past limit
@@ -158,7 +190,11 @@ contract InvestorActions is DestructibleModified {
   // Handles an investor's redemption cancellation, after checking that
   // the fund balance has enough ether to cover the withdrawal.
   // The amount is then moved from sharesPendingRedemption
-  function cancelRedemption(address addr) onlyFund constant returns (uint, uint) {
+  function cancelRedemption(address addr)
+    onlyFund
+    constant
+    returns (uint, uint)
+  {
     var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(addr);
 
     // Check that the total shares pending redemption is greator than the investor's shares pending redemption
@@ -243,7 +279,7 @@ contract InvestorActions is DestructibleModified {
     onlyOwner
     returns (bool success)
   {
-    fund = Fund(_fund);
+    fund = IFund(_fund);
     fundAddress = _fund;
     return true;
   }
@@ -253,7 +289,7 @@ contract InvestorActions is DestructibleModified {
     onlyOwner 
     returns (bool success)
   {
-    dataFeed = DataFeed(_address);
+    dataFeed = IDataFeed(_address);
     return true;
   }
 }

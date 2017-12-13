@@ -16,6 +16,17 @@ import "./zeppelin/DestructibleModified.sol";
  * time elapsed and changes in the value of the portfolio, as provided by the data feed.
  */
 
+contract INavCalculator {
+  function calculate()
+    returns (
+      uint lastCalcDate,
+      uint navPerShare,
+      uint lossCarryforward,
+      uint accumulatedMgmtFees,
+      uint accumulatedAdminFees
+    ) {}
+}
+
 contract NavCalculator is DestructibleModified {
   using SafeMath for uint;
   using Math for uint;
@@ -23,8 +34,8 @@ contract NavCalculator is DestructibleModified {
   address public fundAddress;
 
   // Modules
-  DataFeed public dataFeed;
-  Fund fund;
+  IDataFeed public dataFeed;
+  IFund fund;
 
   // This modifier is applied to all external methods in this contract since only
   // the primary Fund contract can use this module
@@ -35,7 +46,7 @@ contract NavCalculator is DestructibleModified {
 
   function NavCalculator(address _dataFeed)
   {
-    dataFeed = DataFeed(_dataFeed);
+    dataFeed = IDataFeed(_dataFeed);
   }
 
   event LogNavCalculation(
@@ -123,7 +134,7 @@ contract NavCalculator is DestructibleModified {
   function setFund(address _address)
     onlyOwner
   {
-    fund = Fund(_address);
+    fund = IFund(_address);
     fundAddress = _address;
   }
 
@@ -131,7 +142,7 @@ contract NavCalculator is DestructibleModified {
   function setDataFeed(address _address)
     onlyOwner
   {
-    dataFeed = DataFeed(_address);
+    dataFeed = IDataFeed(_address);
   }
 
   // ********* HELPERS *********

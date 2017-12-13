@@ -12,18 +12,17 @@ const allArtifacts = {
 };
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
-
 
 const ethToWei = eth => web3.toWei(eth, 'ether');
 
 const constructors = {
   OwnableModified: owner => allArtifacts.OwnableModified.new({ from: owner }),
   DataFeed: (owner, exchange) => allArtifacts.DataFeed.new(
-    false,                        // _useOraclize
     '[NOT USED]',                 // _queryUrl
     300,                          // _secondsBetweenQueries
-    300 * 100,                    // _initialExchangeRate
+    300 * 100,                    // _initialUsdEthRate
+    10000 * 100,                  // _initialUsdBtcRate
+    100 * 100,                    // _initialUsdLtcRate
     exchange,                     // _exchange
     { from: owner, value: 0 }
   ),
@@ -67,6 +66,7 @@ contract('OwnableModified', (accounts) => {
   const addressZero = '0x0000000000000000000000000000000000000000';
   
   before('should prepare', () => {
+    console.log(`  ****** START TEST [ ${scriptName} ]*******`);
     assert.isAtLeast(accounts.length, 5);
   });
 

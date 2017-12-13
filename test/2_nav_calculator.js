@@ -8,7 +8,6 @@ const DataFeed = artifacts.require('./DataFeed.sol');
 const { increaseTime, sendTransaction, arrayToObject } = require('../js/helpers');
 
 const scriptName = path.basename(__filename);
-console.log(`****** START TEST [ ${scriptName} ]*******`);
 
 const keys = ['date2', 'navPerShare', 'lossCarryforward', 'accumulatedMgmtFees', 'accumulatedAdminFees'];
 
@@ -111,6 +110,7 @@ contract('NavCalculator', (accounts) => {
   }
 
   before(() => {
+    console.log(`  ****** START TEST [ ${scriptName} ] *******`);
     return Promise.all([Fund.deployed(), NavCalculator.deployed(), DataFeed.deployed()])
       .then(_values => {
         [fund, navCalculator, dataFeed] = _values;

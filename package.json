@@ -13,7 +13,7 @@
     "zeppelin-solidity": "^1.1.0"
   },
   "devDependencies": {
-    "bluebird": "^3.5.0",
+    "bluebird": "^3.5.1",
     "eslint": "^4.8.0",
     "eslint-config-airbnb": "^16.0.0",
     "eslint-plugin-import": "^2.7.0",

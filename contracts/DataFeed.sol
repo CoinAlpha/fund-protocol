@@ -1,6 +1,6 @@
 pragma solidity ^0.4.13;
 
-import './oraclize/oraclizeAPI.sol';
+import './oraclize/usingOraclize.sol';
 import './zeppelin/DestructibleModified.sol';
 import "./math/SafeMath.sol";
 import "./jsmnsol/JsmnSolLib.sol";
@@ -12,6 +12,11 @@ import "./jsmnsol/JsmnSolLib.sol";
  * @dev Generic Oraclize data feed contract for data feeds returning an unsigned integer.
  */
 
+contract IDataFeed {
+  uint    public value;                  // Total portfolio value in USD
+  uint    public usdEth;                 // USD/ETH exchange rate
+}
+
 contract DataFeed is usingOraclize, DestructibleModified {
   using SafeMath for uint;
   using JsmnSolLib for string;
@@ -19,7 +24,12 @@ contract DataFeed is usingOraclize, DestructibleModified {
   // Global variables
   bool    public useOraclize;            // True: use Oraclize.  False: use testRPC address.
   uint    public value;                  // Total portfolio value in USD
+  uint    public usdUnsubscribedAmount;  // Total amount of USD in exchange account/NAV service not yet subscribed
+                                         // to the fund.  When calculating NAV, this amount is to be excluded from
+                                         // portfolio value
   uint    public usdEth;                 // USD/ETH exchange rate
+  uint    public usdBtc;                 // USD/BTC exchange rate
+  uint    public usdLtc;                 // USD/BTC exchange rate
   uint    public timestamp;              // Timestamp of last update
 
   // Oraclize-specific variables
@@ -34,32 +44,37 @@ contract DataFeed is usingOraclize, DestructibleModified {
 
   // Only emitted when useOraclize is true
   event LogDataFeedQuery(string description);
-  event LogDataFeedResponse(string rawResult, uint value, uint usdEth, uint timestamp);
+  event LogDataFeedResponse(string rawResult, uint value, uint usdEth, uint usdBtc, uint usdLtc, uint timestamp);
   event LogDataFeedError(string rawResult);
+  event LogUsdUnsubscribedAmountUpdate(uint usdUnsubscribedAmount);
+  event LogWithdrawal(address manager, uint eth);
 
   function DataFeed(
-    bool    _useOraclize,
     string  _queryUrl,
     uint    _secondsBetweenQueries,
-    uint    _initialExchangeRate,
+    uint    _initialUsdEthRate,
+    uint    _initialUsdBtcRate,
+    uint    _initialUsdLtcRate,
     address _exchange
   )
     payable
   {
+    // Testing Oraclize using Ethereum bridge (see readme for more details)
+    /** ### NOTE:  COMMENT THIS OUT FOR DEPLOYMENT / PRODUCTION ## **/
+    OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+
     // Constants
-    useOraclize = _useOraclize;
     queryUrl = _queryUrl;
     secondsBetweenQueries = _secondsBetweenQueries;
     exchange = _exchange;
-    usdEth = _initialExchangeRate;
+    usdEth = _initialUsdEthRate;
+    usdBtc = _initialUsdBtcRate;
+    usdLtc = _initialUsdLtcRate;
     gasLimit = 300000;              // Adjust this value depending on code length
-    gasPrice = 20000000000;         // 20 GWei, Oraclize default
+    gasPrice = 50000000000;         // 50 GWei, Oraclize default
 
-    if (useOraclize) {
-      oraclize_setCustomGasPrice(gasPrice);    
-      oraclize_setProof(proofType_NONE);
-      updateWithOraclize();
-    }
+    oraclize_setCustomGasPrice(gasPrice);    
+    oraclize_setProof(proofType_NONE);
   }
 
   // Updates the value variable by fetching the queryUrl via Oraclize.
@@ -99,14 +114,22 @@ contract DataFeed is usingOraclize, DestructibleModified {
     // Check for the success return code and that the object is not an error string
     if (returnValue == 0 && actualNum > 4) {
       string memory valueRaw = JsmnSolLib.getBytes(_result, tokens[2].start, tokens[2].end);
-      value = parseInt(valueRaw, 2);
+      uint unadjustedValue = parseInt(valueRaw, 2);
+      require(unadjustedValue > usdUnsubscribedAmount);
+      value = unadjustedValue.sub(usdUnsubscribedAmount);
 
       string memory usdEthRaw = JsmnSolLib.getBytes(_result, tokens[4].start, tokens[4].end);
       usdEth = parseInt(usdEthRaw, 2);
 
+      string memory usdBtcRaw = JsmnSolLib.getBytes(_result, tokens[6].start, tokens[6].end);
+      usdBtc = parseInt(usdBtcRaw, 2);
+
+      string memory usdLtcRaw = JsmnSolLib.getBytes(_result, tokens[8].start, tokens[8].end);
+      usdLtc = parseInt(usdLtcRaw, 2);
+
       timestamp = now;
 
-      LogDataFeedResponse(_result, value, usdEth, timestamp);
+      LogDataFeedResponse(_result, value, usdEth, usdBtc, usdLtc, timestamp);
       if (secondsBetweenQueries > 0) {
         updateWithOraclize();
       }
@@ -121,11 +144,38 @@ contract DataFeed is usingOraclize, DestructibleModified {
     returns (bool success)
   {
     if (!useOraclize) {
-      value = exchange.balance.mul(usdEth).mul(_percent).div(1e20);
+      value = exchange.balance.mul(usdEth).mul(_percent).div(1e20).sub(usdUnsubscribedAmount);
       timestamp = now;
-      LogDataFeedResponse("mock", value, usdEth, timestamp);
+      LogDataFeedResponse("mock", value, usdEth, usdBtc, usdLtc, timestamp);
       return true;
     }
+  }
+
+  // Manager override of values
+  // Amounts are in units of 1 cent, i.e. $123.45 corresponds to an input if 12345
+  function updateByManager(uint _portfolioValue, uint _usdEth, uint _usdBtc, uint _usdLtc)
+    onlyOwner
+    returns (bool success)
+  {
+    require(_portfolioValue > 0 && _usdEth > 0 && _usdBtc > 0 && _usdLtc > 0);
+    value = _portfolioValue;
+    usdEth = _usdEth;
+    usdBtc = _usdBtc;
+    usdLtc = _usdLtc;
+    timestamp = now;
+    LogDataFeedResponse("manager update", value, usdEth, usdBtc, usdLtc, timestamp);
+    return true;
+  }
+
+  // Amounts are in units of 1 cent, i.e. $123.45 corresponds to an input if 12345
+  function updateUsdUnsubscribedAmount(uint _usdUnsubcribedAmount)
+    onlyOwner
+    returns (bool success)
+  {
+    require(_usdUnsubcribedAmount >= 0);
+    usdUnsubscribedAmount = _usdUnsubcribedAmount;
+    LogUsdUnsubscribedAmountUpdate(usdUnsubscribedAmount);
+    return true;
   }
 
   // ********* ADMIN *********
@@ -170,6 +220,16 @@ contract DataFeed is usingOraclize, DestructibleModified {
   {
     useOraclize = !useOraclize;
     return useOraclize;
+  }
+
+  function withdrawBalance()
+    onlyOwner
+    returns (bool success)
+  {
+    uint payment = this.balance;
+    msg.sender.transfer(payment);
+    LogWithdrawal(msg.sender, payment);
+    return true;
   }
 
 }

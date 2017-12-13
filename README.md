@@ -35,13 +35,30 @@ npm install
 ## Testing
 
 ### Local
-1. Run TestRPC with a 1 second block time and increased block gas limit, to allow for simulation of time-based fees: `testrpc -b 1 -l 6000000` 
+1. Run TestRPC with a 1 second block time and increased block gas limit, to allow for simulation of time-based fees: `testrpc -b 1 -l 7000000` 
 2. In another Terminal window, `truffle console`
 3. `truffle test` to run all tests
 
-### Tesnet
+### Testnet
 1. Run `geth --testnet --rpc --rpcapi eth,net,web3,personal`
 2. In another Terminal window, `truffle console`
 3. `web3.eth.accounts` and check that you have at least 4 accounts.  Each account should have more than 5 test eth.
 4. Unlock your primary account: `web3.personal.unlockAccount(web3.eth.accounts[0], <INSERT YOUR PASSWORD HERE>, 15000)`
 5. Follow manual testing workflows in `js/Fund-test.js`
+
+### Ethereum Bridge | Oraclize
+Ethereum Bridge is used for connecting to Oraclize from a non-public blockchain instance (e.g. testrpc).  This is used for testing the DataFeed contracts.
+
+1. In a separate folder from this repo, clone the repo: `git clone https://github.com/oraclize/ethereum-bridge`
+2. Setup: `cd ethereum-bridge; npm install`
+3. When running testrpc, use the same mnemonic to keep the OraclizeAddrResolver address constant: `testrpc -l 7000000 -p 7545 -a 50 --mnemonic "coinalpha"`
+4. Run: `node bridge -a 49 -H localhost:7545 --dev` (`-a 49` uses the 49th testrpc account for deploying oraclize; the 9th account should not be used for any other purposes, and port 7545)
+5. After starting the bridge, take note of this message:
+
+  ```
+  Please add this line to your contract constructor:
+
+  OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+  ```
+
+6. Add this line into DataFeel.sol
