@@ -62,9 +62,9 @@ contract('OwnableModified', (accounts) => {
     notOwnerAddress2,
     notOwnerAddress3
   ] = accounts;
-  
+
   const addressZero = '0x0000000000000000000000000000000000000000';
-  
+
   before('should prepare', () => {
     console.log(`  ****** START TEST [ ${scriptName} ]*******`);
     assert.isAtLeast(accounts.length, 5);
@@ -132,21 +132,33 @@ contract('OwnableModified', (accounts) => {
           .then(owners => assert.strictEqual(owners[1], owner1)));
 
         it('should not be possible to add a third owner', () => owned.addOwner(owner2, { from: owner0 })
-          .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should not have reached here; do not add 3rd owner')));
+          .then(
+            () => assert.throw('should not have reached here'),
+            e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+          ));
       });
 
       describe('transferOwnership', () => {
         it('should not be possible to set owner if asking from wrong owner', () =>
           owned.transferOwnership(owner2, { from: notOwner0, gas: 3000000 })
-            .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should not allow nonOwner to transfer ownership')));
+            .then(
+              () => assert.throw('should not have reached here'),
+              e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+            ));
 
         it('should not be possible to set owner if to 0', () =>
           owned.transferOwnership(addressZero, { from: owner0, gas: 3000000 })
-          .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should be able to transfer owner to address(0)')));
-          
+            .then(
+              () => assert.throw('should not have reached here'),
+              e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+            ));
+
         it('should not be possible to transfer ownership to sender account', () =>
           owned.transferOwnership(owner0, { from: owner0, gas: 3000000 })
-          .then(txReceipt => assert(txReceipt.receipt.status === 0, 'should be able to transfer owner to address(0)')));
+            .then(
+              () => assert.throw('should not have reached here'),
+              e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+            ));
 
         it('should not be possible to set owner if pass value', () => owned.transferOwnership(owner2, { from: owner0, value: 1 })
           .then(

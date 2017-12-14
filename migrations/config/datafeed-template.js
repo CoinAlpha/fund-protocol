@@ -1,7 +1,7 @@
 // Create a file called datafeed.js duplicating this file and replace the values below
 
 module.exports = {
-  test: {
+  development: {
     navServiceUrl: '[STAGING URL]',
     dataFeedAddress: '',
   },
