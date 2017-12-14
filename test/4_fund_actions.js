@@ -68,7 +68,7 @@ contract('FundActions', (accounts) => {
     USD_BTC_EXCHANGE_RATE * 100,            // _initialUsdBtcRate
     USD_LTC_EXCHANGE_RATE * 100,            // _initialUsdLtcRate
     EXCHANGE,                               // _exchange
-    { from: OWNER, value: 0 }
+    { from: OWNER, value: web3.toWei(0.5,'ether') }
   )
     .then((instance) => {
       console.log(`  ****** START TEST [ ${scriptName} ]  *******`);
@@ -161,7 +161,7 @@ contract('FundActions', (accounts) => {
           return fund.requestSubscription(USD_ETH_BASIS, { from: investor, value: ethToWei(amt), gas: GAS_AMT })
             .then(
               () => assert.throw('should not have accepted request lower than minInitialSubscriptionEth'),
-              e => assert.isAtLeast(e.message.indexOf('invalid opcode'), 0)
+              e => assert.isAtLeast(e.message.indexOf('revert'), 0)
             ).catch(console.warn);
         });
 
@@ -170,7 +170,7 @@ contract('FundActions', (accounts) => {
           return fund.requestSubscription(USD_ETH_BASIS, { from: investor, value: ethToWei(amt), gas: GAS_AMT })
             .then(
               () => assert.throw('should not have accepted request amount higher than allocation'),
-              e => assert.isAtLeast(e.message.indexOf('invalid opcode'), 0)
+              e => assert.isAtLeast(e.message.indexOf('revert'), 0)
             ).catch(console.warn);
         });
       });
@@ -348,7 +348,7 @@ contract('FundActions', (accounts) => {
       return fund.requestRedemption(amt, { from: MIN_INVESTOR })
         .then(
           () => assert.throw('should not have accepted request lower than min redemption shares'),
-          e => assert.isAtLeast(e.message.indexOf('invalid opcode'), 0)
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0)
         ).catch(console.warn);
     });
 
@@ -361,7 +361,7 @@ contract('FundActions', (accounts) => {
         })
         .then(
           () => assert.throw('should not have accepted request higher than amount of shares owned'),
-          e => assert.isAtLeast(e.message.indexOf('invalid opcode'), 0)
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0)
         ).catch(console.warn);
     });
 
