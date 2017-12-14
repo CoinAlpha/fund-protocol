@@ -14,7 +14,7 @@ module.exports = function expectedExceptionPromise(action, gasToUse) {
     }
   })
     .then(function (txObj) {
-      return typeof txn === "string"
+      return typeof txObj === "string"
         ? web3.eth.getTransactionReceiptMined(txObj) // regular tx hash
         : typeof txObj.receipt !== "undefined"
           ? txObj.receipt // truffle-contract function call
