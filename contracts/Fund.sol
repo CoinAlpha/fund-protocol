@@ -97,7 +97,7 @@ contract Fund is DestructiblePausable {
   // Modules: where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
   INavCalculator   public navCalculator;         // calculating net asset value
   IInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
-  IDataFeed       public dataFeed;              // fetching external data like total portfolio value and exchange rates
+  IDataFeed        public dataFeed;              // fetching external data like total portfolio value and exchange rates
 
   // This struct tracks fund-related balances for a specific investor address
   struct Investor {

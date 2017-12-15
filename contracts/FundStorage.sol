@@ -10,6 +10,13 @@ import "./zeppelin/DestructibleModified.sol";
  * @dev A module for storing all data for the fund
  */
 
+contract IFundStorage {
+  function addInvestor(address _investor, uint _investorType)
+    returns(bool wasAdded) {}
+  function removeInvestor(address _investor)
+    returns (bool success) {}
+}
+
 contract FundStorage is DestructibleModified {
 
   address public fundAddress;
