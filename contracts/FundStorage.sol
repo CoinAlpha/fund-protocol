@@ -7,7 +7,7 @@ import "./zeppelin/DestructibleModified.sol";
  * @title FundStorage
  * @author CoinAlpha, Inc. <contact@coinalpha.com>
  *
- * @dev A module for storing all data for fund
+ * @dev A module for storing all data for the fund
  */
 
 contract FundStorage is DestructibleModified {
@@ -24,6 +24,25 @@ contract FundStorage is DestructibleModified {
     _;
   }
 
+  /**
+   * @dev Throws if called by any account other than the owners or the fund
+   */
+  modifier onlyFundOrOwner() {
+    bool authorized = false;
+    if (msg.sender == fundAddress) {
+      authorized = true;
+    } else {
+      for (uint  i = 0; i < owners.length; i++) {
+        if (msg.sender == owners[i]) {
+          authorized = true;
+          i = owners.length; // escape loop
+        }
+      }
+    }
+    require(authorized);
+    _;
+  }
+
   // This struct tracks fund-related balances for a specific investor address
   struct InvestorStruct {
     uint investorType;                 // [0] no investor [1] ETH investor [2] USD investor 
@@ -37,12 +56,14 @@ contract FundStorage is DestructibleModified {
 
   mapping (address => InvestorStruct) public    investors;
   address[]                                     investorAddresses;
-  mapping(address => uint)                      hasInvestor;  // [0] no investor [1] ETH investor [2] USD investor 
+  mapping(address => uint)                      containsInvestor;  // [0] no investor [1] ETH investor [2] USD investor 
 
-  // Events
-  event LogSetFundAddress(address oldFundAddress, address newFundAddress);
+  // Fund Events
   event LogAddedInvestor(address newInvestor, uint investorType);
   event LogRemovedInvestor(address removedInvestor, uint investorType);
+
+  // Administrative Events
+  event LogSetFundAddress(address oldFundAddress, address newFundAddress);
 
   // Constructor
   function FundStorage() {
@@ -66,11 +87,11 @@ contract FundStorage is DestructibleModified {
   }
 
   function addInvestor(address _investor, uint _investorType)
-    onlyFund
+    onlyFundOrOwner
     returns(bool wasAdded)
   {
-    require(hasInvestor[_investor] == 0 && _investorType > 0 && _investorType < 3);
-    hasInvestor[_investor] = _investorType;
+    require(containsInvestor[_investor] == 0 && _investorType > 0 && _investorType < 3);
+    containsInvestor[_investor] = _investorType;
     investorAddresses.push(_investor);
     investors[_investor].investorType = _investorType;
     LogAddedInvestor(_investor, _investorType);
@@ -79,10 +100,10 @@ contract FundStorage is DestructibleModified {
 
   // Remove investor address from list
   function removeInvestor(address _investor)
-    onlyFund
+    onlyFundOrOwner
     returns (bool success)
   {
-    require(hasInvestor[_investor] > 0);
+    require(containsInvestor[_investor] > 0);
     InvestorStruct storage investor = investors[_investor];
 
     require(investor.amountPendingSubscription == 0 && investor.sharesOwned == 0 && investor.sharesPendingRedemption == 0 && investor.amountPendingWithdrawal == 0);
@@ -105,18 +126,18 @@ contract FundStorage is DestructibleModified {
     if (!investorWasRemoved) {
       revert();
     }
-    hasInvestor[_investor] = 0;
+    containsInvestor[_investor] = 0;
     investors[_investor] = InvestorStruct(0,0,0,0,0,0);
     LogRemovedInvestor(_investor, investor.investorType);
     return true;
   }
 
-  function getHasInvestor(address _investor)
+  function queryContainsInvestor(address _investor)
     constant
     public
     returns (uint investorType)
   {
-    return hasInvestor[_investor];
+    return containsInvestor[_investor];
   }
 
   function getInvestorAddresses()
@@ -133,6 +154,7 @@ contract FundStorage is DestructibleModified {
   function setFund(address _fundAddress)
     onlyOwner
   {
+    require(_fundAddress != fundAddress && _fundAddress != address(0));
     address oldFundAddress = fundAddress;
     fundAddress = _fundAddress;
     LogSetFundAddress(oldFundAddress, _fundAddress);
