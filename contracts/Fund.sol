@@ -248,15 +248,6 @@ contract Fund is DestructiblePausable {
     return true;
   }
 
-  // [INVESTOR METHOD] External wrapper for the getAvailableAllocation function in InvestorActions
-  // Delegates logic to the InvestorActions module
-  function getAvailableAllocation(address _addr)
-    constant
-    returns (uint ethAvailableAllocation)
-  {
-    return investorActions.getAvailableAllocation(_addr);
-  }
-
   // Non-payable fallback function so that any attempt to send ETH directly to the contract is thrown
   function ()
     payable
@@ -440,7 +431,7 @@ contract Fund is DestructiblePausable {
     LogLiquidation(_addr, shares, navPerShare, dataFeed.usdEth());
     return true;
   }
-  
+
   function liquidateInvestor(address _addr)
     onlyOwner
     returns (bool success)
