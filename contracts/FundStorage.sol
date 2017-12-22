@@ -224,7 +224,7 @@ contract FundStorage is DestructibleModified {
     return (investor.investorType, investor.amountPendingSubscription, investor.sharesOwned, investor.shareClass, investor.sharesPendingRedemption, investor.amountPendingWithdrawal);
   }
 
-  // Whitelist and investor and specify investor type: [1] ETH investor | [2] USD investor
+  // Whitelist an investor and specify investor type: [1] ETH investor | [2] USD investor
   function addInvestor(address _investor, uint _investorType)
     onlyFundOrOwner
     returns(bool wasAdded)

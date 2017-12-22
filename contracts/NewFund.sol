@@ -21,7 +21,7 @@ contract NewFund is DestructiblePausable {
   uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
   uint    public totalSupply;                    // total number of shares outstanding
 
-  // ** MODULES **
+  // ========================================= MODULES ==========================================
   // Where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
   INavCalculator   public navCalculator;         // calculating net asset value
   IInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
@@ -29,7 +29,7 @@ contract NewFund is DestructiblePausable {
   IFundStorage     public fundStorage;           // fetching external data like total portfolio value and exchange rates
 
 
-  // ** MODIFIES **
+  // ========================================= MODIFIERS =========================================
   modifier onlyFromExchange {
     require(msg.sender == exchange);
     _;
@@ -40,7 +40,11 @@ contract NewFund is DestructiblePausable {
     _;
   }
 
-  // ** CONSTRUCTOR **
+  // ========================================== EVENTS ===========================================
+
+  event LogWhiteListInvestor(address investor, uint investorType);
+
+  // ======================================== CONSTRUCTOR ========================================
   function NewFund(
     address _manager,
     address _exchange,
@@ -62,5 +66,18 @@ contract NewFund is DestructiblePausable {
     dataFeed = IDataFeed(_dataFeed);
     fundStorage = IFundStorage(_fundStorage);
   }  // End of constructor
+
+  // ********* SUBSCRIPTIONS *********
+
+  // Whitelist an investor
+  // TODO: Delegates logic to the InvestorActions module
+  function whiteListInvestor(address _investor, uint _investorType)
+    onlyOwner
+    returns (bool isSuccess)
+  {
+    fundStorage.addInvestor(_investor, _investorType);
+    LogWhiteListInvestor(_investor, _investorType);
+    return true;
+  }
 
 } // END OF NewFund

@@ -107,7 +107,9 @@ module.exports = function (deployer, network, accounts) {
         FUND_SYMBOL,                    // _symbol
         FUND_DECIMALS,                  // _decimals
         { from: ADMINISTRATOR }
-      ));
+      ))
+      .then(() => FundStorage.deployed())
+      .then(_fundStorage => _fundStorage.setFund(Fund.address));
   } else {
 
     // Network-specific variables
@@ -166,6 +168,8 @@ module.exports = function (deployer, network, accounts) {
         FundStorage.address,            // _fundStorage
         FUND_DECIMALS,                  // _decimals
         { from: ADMINISTRATOR }
-      ));
+      ))
+      .then(() => FundStorage.deployed())
+      .then(_fundStorage => _fundStorage.setFund(Fund.address));
   }
 };
