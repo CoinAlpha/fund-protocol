@@ -19,6 +19,9 @@ contract IInvestorActions {
   function modifyAllocation(address _addr, uint _allocation)
     returns (uint _ethTotalAllocation) {}
 
+  function getAvailableAllocation(address _addr)
+    returns (uint ethAvailableAllocation) {}
+
   function requestSubscription(address _addr, uint _amount)
     returns (uint, uint) {}
 
@@ -79,6 +82,23 @@ contract InvestorActions is DestructibleModified {
     return _allocation;
   }
 
+  // Get the remaining available amount in Ether that an investor can subscribe for
+  function getAvailableAllocation(address _addr)
+    onlyFund
+    constant
+    returns (uint ethAvailableAllocation)
+  {
+    var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
+
+    uint ethFilledAllocation = ethPendingSubscription.add(fund.sharesToEth(sharesOwned));
+
+    if (ethTotalAllocation > ethFilledAllocation) {
+      return ethTotalAllocation.sub(ethFilledAllocation);
+    } else {
+      return 0;
+    }
+  }
+  
   // Register an investor's subscription request, after checking that
   // 1) the requested amount exceeds the minimum subscription amount and
   // 2) the investor's total allocation is not exceeded

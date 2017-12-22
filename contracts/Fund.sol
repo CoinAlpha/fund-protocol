@@ -154,7 +154,6 @@ contract Fund is DestructiblePausable {
     address _navCalculator,
     address _investorActions,
     address _dataFeed,
-    address _fundStorage,
     string  _name,
     string  _symbol,
     uint    _decimals,
@@ -184,7 +183,6 @@ contract Fund is DestructiblePausable {
     navCalculator = INavCalculator(_navCalculator);
     investorActions = IInvestorActions(_investorActions);
     dataFeed = IDataFeed(_dataFeed);
-    fundStorage = IFundStorage(_fundStorage);
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;

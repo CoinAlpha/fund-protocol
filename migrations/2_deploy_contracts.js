@@ -72,7 +72,6 @@ module.exports = function (deployer, network, accounts) {
         NavCalculator.address,          // _navCalculator
         InvestorActions.address,        // _investorActions
         DataFeed.address,               // _dataFeed
-        FundStorage.address,            // _fundStorage
         FUND_NAME,                      // _name
         FUND_SYMBOL,                    // _symbol
         FUND_DECIMALS,                  // _decimals
@@ -113,7 +112,6 @@ module.exports = function (deployer, network, accounts) {
         NavCalculator.address,          // _navCalculator
         InvestorActions.address,        // _investorActions
         DATA_FEED_ADDRESS,              // _dataFeed
-        FundStorage.address,            // _fundStorage
         FUND_NAME,                      // _name
         FUND_SYMBOL,                    // _symbol
         FUND_DECIMALS,                  // _decimals
