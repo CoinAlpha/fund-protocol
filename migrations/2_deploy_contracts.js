@@ -2,6 +2,7 @@ const DataFeed = artifacts.require("./DataFeed.sol");
 const NavCalculator = artifacts.require("./NavCalculator.sol");
 const InvestorActions = artifacts.require("./InvestorActions.sol");
 const Fund = artifacts.require("./Fund.sol");
+const NewFund = artifacts.require("./NewFund.sol");
 const FundStorage = artifacts.require("./FundStorage.sol");
 
 const dataFeedInfo = require('./config/datafeed.js');
@@ -24,6 +25,8 @@ const FUND_DECIMALS = 4;
 const MANAGER_USD_ETH_BASIS = 300;
 const MIN_INITIAL_SUBSCRIPTION_ETH = 20;
 const MIN_SUBSCRIPTION_ETH = 5;
+const MIN_INITIAL_SUBSCRIPTION_USD = 10000;
+const MIN_SUBSCRIPTION_USD = 5000;
 const MIN_REDEMPTION_SHARES = 100000;
 const ADMIN_FEE = 1;
 const MGMT_FEE = 0;
@@ -63,6 +66,14 @@ module.exports = function (deployer, network, accounts) {
       ))
       .then(() => deployer.deploy(
         FundStorage,
+        FUND_NAME,                      // _name
+        FUND_SYMBOL,                    // _symbol
+        MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionEth
+        MIN_SUBSCRIPTION_USD * 100,     // _minSubscriptionEth
+        MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
+        ADMIN_FEE * 100,                // _adminFeeBps
+        MGMT_FEE * 100,                 // _mgmtFeeBps
+        PERFORM_FEE * 100,              // _performFeeBps
         { from: ADMINISTRATOR }
       ))
       .then(() => deployer.deploy(
@@ -82,6 +93,19 @@ module.exports = function (deployer, network, accounts) {
         MGMT_FEE * 100,                 // _mgmtFeeBps
         PERFORM_FEE * 100,              // _performFeeBps
         MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
+        { from: ADMINISTRATOR }
+      ))
+      .then(() => deployer.deploy(
+        NewFund,
+        MANAGER,                        // _manager
+        EXCHANGE,                       // _exchange
+        NavCalculator.address,          // _navCalculator
+        InvestorActions.address,        // _investorActions
+        DataFeed.address,               // _dataFeed
+        FundStorage.address,            // _fundStorage
+        FUND_NAME,                      // _name
+        FUND_SYMBOL,                    // _symbol
+        FUND_DECIMALS,                  // _decimals
         { from: ADMINISTRATOR }
       ));
   } else {
@@ -103,6 +127,14 @@ module.exports = function (deployer, network, accounts) {
       ))
       .then(() => deployer.deploy(
         FundStorage,
+        FUND_NAME,                      // _name
+        FUND_SYMBOL,                    // _symbol
+        MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionEth
+        MIN_SUBSCRIPTION_USD * 100,     // _minSubscriptionEth
+        MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
+        ADMIN_FEE * 100,                // _adminFeeBps
+        MGMT_FEE * 100,                 // _mgmtFeeBps
+        PERFORM_FEE * 100,              // _performFeeBps
         { from: ADMINISTRATOR }
       ))
       .then(() => deployer.deploy(
@@ -125,7 +157,14 @@ module.exports = function (deployer, network, accounts) {
         { from: ADMINISTRATOR }
       ))
       .then(() => deployer.deploy(
-        FundStorage,
+        NewFund,
+        MANAGER,                        // _manager
+        EXCHANGE,                       // _exchange
+        NavCalculator.address,          // _navCalculator
+        InvestorActions.address,        // _investorActions
+        DATA_FEED_ADDRESS,              // _dataFeed
+        FundStorage.address,            // _fundStorage
+        FUND_DECIMALS,                  // _decimals
         { from: ADMINISTRATOR }
       ));
   }

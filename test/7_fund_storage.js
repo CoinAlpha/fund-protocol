@@ -32,7 +32,8 @@ contract('FundStorage', (accounts) => {
       .then(_fundStorage => fundStorage = _fundStorage)
       .then(() => fundStorage.setFund(FUND, { from: MANAGER }))
       .then(() => fundStorage.getInvestorAddresses.call({ from: MANAGER }))
-      .then((_investorAddresses) => assert.strictEqual(_investorAddresses.length, 0, 'investor list is not empty'));
+      .then((_investorAddresses) => assert.strictEqual(_investorAddresses.length, 0, 'investor list is not empty'))
+      .catch(err => assert.throw(`failed to initialize fundStorage: ${err.toString()}`));
   });
 
   describe('Check if there are any investors', () => {

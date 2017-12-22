@@ -10,6 +10,7 @@ const allArtifacts = {
   DataFeed: artifacts.require('./DataFeed.sol'),
   FundStorage: artifacts.require('./FundStorage.sol'),
   Fund: artifacts.require('./Fund.sol'),
+  NewFund: artifacts.require('./NewFund.sol'),
 };
 
 const scriptName = path.basename(__filename);
@@ -29,7 +30,17 @@ const constructors = {
   ),
   NavCalculator: (owner, dataFeed) => allArtifacts.NavCalculator.new(dataFeed, { from: owner }),
   InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner }),
-  FundStorage: (owner, dataFeed) => allArtifacts.FundStorage.new({ from: owner }),
+  FundStorage: (owner, dataFeed) => allArtifacts.FundStorage.new(
+    'TestFund',                  // _name
+    'TEST',                      // _symbol
+    10000 * 100,                 // _minInitialSubscriptionUsd
+    5000 * 100,                  // _minSubscriptionUsd
+    100000,                      // _minRedemptionShares,
+    100,                         // _adminFeeBps
+    100,                         // _mgmtFeeBps
+    2000,                        // _performFeeBps
+    { from: owner }
+  ),
   Fund: (owner, exchange, navCalculator, investorActions, dataFeed, fundStorage) =>
     allArtifacts.Fund.new(
       owner,                     // _manager
@@ -47,6 +58,17 @@ const constructors = {
       100,                       // _mgmtFeeBps
       2000,                      // _performFeeBps
       30000,                     // _managerUsdEthBasis
+      { from: owner }
+    ),
+  NewFund: (owner, exchange, navCalculator, investorActions, dataFeed, fundStorage) =>
+    allArtifacts.NewFund.new(
+      owner,                     // _manager
+      exchange,                  // _exchange
+      navCalculator.address,     // _navCalculator
+      investorActions.address,   // _investorActions
+      dataFeed.address,          // _dataFeed
+      fundStorage.address,       // _fundStorage
+      4,                         // _decimals
       { from: owner }
     ),
 };
@@ -85,7 +107,7 @@ contract('OwnableModified', (accounts) => {
               owned = instance;
               dataFeed = instance;
             });
-        } else if (name === 'Fund') {
+        } else if (name === 'Fund' || name === 'NewFund') {
           return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed, fundStorage)
             .then(instance => owned = instance);
         } else {

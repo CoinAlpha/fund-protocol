@@ -10,8 +10,15 @@ import "./zeppelin/DestructibleModified.sol";
  * @dev A module for storing all data for the fund
  */
 
-// CONTRACT INTERFACE
+// ==================================== CONTRACT INTERFACE ====================================
 contract IFundStorage {
+  // Fund Details Functions
+  function updateMinInitialSubscriptionUsd(uint _minInitialSubscriptionUsd)
+    returns (bool wasUpdated) {}
+  function updateMinSubscriptionUsd(uint _minSubscriptionUsd)
+    returns (bool wasUpdated) {}
+  function updateMinRedemptionShares(uint _minRedemptionShares)
+    returns (bool wasUpdated) {}
 
   // Investor Functions
   function addInvestor(address _investor, uint _investorType)
@@ -57,9 +64,17 @@ contract IFundStorage {
     returns (uint numberOfShareClasses) {}
 }
 
-// CONTRACT
+// ==================================== CONTRACT ====================================
+
 contract FundStorage is DestructibleModified {
 
+  // Constants set at contract inception
+  string  public name;                         // fund name
+  string  public symbol;                       // Ethereum token symbol
+  uint    public minInitialSubscriptionUsd;    // minimum amount of USD that a new investor can subscribe
+  uint    public minSubscriptionUsd;           // minimum amount of USD that an existing investor can subscribe
+  uint    public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
+  
   address public fundAddress;
 
   // This modifier is applied to all external methods in this contract since only
@@ -118,6 +133,7 @@ contract FundStorage is DestructibleModified {
   uint                                public  totalShareSupply;
 
   // Fund Events
+  event LogUpdatedDetails(string updatedField, uint oldValue, uint newValue);
   event LogAddedInvestor(address newInvestor, uint investorType);
   event LogRemovedInvestor(address removedInvestor, uint investorType);
   event LogModifiedInvestor(string _description, uint _investorType, uint _amountPendingSubscription, uint _sharesOwned, uint _shareClass, uint _sharesPendingRedemption, uint _amountPendingWithdrawal);
@@ -130,8 +146,62 @@ contract FundStorage is DestructibleModified {
   // Administrative Events
   event LogSetFundAddress(address oldFundAddress, address newFundAddress);
 
-  // Constructor
-  function FundStorage() {
+  // ***** Constructor *****
+  function FundStorage(
+    string  _name,
+    string  _symbol,
+    uint    _minInitialSubscriptionUsd,
+    uint    _minSubscriptionUsd,
+    uint    _minRedemptionShares,
+    uint    _adminFeeBps, // DETAILS OF INITIAL SHARE CLASS
+    uint    _mgmtFeeBps,
+    uint    _performFeeBps
+  ) // "Falcon", "FALC", 1000000, 500000, 100000, 100, 100, 20000
+  {
+    name = _name;
+    symbol = _symbol;
+    minSubscriptionUsd = _minSubscriptionUsd;
+    minInitialSubscriptionUsd = _minInitialSubscriptionUsd;
+    minRedemptionShares = _minRedemptionShares;
+    // Create initial share class
+    // numberOfShareClasses = 1;
+    // shareClasses[0] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, 10000, now);
+  }
+
+
+  // ********* FUND DETAIL FUNCTIONS *********
+  
+  function updateMinInitialSubscriptionUsd(uint _minInitialSubscriptionUsd)
+    onlyFund
+    returns (bool wasUpdated)
+  {
+    uint old = minInitialSubscriptionUsd;
+    require(old != _minInitialSubscriptionUsd);
+    minInitialSubscriptionUsd = _minInitialSubscriptionUsd;
+    LogUpdatedDetails("minInitialSubscriptionUsd", old, _minInitialSubscriptionUsd);
+    return true;
+  }
+  
+  function updateMinSubscriptionUsd(uint _minSubscriptionUsd)
+    onlyFund
+    returns (bool wasUpdated)
+  {
+    uint old = minSubscriptionUsd;
+    require(old != _minSubscriptionUsd);
+    LogUpdatedDetails("minSubscriptionUsd", old, _minSubscriptionUsd);
+    minSubscriptionUsd = _minSubscriptionUsd;
+    return true;
+  }
+  
+  function updateMinRedemptionShares(uint _minRedemptionShares)
+    onlyFund
+    returns (bool wasUpdated)
+  {
+    uint old = minRedemptionShares;
+    require(old != _minRedemptionShares);
+    minRedemptionShares = _minRedemptionShares;
+    LogUpdatedDetails("minRedemeptionShares", old, _minRedemptionShares);
+    return true;
   }
 
 
