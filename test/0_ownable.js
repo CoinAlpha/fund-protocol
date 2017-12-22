@@ -8,6 +8,7 @@ const allArtifacts = {
   NavCalculator: artifacts.require('./NavCalculator.sol'),
   InvestorActions: artifacts.require('./InvestorActions.sol'),
   DataFeed: artifacts.require('./DataFeed.sol'),
+  FundStorage: artifacts.require('./FundStorage.sol'),
   Fund: artifacts.require('./Fund.sol'),
 };
 
@@ -28,13 +29,15 @@ const constructors = {
   ),
   NavCalculator: (owner, dataFeed) => allArtifacts.NavCalculator.new(dataFeed, { from: owner }),
   InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner }),
-  Fund: (owner, exchange, navCalculator, investorActions, dataFeed) =>
+  FundStorage: (owner, dataFeed) => allArtifacts.FundStorage.new({ from: owner }),
+  Fund: (owner, exchange, navCalculator, investorActions, dataFeed, fundStorage) =>
     allArtifacts.Fund.new(
       owner,                     // _manager
       exchange,                  // _exchange
       navCalculator.address,     // _navCalculator
       investorActions.address,   // _investorActions
       dataFeed.address,          // _dataFeed
+      fundStorage.address,       // _fundStorage
       'TestFund',                // _name
       'TEST',                    // _symbol
       4,                         // _decimals
@@ -50,7 +53,7 @@ const constructors = {
 };
 
 contract('OwnableModified', (accounts) => {
-  let owned, dataFeed, navCalculator, investorActions;
+  let owned, dataFeed, navCalculator, investorActions, fundStorage;
   const [
     owner0,
     owner1,
@@ -84,7 +87,7 @@ contract('OwnableModified', (accounts) => {
               dataFeed = instance;
             });
         } else if (name === 'Fund') {
-          return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed)
+          return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed, fundStorage)
             .then(instance => owned = instance);
         } else {
           return constructors[name](owner0, dataFeed.address)
@@ -96,6 +99,9 @@ contract('OwnableModified', (accounts) => {
                   break;
                 case 'InvestorActions':
                   investorActions = instance;
+                  break;
+                case 'FundStorage':
+                  fundStorage = instance;
                   break;
                 default:
                   break;

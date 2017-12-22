@@ -35,7 +35,7 @@ contract('FundStorage', (accounts) => {
       .then((_investorAddresses) => assert.strictEqual(_investorAddresses.length, 0, 'investor list is not empty'));
   });
 
-  xdescribe('Check if there are any investors', () => {
+  describe('Check if there are any investors', () => {
     it('should have a hasInvestor function', () => assert.isDefined(fundStorage.queryContainsInvestor, 'function undefined'));
 
     investors.forEach((_investor) => {
@@ -46,7 +46,7 @@ contract('FundStorage', (accounts) => {
     });
   });
 
-  xdescribe('Add and remove investors', () => {
+  describe('Add and remove investors', () => {
     const numInvestors = investors.length;
     let split = Math.round(numInvestors / 2);
     const included = investors.slice(split);
@@ -96,13 +96,13 @@ contract('FundStorage', (accounts) => {
     });
   });  // describe
 
-  xdescribe('getInvestor', () => {
+  describe('getInvestor', () => {
     it('should return an empty investor', () => fundStorage.getInvestor.call(INVESTOR1)
       .then(_vals => _vals.map(_val => assert.strictEqual(Number(_val), 0, 'values are non-zero')))
       .catch(assert.throw));
   }); // describe
 
-  xdescribe('Function Permissions', () => {
+  describe('Function Permissions', () => {
 
     it('add and remove an investor', () => fundStorage.addInvestor(INVESTOR1, 1, { from: MANAGER })
       .then(() => fundStorage.queryContainsInvestor.call(INVESTOR1))

@@ -10,6 +10,7 @@ import "./zeppelin/DestructibleModified.sol";
  * @dev A module for storing all data for the fund
  */
 
+// CONTRACT INTERFACE
 contract IFundStorage {
 
   // Investor Functions
@@ -56,6 +57,7 @@ contract IFundStorage {
     returns (uint numberOfShareClasses) {}
 }
 
+// CONTRACT
 contract FundStorage is DestructibleModified {
 
   address public fundAddress;

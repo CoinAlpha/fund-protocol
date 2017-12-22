@@ -62,12 +62,17 @@ module.exports = function (deployer, network, accounts) {
         { from: ADMINISTRATOR }
       ))
       .then(() => deployer.deploy(
+        FundStorage,
+        { from: ADMINISTRATOR }
+      ))
+      .then(() => deployer.deploy(
         Fund,
         MANAGER,                        // _manager
         EXCHANGE,                       // _exchange
         NavCalculator.address,          // _navCalculator
         InvestorActions.address,        // _investorActions
         DataFeed.address,               // _dataFeed
+        FundStorage.address,            // _fundStorage
         FUND_NAME,                      // _name
         FUND_SYMBOL,                    // _symbol
         FUND_DECIMALS,                  // _decimals
@@ -78,10 +83,6 @@ module.exports = function (deployer, network, accounts) {
         MGMT_FEE * 100,                 // _mgmtFeeBps
         PERFORM_FEE * 100,              // _performFeeBps
         MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
-        { from: ADMINISTRATOR }
-      ))
-      .then(() => deployer.deploy(
-        FundStorage,
         { from: ADMINISTRATOR }
       ));
   } else {
@@ -102,12 +103,17 @@ module.exports = function (deployer, network, accounts) {
         { from: ADMINISTRATOR }
       ))
       .then(() => deployer.deploy(
+        FundStorage,
+        { from: ADMINISTRATOR }
+      ))
+      .then(() => deployer.deploy(
         Fund,
         MANAGER,                        // _manager
         EXCHANGE,                       // _exchange
         NavCalculator.address,          // _navCalculator
         InvestorActions.address,        // _investorActions
         DATA_FEED_ADDRESS,              // _dataFeed
+        FundStorage.address,            // _fundStorage
         FUND_NAME,                      // _name
         FUND_SYMBOL,                    // _symbol
         FUND_DECIMALS,                  // _decimals

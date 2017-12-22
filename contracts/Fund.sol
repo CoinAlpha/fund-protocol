@@ -3,6 +3,7 @@ pragma solidity ^0.4.13;
 import "./NavCalculator.sol";
 import "./InvestorActions.sol";
 import "./DataFeed.sol";
+import "./FundStorage.sol";
 import "./math/SafeMath.sol";
 import "./zeppelin/DestructiblePausable.sol";
 
@@ -98,6 +99,7 @@ contract Fund is DestructiblePausable {
   INavCalculator   public navCalculator;         // calculating net asset value
   IInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
   IDataFeed        public dataFeed;              // fetching external data like total portfolio value and exchange rates
+  IFundStorage     public fundStorage;           // fetching external data like total portfolio value and exchange rates
 
   // This struct tracks fund-related balances for a specific investor address
   struct Investor {
@@ -123,9 +125,9 @@ contract Fund is DestructiblePausable {
   event LogNavSnapshot(uint indexed timestamp, uint navPerShare, uint lossCarryforward, uint accumulatedMgmtFees, uint accumulatedAdminFees);
   event LogManagerAddressChanged(address oldAddress, address newAddress);
   event LogExchangeAddressChanged(address oldAddress, address newAddress);
-  event LogNavCalculatorModuleChanged(address oldAddress, address newAddress);
-  event LogInvestorActionsModuleChanged(address oldAddress, address newAddress);
-  event LogDataFeedModuleChanged(address oldAddress, address newAddress);
+
+  event LogModuleChanged(string module, address oldAddress, address newAddress);
+  
   event LogTransferToExchange(uint amount);
   event LogTransferFromExchange(uint amount);
   event LogManagementFeeWithdrawal(uint amountInEth, uint usdEthExchangeRate);
@@ -152,6 +154,7 @@ contract Fund is DestructiblePausable {
     address _navCalculator,
     address _investorActions,
     address _dataFeed,
+    address _fundStorage,
     string  _name,
     string  _symbol,
     uint    _decimals,
@@ -181,6 +184,7 @@ contract Fund is DestructiblePausable {
     navCalculator = INavCalculator(_navCalculator);
     investorActions = IInvestorActions(_investorActions);
     dataFeed = IDataFeed(_dataFeed);
+    fundStorage = IFundStorage(_fundStorage);
 
     // Set the initial net asset value calculation variables
     lastCalcDate = now;
@@ -436,6 +440,7 @@ contract Fund is DestructiblePausable {
     LogLiquidation(_addr, shares, navPerShare, dataFeed.usdEth());
     return true;
   }
+  
   function liquidateInvestor(address _addr)
     onlyOwner
     returns (bool success)
@@ -582,7 +587,7 @@ contract Fund is DestructiblePausable {
     require(_addr != address(0));
     address old = navCalculator;
     navCalculator = INavCalculator(_addr);
-    LogNavCalculatorModuleChanged(old, _addr);
+    LogModuleChanged("NavCalculator", old, _addr);
     return true;
   }
 
@@ -594,7 +599,7 @@ contract Fund is DestructiblePausable {
     require(_addr != address(0));
     address old = investorActions;
     investorActions = IInvestorActions(_addr);
-    LogInvestorActionsModuleChanged(old, _addr);
+    LogModuleChanged("InvestorActions", old, _addr);
     return true;
   }
 
@@ -606,7 +611,19 @@ contract Fund is DestructiblePausable {
     require(_addr != address(0));
     address old = dataFeed;
     dataFeed = IDataFeed(_addr);
-    LogDataFeedModuleChanged(old, _addr);
+    LogModuleChanged("DataFeed", old, _addr);
+    return true;
+  }
+
+  // Update the address of the fund storage contract
+  function setFundStorage(address _addr) 
+    onlyOwner
+    returns (bool success) 
+  {
+    require(_addr != address(0));
+    address old = fundStorage;
+    fundStorage = IFundStorage(_addr);
+    LogModuleChanged("FundStorage", old, _addr);
     return true;
   }
 
