@@ -55,7 +55,7 @@ contract('New Fund', (accounts) => {
       newFund.whiteListInvestor(INVESTOR1, 1, { from: MANAGER })
         .catch(err => assert.throw(`Error whitelisting investor ${INVESTOR1}: ${err.toString()}`))
         .then(() => fundStorage.getInvestor(INVESTOR1))
-        .then(_investor => console.log(_investor))
+        .then(_investor => assert.strictEqual(Number(_investor[0]), 1, 'incorrect investor type'))
         .catch(err => assert.throw(`Error getting investor: ${err.toString()}`))
     );
 
