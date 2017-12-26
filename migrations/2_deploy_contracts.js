@@ -44,6 +44,9 @@ module.exports = function (deployer, network, accounts) {
   const dataFeedReserve = ethToWei(DATA_FEED_GAS_RESERVE);
 
   if (network == "development") {
+
+    console.log('******** Deploy environment: development *********');
+
     deployer.deploy(
       DataFeed,
       dataFeedInfo[network].navServiceUrl,    // _queryUrl
@@ -109,7 +112,14 @@ module.exports = function (deployer, network, accounts) {
         { from: ADMINISTRATOR }
       ))
       .then(() => FundStorage.deployed())
-      .then(_fundStorage => _fundStorage.setFund(Fund.address));
+      .then(_fundStorage => _fundStorage.setFund(Fund.address))
+      .then(() => console.log('  Contract addresses:'))
+      .then(() => console.log(`  - DataFeed        | ${DataFeed.address}`))
+      .then(() => console.log(`  - NAV             | ${NavCalculator.address}`))
+      .then(() => console.log(`  - InvestorActions | ${InvestorActions.address}`))
+      .then(() => console.log(`  - FundStorage     | ${FundStorage.address}`))
+      .then(() => console.log(`  - Fund            | ${Fund.address}`))
+      .then(() => console.log(`  - NewFund         | ${NewFund.address}`));
   } else {
 
     // Network-specific variables
@@ -166,6 +176,8 @@ module.exports = function (deployer, network, accounts) {
         InvestorActions.address,        // _investorActions
         DATA_FEED_ADDRESS,              // _dataFeed
         FundStorage.address,            // _fundStorage
+        FUND_NAME,                      // _name
+        FUND_SYMBOL,                    // _symbol
         FUND_DECIMALS,                  // _decimals
         { from: ADMINISTRATOR }
       ))

@@ -68,6 +68,8 @@ const constructors = {
       investorActions.address,   // _investorActions
       dataFeed.address,          // _dataFeed
       fundStorage.address,       // _fundStorage
+      'TestFund',                // _name
+      'TEST',                    // _symbol
       4,                         // _decimals
       { from: owner }
     ),

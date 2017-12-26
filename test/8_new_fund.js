@@ -37,6 +37,15 @@ contract('New Fund', (accounts) => {
       .then(() => fundStorage.queryContainsInvestor(INVESTOR1))
       .then(contains => assert.strictEqual(Number(contains), 0, 'investor already whitelisted'))
       .catch(err => assert.throw(`failed queryContainsInvestor: ${err.toString()}`))
+      .then(() => Promise.all([
+        newFund.manager.call(),
+        newFund.exchange.call(),
+        newFund.navCalculator.call(),
+        newFund.investorActions.call(),
+        newFund.fundStorage.call()
+      ]))
+      .then(_addresses => _addresses.forEach(_address => assert.notEqual(_address, '0x0000000000000000000000000000000000000000', 'Contract address not set')))
+      .catch(err => `  Error retrieving variables: ${err.toString()}`)
   });
 
   describe('should subscribe investors', () => {
@@ -44,7 +53,7 @@ contract('New Fund', (accounts) => {
 
     it('should whitelist an investor', () =>
       newFund.whiteListInvestor(INVESTOR1, 1, { from: MANAGER })
-        .catch(err => assert.throw(`Error whitelisting investor: ${err.toString()}`))
+        .catch(err => assert.throw(`Error whitelisting investor ${INVESTOR1}: ${err.toString()}`))
         .then(() => fundStorage.getInvestor(INVESTOR1))
         .then(_investor => console.log(_investor))
         .catch(err => assert.throw(`Error getting investor: ${err.toString()}`))

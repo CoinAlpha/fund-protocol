@@ -11,6 +11,8 @@ contract NewFund is DestructiblePausable {
   using SafeMath for uint;
 
   // ** CONSTANTS ** set at contract inception
+  string  public name;                         // fund name
+  string  public symbol;                       // Ethereum token symbol
   uint    public decimals;                     // number of decimals used to display navPerShare
   address public manager;                      // address of the manager account allowed to withdraw base and performance management fees
   address public exchange;                     // address of the exchange account where the manager conducts trading.
@@ -26,7 +28,7 @@ contract NewFund is DestructiblePausable {
   INavCalculator   public navCalculator;         // calculating net asset value
   IInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
   IDataFeed        public dataFeed;              // fetching external data like total portfolio value and exchange rates
-  IFundStorage     public fundStorage;           // fetching external data like total portfolio value and exchange rates
+  IFundStorage     public fundStorage;           // data storage module
 
 
   // ========================================= MODIFIERS =========================================
@@ -44,6 +46,8 @@ contract NewFund is DestructiblePausable {
 
   event LogWhiteListInvestor(address investor, uint investorType);
 
+  event LogModuleChanged(string module, address oldAddress, address newAddress);
+
   // ======================================== CONSTRUCTOR ========================================
   function NewFund(
     address _manager,
@@ -52,10 +56,14 @@ contract NewFund is DestructiblePausable {
     address _investorActions,
     address _dataFeed,
     address _fundStorage,
+    string  _name,
+    string  _symbol,
     uint    _decimals
   )
   {
     // Constants
+    name = _name;
+    symbol = _symbol;
     decimals = _decimals;
 
     // Set the addresses of other wallets/contracts with which this contract interacts
@@ -67,7 +75,7 @@ contract NewFund is DestructiblePausable {
     fundStorage = IFundStorage(_fundStorage);
   }  // End of constructor
 
-  // ********* SUBSCRIPTIONS *********
+  // ====================================== SUBSCRIPTIONS ======================================
 
   // Whitelist an investor
   // TODO: Delegates logic to the InvestorActions module
@@ -77,6 +85,21 @@ contract NewFund is DestructiblePausable {
   {
     fundStorage.addInvestor(_investor, _investorType);
     LogWhiteListInvestor(_investor, _investorType);
+    return true;
+  }
+
+
+  // ========================================== ADMIN ==========================================
+
+  // Update the address of the fundStorage contract
+  function setFundStorage(address _fundStorage) 
+    onlyOwner
+    returns (bool success) 
+  {
+    require(_fundStorage != address(0) && _fundStorage != address(fundStorage));
+    address old = fundStorage;
+    fundStorage = IFundStorage(_fundStorage);
+    LogModuleChanged("FundStorage", old, _fundStorage);
     return true;
   }
 
