@@ -71,8 +71,9 @@ module.exports = function (deployer, network, accounts) {
         FundStorage,
         FUND_NAME,                      // _name
         FUND_SYMBOL,                    // _symbol
-        MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionEth
-        MIN_SUBSCRIPTION_USD * 100,     // _minSubscriptionEth
+        FUND_DECIMALS,                  // _decimals
+        MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionUsd
+        MIN_SUBSCRIPTION_USD * 100,     // _minSubscriptionUsd
         MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
         ADMIN_FEE * 100,                // _adminFeeBps
         MGMT_FEE * 100,                 // _mgmtFeeBps
@@ -106,9 +107,6 @@ module.exports = function (deployer, network, accounts) {
         InvestorActions.address,        // _investorActions
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
-        FUND_NAME,                      // _name
-        FUND_SYMBOL,                    // _symbol
-        FUND_DECIMALS,                  // _decimals
         { from: ADMINISTRATOR }
       ))
       .then(() => FundStorage.deployed())
@@ -141,6 +139,7 @@ module.exports = function (deployer, network, accounts) {
         FundStorage,
         FUND_NAME,                      // _name
         FUND_SYMBOL,                    // _symbol
+        FUND_DECIMALS,                  // _decimals
         MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionEth
         MIN_SUBSCRIPTION_USD * 100,     // _minSubscriptionEth
         MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
@@ -176,9 +175,6 @@ module.exports = function (deployer, network, accounts) {
         InvestorActions.address,        // _investorActions
         DATA_FEED_ADDRESS,              // _dataFeed
         FundStorage.address,            // _fundStorage
-        FUND_NAME,                      // _name
-        FUND_SYMBOL,                    // _symbol
-        FUND_DECIMALS,                  // _decimals
         { from: ADMINISTRATOR }
       ))
       .then(() => FundStorage.deployed())

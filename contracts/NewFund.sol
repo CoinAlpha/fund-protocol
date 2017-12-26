@@ -11,8 +11,6 @@ contract NewFund is DestructiblePausable {
   using SafeMath for uint;
 
   // ** CONSTANTS ** set at contract inception
-  string  public name;                         // fund name
-  string  public symbol;                       // Ethereum token symbol
   uint    public decimals;                     // number of decimals used to display navPerShare
   address public manager;                      // address of the manager account allowed to withdraw base and performance management fees
   address public exchange;                     // address of the exchange account where the manager conducts trading.
@@ -55,16 +53,9 @@ contract NewFund is DestructiblePausable {
     address _navCalculator,
     address _investorActions,
     address _dataFeed,
-    address _fundStorage,
-    string  _name,
-    string  _symbol,
-    uint    _decimals
+    address _fundStorage
   )
   {
-    // Constants
-    name = _name;
-    symbol = _symbol;
-    decimals = _decimals;
 
     // Set the addresses of other wallets/contracts with which this contract interacts
     manager = _manager;
@@ -91,15 +82,49 @@ contract NewFund is DestructiblePausable {
 
   // ========================================== ADMIN ==========================================
 
-  // Update the address of the fundStorage contract
-  function setFundStorage(address _fundStorage) 
+  function getFundDetails()
+    constant
+    public
+    returns (
+      bytes32 name,
+      bytes32 symbol,
+      uint minInitialSubscriptionUsd,
+      uint minSubscriptionUsd,
+      uint minRedemptionShares
+    )
+  {
+    require(address(fundStorage) != address(0));
+    return (fundStorage.name(), fundStorage.symbol(), fundStorage.minInitialSubscriptionUsd(), fundStorage.minSubscriptionUsd(), fundStorage.minRedemptionShares());
+  }
+
+  // Update the address of a module, for upgrading
+  function changeModule(string _module, address _newAddress) 
     onlyOwner
     returns (bool success) 
   {
-    require(_fundStorage != address(0) && _fundStorage != address(fundStorage));
-    address old = fundStorage;
-    fundStorage = IFundStorage(_fundStorage);
-    LogModuleChanged("FundStorage", old, _fundStorage);
+    require(_newAddress != address(0));
+    address oldAddress;
+    bytes32 module = keccak256(_module);
+    if (module == keccak256("NavCalculator")) {
+      oldAddress = navCalculator;
+      require(oldAddress != _newAddress);
+      navCalculator = INavCalculator(_newAddress);
+    } else if (module == keccak256("InvestorActions")) {
+      oldAddress = investorActions;
+      require(oldAddress != _newAddress);
+      investorActions = IInvestorActions(_newAddress);
+    } else if (module == keccak256("DataFeed")) {
+      oldAddress = dataFeed;
+      require(oldAddress != _newAddress);
+      dataFeed = IDataFeed(_newAddress);
+    } else if (module == keccak256("FundStorage")) {
+      oldAddress = fundStorage;
+      require(oldAddress != _newAddress);
+      fundStorage = IFundStorage(_newAddress);
+    } else {
+      revert();
+    }
+    LogModuleChanged(_module, oldAddress, _newAddress);
     return true;
   }
 

@@ -12,6 +12,14 @@ import "./zeppelin/DestructibleModified.sol";
 
 // ==================================== CONTRACT INTERFACE ====================================
 contract IFundStorage {
+  // Constants
+  bytes32  public name;                         // fund name
+  bytes32  public symbol;                       // Ethereum token symbol
+  uint     public decimals;                     // number of decimals used to display navPerShare
+  uint     public minInitialSubscriptionUsd;    // minimum amount of USD that a new investor can subscribe
+  uint     public minSubscriptionUsd;           // minimum amount of USD that an existing investor can subscribe
+  uint     public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
+
   // Fund Details Functions
   function updateMinInitialSubscriptionUsd(uint _minInitialSubscriptionUsd)
     returns (bool wasUpdated) {}
@@ -69,8 +77,9 @@ contract IFundStorage {
 contract FundStorage is DestructibleModified {
 
   // Constants set at contract inception
-  string  public name;                         // fund name
-  string  public symbol;                       // Ethereum token symbol
+  bytes32  public name;                         // fund name
+  bytes32  public symbol;                       // Ethereum token symbol
+  uint    public decimals;                     // number of decimals used to display navPerShare
   uint    public minInitialSubscriptionUsd;    // minimum amount of USD that a new investor can subscribe
   uint    public minSubscriptionUsd;           // minimum amount of USD that an existing investor can subscribe
   uint    public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
@@ -148,18 +157,20 @@ contract FundStorage is DestructibleModified {
 
   // ***** Constructor *****
   function FundStorage(
-    string  _name,
-    string  _symbol,
-    uint    _minInitialSubscriptionUsd,
-    uint    _minSubscriptionUsd,
-    uint    _minRedemptionShares,
-    uint    _adminFeeBps, // DETAILS OF INITIAL SHARE CLASS
-    uint    _mgmtFeeBps,
-    uint    _performFeeBps
+    bytes32  _name,
+    bytes32  _symbol,
+    uint     _decimals,
+    uint     _minInitialSubscriptionUsd,
+    uint     _minSubscriptionUsd,
+    uint     _minRedemptionShares,
+    uint     _adminFeeBps, // DETAILS OF INITIAL SHARE CLASS
+    uint     _mgmtFeeBps,
+    uint     _performFeeBps
   ) // "Falcon", "FALC", 1000000, 500000, 100000, 100, 100, 20000
   {
     name = _name;
     symbol = _symbol;
+    decimals = _decimals;
     minSubscriptionUsd = _minSubscriptionUsd;
     minInitialSubscriptionUsd = _minInitialSubscriptionUsd;
     minRedemptionShares = _minRedemptionShares;

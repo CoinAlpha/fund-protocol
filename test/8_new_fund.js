@@ -25,6 +25,9 @@ contract('New Fund', (accounts) => {
   const INVESTOR3 = investors[2];
   const INVESTOR4 = investors[3];
 
+  const ethInvestors = investors.slice(5, 10);
+  const usdInvestors = investors.slice(11, 16);
+
   let newFund, fundStorage;
 
   before('before: should prepare', () => {
@@ -48,17 +51,108 @@ contract('New Fund', (accounts) => {
       .catch(err => `  Error retrieving variables: ${err.toString()}`)
   });
 
-  describe('should subscribe investors', () => {
+  describe('getFundDetails()', () => {
+
+    let newFundDetails;
+    let fundStorageDetails;
+
+    it('can get fund details', () => newFund.getFundDetails()
+      .then(_details => newFundDetails = _details)
+      .catch(err => `Error calling newFund getFundDetails(): ${err.toString()}`)
+      .then(() => Promise.all([
+        fundStorage.name(),
+        fundStorage.symbol(),
+        fundStorage.minInitialSubscriptionUsd(),
+        fundStorage.minSubscriptionUsd(),
+        fundStorage.minRedemptionShares()
+      ]))
+      .then(_details => fundStorageDetails = _details)
+      .then(() => newFundDetails.forEach((_detail, index) => {
+        if (typeof _detail === 'string') {
+          assert.strictEqual(_detail, fundStorageDetails[index], 'string details do not match');
+        } else {
+          assert.strictEqual(Number(_detail), Number(fundStorageDetails[index]), 'number details do not match');
+        }
+      }))
+    );
+  })  // describe
+
+  describe('whiteListInvestor', () => {
     it('should have a whiteListInvestor function', () => assert.isDefined(newFund.whiteListInvestor, 'function undefined'));
 
-    it('should whitelist an investor', () =>
-      newFund.whiteListInvestor(INVESTOR1, 1, { from: MANAGER })
-        .catch(err => assert.throw(`Error whitelisting investor ${INVESTOR1}: ${err.toString()}`))
-        .then(() => fundStorage.getInvestor(INVESTOR1))
-        .then(_investor => assert.strictEqual(Number(_investor[0]), 1, 'incorrect investor type'))
-        .catch(err => assert.throw(`Error getting investor: ${err.toString()}`))
-    );
+    ethInvestors.forEach((_investor, index) => {
+      it(`should whitelist an ETH investor [${index}] ${_investor}`, () =>
+        newFund.whiteListInvestor(_investor, 1, { from: MANAGER })
+          .catch(err => assert.throw(`Error whitelisting investor ${_investor}: ${err.toString()}`))
+          .then(() => fundStorage.getInvestor(_investor))
+          .then(_investor => assert.strictEqual(Number(_investor[0]), 1, 'incorrect investor type'))
+          .catch(err => assert.throw(`Error getting investor: ${err.toString()}`))
+      );
+    });
+
+    usdInvestors.forEach((_investor, index) => {
+      it(`should whitelist a USD investor [${index}] ${_investor}`, () =>
+        newFund.whiteListInvestor(_investor, 2, { from: MANAGER })
+          .catch(err => assert.throw(`Error whitelisting investor ${_investor}: ${err.toString()}`))
+          .then(() => fundStorage.getInvestor(_investor))
+          .then(_investor => assert.strictEqual(Number(_investor[0]), 2, 'incorrect investor type'))
+          .catch(err => assert.throw(`Error getting investor: ${err.toString()}`))
+      );
+    });
 
   }); // describe
+
+  xdescribe('subscribeInvestors', () => {
+    it('not allow ETH subscription below minimumInitialSubscriptionUsd', () => {
+
+    });
+    
+    it('subscribe ETH investor', () => {
+      
+    });
+
+    it('not allow USD subscription below minimumInitialSubscriptionUsd', () => {
+
+    });
+
+    it('subscribe USD investor', () => {
+
+    });
+
+    it('not allow repeat ETH subscription below minimumSubscriptionUsd', () => {
+
+    });
+    
+    it('subscribe repeat ETH investor', () => {
+      
+    });
+
+    it('not allow repeat USD subscription below minimumSubscriptionUsd', () => {
+
+    });
+
+    it('subscribe repeat USD investor', () => {
+
+    });
+
+  });
+
+  xdescribe('changeModule', () => {
+    it('NavCalculator', () => {
+
+    });
+
+    it('InvestorActions', () => {
+
+    });
+
+    it('DataFeed', () => {
+
+    });
+
+    it('FundStroage', () => {
+
+    });
+  });
 
 }); // contract
