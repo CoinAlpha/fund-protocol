@@ -10,6 +10,7 @@ const allArtifacts = {
   DataFeed: artifacts.require('./DataFeed.sol'),
   FundStorage: artifacts.require('./FundStorage.sol'),
   Fund: artifacts.require('./Fund.sol'),
+  NewInvestorActions: artifacts.require('./NewInvestorActions.sol'),
   NewFund: artifacts.require('./NewFund.sol'),
 };
 
@@ -60,12 +61,13 @@ const constructors = {
       30000,                     // _managerUsdEthBasis
       { from: owner }
     ),
-  NewFund: (owner, exchange, navCalculator, investorActions, dataFeed, fundStorage) =>
+  NewInvestorActions: (owner, dataFeed, fundStorage) => allArtifacts.NewInvestorActions.new(dataFeed, fundStorage, { from: owner }),
+  NewFund: (owner, exchange, navCalculator, newInvestorActions, dataFeed, fundStorage) =>
     allArtifacts.NewFund.new(
       owner,                     // _manager
       exchange,                  // _exchange
       navCalculator.address,     // _navCalculator
-      investorActions.address,   // _investorActions
+      newInvestorActions.address,   // _investorActions
       dataFeed.address,          // _dataFeed
       fundStorage.address,       // _fundStorage
       'TestFund',                // _name
@@ -76,7 +78,7 @@ const constructors = {
 };
 
 contract('OwnableModified', (accounts) => {
-  let owned, dataFeed, navCalculator, investorActions, fundStorage;
+  let owned, dataFeed, navCalculator, investorActions, fundStorage, newInvestorActions;
   const [
     owner0,
     owner1,
@@ -106,12 +108,16 @@ contract('OwnableModified', (accounts) => {
         } else if (name === 'DataFeed') {
           return constructors[name](owner0, notOwnerAddress0)
             .then((instance) => {
-              owned = instance;
-              dataFeed = instance;
+              owned = dataFeed = instance;
             });
         } else if (name === 'Fund' || name === 'NewFund') {
           return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed, fundStorage)
             .then(instance => owned = instance);
+        } else if (name === 'NewInvestorActions') {
+          return constructors[name](owner0, dataFeed.address, fundStorage.address)
+            .then((instance) => {
+              owned = newInvestorActions = instance;
+            });
         } else {
           return constructors[name](owner0, dataFeed.address)
             .then((instance) => {

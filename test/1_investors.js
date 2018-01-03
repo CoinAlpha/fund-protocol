@@ -1,27 +1,27 @@
 const path = require('path');
 
-const Fund = artifacts.require('./Fund.sol');
-const InvestorActions = artifacts.require('./InvestorActions.sol');
 const NavCalculator = artifacts.require('./NavCalculator.sol');
+const NewFund = artifacts.require('./NewFund.sol');
+const NewInvestorActions = artifacts.require('./NewInvestorActions.sol');
 
 const scriptName = path.basename(__filename);
 
-contract('InvestorActions', () => {
-  let fund;
+contract('NewInvestorActions', () => {
+  let newFund;
   let navCalculator;
-  let investorActions;
+  let newInvestorActions;
 
   before(() => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
     return Promise.all([
-      Fund.deployed(),
+      NewFund.deployed(),
       NavCalculator.deployed(),
-      InvestorActions.deployed()
+      NewInvestorActions.deployed()
     ])
-      .then(values => [fund, navCalculator, investorActions] = values);
+      .then(values => [newFund, navCalculator, newInvestorActions] = values);
   });
 
-  it('should set fund to the correct fund address', () => investorActions.setFund(fund.address)
-    .then(() => investorActions.fundAddress.call())
-    .then(_fundAddr => assert.equal(_fundAddr, fund.address, 'fund addresses don\'t match')));
+  it('should set fund to the correct fund address', () => newInvestorActions.setFund(newFund.address)
+    .then(() => newInvestorActions.fundAddress.call())
+    .then(_fundAddr => assert.equal(_fundAddr, newFund.address, 'fund addresses don\'t match')));
 });

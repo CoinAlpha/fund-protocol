@@ -1,11 +1,21 @@
 pragma solidity ^0.4.13;
 
 import "./NavCalculator.sol";
-import "./InvestorActions.sol";
+import "./NewInvestorActions.sol";
 import "./DataFeed.sol";
 import "./FundStorage.sol";
 import "./math/SafeMath.sol";
 import "./zeppelin/DestructiblePausable.sol";
+
+
+// ==================================== NewFund Interface ======================================
+
+contract INewFund {
+
+}
+
+
+// ===================================== NewFund Contract ======================================
 
 contract NewFund is DestructiblePausable {
   using SafeMath for uint;
@@ -24,7 +34,7 @@ contract NewFund is DestructiblePausable {
   // ========================================= MODULES ==========================================
   // Where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
   INavCalculator   public navCalculator;         // calculating net asset value
-  IInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
+  INewInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
   IDataFeed        public dataFeed;              // fetching external data like total portfolio value and exchange rates
   IFundStorage     public fundStorage;           // data storage module
 
@@ -61,7 +71,7 @@ contract NewFund is DestructiblePausable {
     manager = _manager;
     exchange = _exchange;
     navCalculator = INavCalculator(_navCalculator);
-    investorActions = IInvestorActions(_investorActions);
+    investorActions = INewInvestorActions(_investorActions);
     dataFeed = IDataFeed(_dataFeed);
     fundStorage = IFundStorage(_fundStorage);
   }  // End of constructor
@@ -71,7 +81,7 @@ contract NewFund is DestructiblePausable {
   // Whitelist an investor
   // TODO: Delegates logic to the InvestorActions module
   function whiteListInvestor(address _investor, uint _investorType)
-    onlyOwner
+    onlyManager
     returns (bool isSuccess)
   {
     fundStorage.addInvestor(_investor, _investorType);
@@ -112,7 +122,7 @@ contract NewFund is DestructiblePausable {
     } else if (module == keccak256("InvestorActions")) {
       oldAddress = investorActions;
       require(oldAddress != _newAddress);
-      investorActions = IInvestorActions(_newAddress);
+      investorActions = INewInvestorActions(_newAddress);
     } else if (module == keccak256("DataFeed")) {
       oldAddress = dataFeed;
       require(oldAddress != _newAddress);

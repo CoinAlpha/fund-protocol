@@ -1,6 +1,5 @@
 pragma solidity ^0.4.13;
 
-import "./Fund.sol";
 import "./zeppelin/DestructibleModified.sol";
 
 /**
@@ -79,12 +78,12 @@ contract FundStorage is DestructibleModified {
   // Constants set at contract inception
   bytes32  public name;                         // fund name
   bytes32  public symbol;                       // Ethereum token symbol
-  uint    public decimals;                     // number of decimals used to display navPerShare
-  uint    public minInitialSubscriptionUsd;    // minimum amount of USD that a new investor can subscribe
-  uint    public minSubscriptionUsd;           // minimum amount of USD that an existing investor can subscribe
-  uint    public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
+  uint     public decimals;                     // number of decimals used to display navPerShare
+  uint     public minInitialSubscriptionUsd;    // minimum amount of USD that a new investor can subscribe
+  uint     public minSubscriptionUsd;           // minimum amount of USD that an existing investor can subscribe
+  uint     public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
   
-  address public fundAddress;
+  address  public fundAddress;
 
   // This modifier is applied to all external methods in this contract since only
   // the primary Fund contract can use this module

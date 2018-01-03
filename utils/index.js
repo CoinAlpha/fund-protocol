@@ -9,3 +9,15 @@ const transferExactAmountPromise = (from, to, _eth) => {
   const newTx = Object.assign({}, tx, { value: tx.value - gasEstimate });
   return web3.eth.sendTransactionPromise(newTx);
 };
+
+const getInvestorData = (fundStorageInstance, investor) => fundStorageInstance.getInvestor.call(investor)
+  .then((_investorData) => {
+    const [investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal] = _investorData.map(x => Number(x));
+    const investorData = { investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal };
+    return investorData;
+  });
+
+module.exports = {
+  transferExactAmountPromise,
+  getInvestorData,
+}
