@@ -18,18 +18,28 @@ const getInvestorData = (fundStorageInstance, investor) => fundStorageInstance.g
   })
   .catch(err => assert.throw(`Error getInvestorData: ${err.toString()}`));
 
-const getContractFieldsData = (label, contractInstance, fields) => Promise.all(fields.map(_field => contractInstance[_field].call()))
+const hexToString = (hex) => {
+  var string = '';
+  for (var i = 0; i < hex.length; i += 2) {
+    string += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  }
+  return string;
+};
+
+const getContractNumericalData = (label, contractInstance, fields) => Promise.all(fields.map(_field => contractInstance[_field].call()))
   .then((vals) => {
     const result = {};
     vals.forEach((_val, index) => {
-      result[fields[index]] = isNaN(_val) ? _val : Number(_val);
+      result[fields[index]] = Number(_val);
     });
     console.log(`${label} Details`);
     console.log(result);
-  });
+    return;
+  })
+  .catch(err => assert.throw(`Error getting contract field data: ${err.toString()}`));
 
 module.exports = {
   transferExactAmountPromise,
   getInvestorData,
-  getContractFieldsData,
+  getContractNumericalData,
 };

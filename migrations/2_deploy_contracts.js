@@ -10,32 +10,31 @@ const NewInvestorActions = artifacts.require("./NewInvestorActions.sol");
 const NewFund = artifacts.require("./NewFund.sol");
 const FundStorage = artifacts.require("./FundStorage.sol");
 
-const dataFeedInfo = require('./config/datafeed.js');
+const dataFeedInfo = require('../config/datafeed.js');
 
 // helpers
 const ethToWei = (eth) => eth * 1e18;
 
-// DataFeed settings
-const SECONDS_BETWEEN_QUERIES = 300;
-
-const USD_ETH_EXCHANGE_RATE = 1000;
-const USD_BTC_EXCHANGE_RATE = 10000;
-const USD_LTC_EXCHANGE_RATE = 100;
-const DATA_FEED_GAS_RESERVE = 1;
-
-// Fund settings
-const FUND_NAME = "CoinAlpha Falcon";
-const FUND_SYMBOL = "FALC";
-const FUND_DECIMALS = 4;
-const MANAGER_USD_ETH_BASIS = 300;
-const MIN_INITIAL_SUBSCRIPTION_ETH = 20;
-const MIN_SUBSCRIPTION_ETH = 5;
-const MIN_INITIAL_SUBSCRIPTION_USD = 10000;
-const MIN_SUBSCRIPTION_USD = 5000;
-const MIN_REDEMPTION_SHARES = 100000;
-const ADMIN_FEE = 1;
-const MGMT_FEE = 0;
-const PERFORM_FEE = 20;
+// DEPLOY PARAMETERS
+const {
+  SECONDS_BETWEEN_QUERIES,
+  USD_ETH_EXCHANGE_RATE,
+  USD_BTC_EXCHANGE_RATE,
+  USD_LTC_EXCHANGE_RATE,
+  DATA_FEED_GAS_RESERVE,
+  FUND_NAME,
+  FUND_SYMBOL,
+  FUND_DECIMALS,
+  MANAGER_USD_ETH_BASIS,
+  MIN_INITIAL_SUBSCRIPTION_ETH,
+  MIN_SUBSCRIPTION_ETH,
+  MIN_INITIAL_SUBSCRIPTION_USD,
+  MIN_SUBSCRIPTION_USD,
+  MIN_REDEMPTION_SHARES,
+  ADMIN_FEE,
+  MGMT_FEE,
+  PERFORM_FEE,
+} = require('../config');
 
 module.exports = function (deployer, network, accounts) {
 

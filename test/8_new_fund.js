@@ -3,6 +3,7 @@ const Promise = require('bluebird');
 
 const NewFund = artifacts.require('./NewFund.sol');
 const FundStorage = artifacts.require('./FundStorage.sol');
+const DataFeed = artifacts.require('./DataFeed.sol');
 
 const scriptName = path.basename(__filename);
 
@@ -12,7 +13,7 @@ if (typeof web3.eth.getAccountsPromise === "undefined") {
 
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
 
-const { getInvestorData, getContractFieldsData } = require('../utils');
+const { getInvestorData, getContractNumericalData } = require('../utils');
 
 contract('New Fund', (accounts) => {
   accounts.pop(); // Remove Oraclize account
@@ -30,21 +31,27 @@ contract('New Fund', (accounts) => {
   const ethInvestors = investors.slice(5, 10);
   const usdInvestors = investors.slice(11, 16);
 
-  let newFund, fundStorage;
+  let newFund, fundStorage, dataFeed;
 
   const fundStorageFields = [
-    'name',
-    'symbol',
     'decimals',
     'minInitialSubscriptionUsd',
     'minSubscriptionUsd',
     'minRedemptionShares',
   ];
 
+  const dataFeedFields = [
+    'value',
+    'usdEth',
+    'usdBtc',
+    'usdLtc',
+    'timestamp',
+  ];
+
   before('before: should prepare', () => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
-    return Promise.all([NewFund.deployed(), FundStorage.deployed()])
-      .then(_instances => [newFund, fundStorage] = _instances)
+    return Promise.all([NewFund.deployed(), FundStorage.deployed(), DataFeed.deployed()])
+      .then(_instances => [newFund, fundStorage, dataFeed] = _instances)
       .catch(err => assert.throw(`failed to get instances: ${err.toString()}`))
       .then(() => fundStorage.setFund(newFund.address, { from: MANAGER }))
       .catch(err => assert.throw(`failed - fundStorage.setFund(): ${err.toString()}`))
@@ -60,8 +67,11 @@ contract('New Fund', (accounts) => {
       ]))
       .then(_addresses => _addresses.forEach(_address => assert.notEqual(_address, '0x0000000000000000000000000000000000000000', 'Contract address not set')))
       .catch(err => `  Error retrieving variables: ${err.toString()}`)
-      .then(() => getContractFieldsData('FundStorage Fields Data', fundStorage, fundStorageFields))
-      .catch(err => assert.throw(`failed to get fundStorage data: ${err.toString()}`));
+      .then(() => {
+        getContractNumericalData('FundStorage Fields Data', fundStorage, fundStorageFields);
+        getContractNumericalData('DataFeed Fields Data', dataFeed, dataFeedFields);
+      })
+      .catch(err => assert.throw(`failed to get contracts data: ${err.toString()}`));
   });
 
   describe('getFundDetails()', () => {
@@ -119,6 +129,41 @@ contract('New Fund', (accounts) => {
 
   }); // describe
 
+  describe('requestEthSubscription', () => {
+    it('not allow ETH subscription below minimumInitialSubscriptionUsd', () => {
+
+    });
+    
+    it('subscribe ETH investor', () => {
+      
+    });
+
+    it('not allow USD subscription below minimumInitialSubscriptionUsd', () => {
+
+    });
+
+    it('subscribe USD investor', () => {
+
+    });
+
+    it('not allow repeat ETH subscription below minimumSubscriptionUsd', () => {
+
+    });
+    
+    it('subscribe repeat ETH investor', () => {
+      
+    });
+
+    it('not allow repeat USD subscription below minimumSubscriptionUsd', () => {
+
+    });
+
+    it('subscribe repeat USD investor', () => {
+
+    });
+
+  }); // describe requestEthSubscription
+
   xdescribe('subscribeInvestors', () => {
     it('not allow ETH subscription below minimumInitialSubscriptionUsd', () => {
 
@@ -152,7 +197,7 @@ contract('New Fund', (accounts) => {
 
     });
 
-  });
+  }); // describe subscribeInvestors
 
   xdescribe('changeModule', () => {
     it('NavCalculator', () => {
@@ -170,6 +215,6 @@ contract('New Fund', (accounts) => {
     it('FundStroage', () => {
 
     });
-  });
+  }); // describe changeModule
 
 }); // contract

@@ -1,0 +1,46 @@
+// DataFeed settings
+const SECONDS_BETWEEN_QUERIES = 300;
+
+const USD_ETH_EXCHANGE_RATE = 1000;
+const USD_BTC_EXCHANGE_RATE = 10000;
+const USD_LTC_EXCHANGE_RATE = 250;
+const DATA_FEED_GAS_RESERVE = 1;        // ETH amount
+
+// Fund settings
+const FUND_NAME = "CoinAlpha Falcon";
+const FUND_SYMBOL = "FALC";
+const FUND_DECIMALS = 4;
+const MANAGER_USD_ETH_BASIS = 300;
+
+// ** OLD [TODO: DELETE] **
+const MIN_INITIAL_SUBSCRIPTION_ETH = 20;
+const MIN_SUBSCRIPTION_ETH = 5;
+
+// ** NEW **
+const MIN_INITIAL_SUBSCRIPTION_USD = 10000;   // USD amount
+const MIN_SUBSCRIPTION_USD = 5000;            // USD amount
+
+const MIN_REDEMPTION_SHARES = 1000;
+const ADMIN_FEE = 1;                  // in basis points : 0.01% units
+const MGMT_FEE = 0;                   // in basis points : 0.01% units
+const PERFORM_FEE = 20;               // in basis points : 0.01% units
+
+module.exports = {
+  SECONDS_BETWEEN_QUERIES,
+  USD_ETH_EXCHANGE_RATE,
+  USD_BTC_EXCHANGE_RATE,
+  USD_LTC_EXCHANGE_RATE,
+  DATA_FEED_GAS_RESERVE,
+  FUND_NAME,
+  FUND_SYMBOL,
+  FUND_DECIMALS,
+  MANAGER_USD_ETH_BASIS,
+  MIN_INITIAL_SUBSCRIPTION_ETH,
+  MIN_SUBSCRIPTION_ETH,
+  MIN_INITIAL_SUBSCRIPTION_USD,
+  MIN_SUBSCRIPTION_USD,
+  MIN_REDEMPTION_SHARES,
+  ADMIN_FEE,
+  MGMT_FEE,
+  PERFORM_FEE,
+};

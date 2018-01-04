@@ -1,81 +1,12 @@
 const path = require('path');
+const scriptName = path.basename(__filename);
+
+const { allArtifacts, constructors } = require('../migrations/artifacts.js');
 
 const expectedExceptionPromise = require('../utils/expectedException.js');
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
 
-const allArtifacts = {
-  OwnableModified: artifacts.require('./OwnableModified.sol'),
-  NavCalculator: artifacts.require('./NavCalculator.sol'),
-  InvestorActions: artifacts.require('./InvestorActions.sol'),
-  DataFeed: artifacts.require('./DataFeed.sol'),
-  FundStorage: artifacts.require('./FundStorage.sol'),
-  Fund: artifacts.require('./Fund.sol'),
-  NewInvestorActions: artifacts.require('./NewInvestorActions.sol'),
-  NewFund: artifacts.require('./NewFund.sol'),
-};
-
-const scriptName = path.basename(__filename);
-
 const ethToWei = eth => web3.toWei(eth, 'ether');
-
-const constructors = {
-  OwnableModified: owner => allArtifacts.OwnableModified.new({ from: owner }),
-  DataFeed: (owner, exchange) => allArtifacts.DataFeed.new(
-    '[NOT USED]',                 // _queryUrl
-    300,                          // _secondsBetweenQueries
-    300 * 100,                    // _initialUsdEthRate
-    10000 * 100,                  // _initialUsdBtcRate
-    100 * 100,                    // _initialUsdLtcRate
-    exchange,                     // _exchange
-    { from: owner, value: 0 }
-  ),
-  NavCalculator: (owner, dataFeed) => allArtifacts.NavCalculator.new(dataFeed, { from: owner }),
-  InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner }),
-  FundStorage: (owner, dataFeed) => allArtifacts.FundStorage.new(
-    'TestFund',                  // _name
-    'TEST',                      // _symbol
-    10000 * 100,                 // _minInitialSubscriptionUsd
-    5000 * 100,                  // _minSubscriptionUsd
-    100000,                      // _minRedemptionShares,
-    100,                         // _adminFeeBps
-    100,                         // _mgmtFeeBps
-    2000,                        // _performFeeBps
-    { from: owner }
-  ),
-  Fund: (owner, exchange, navCalculator, investorActions, dataFeed, fundStorage) =>
-    allArtifacts.Fund.new(
-      owner,                     // _manager
-      exchange,                  // _exchange
-      navCalculator.address,     // _navCalculator
-      investorActions.address,   // _investorActions
-      dataFeed.address,          // _dataFeed
-      'TestFund',                // _name
-      'TEST',                    // _symbol
-      4,                         // _decimals
-      ethToWei(20),              // _minInitialSubscriptionEth
-      ethToWei(5),               // _minSubscriptionEth
-      100000,                    // _minRedemptionShares,
-      100,                       // _adminFeeBps
-      100,                       // _mgmtFeeBps
-      2000,                      // _performFeeBps
-      30000,                     // _managerUsdEthBasis
-      { from: owner }
-    ),
-  NewInvestorActions: (owner, dataFeed, fundStorage) => allArtifacts.NewInvestorActions.new(dataFeed, fundStorage, { from: owner }),
-  NewFund: (owner, exchange, navCalculator, newInvestorActions, dataFeed, fundStorage) =>
-    allArtifacts.NewFund.new(
-      owner,                     // _manager
-      exchange,                  // _exchange
-      navCalculator.address,     // _navCalculator
-      newInvestorActions.address,   // _investorActions
-      dataFeed.address,          // _dataFeed
-      fundStorage.address,       // _fundStorage
-      'TestFund',                // _name
-      'TEST',                    // _symbol
-      4,                         // _decimals
-      { from: owner }
-    ),
-};
 
 contract('OwnableModified', (accounts) => {
   let owned, dataFeed, navCalculator, investorActions, fundStorage, newInvestorActions;
