@@ -23,7 +23,7 @@ contract INewInvestorActions {
   // function getAvailableAllocation(address _addr)
   //   returns (uint ethAvailableAllocation) {}
 
-  function requestSubscription(address _addr, uint _amount)
+  function requestEthSubscription(address _addr, uint _amount)
     returns (uint, uint) {}
 
   function cancelSubscription(address _addr)
@@ -106,12 +106,12 @@ contract NewInvestorActions is DestructibleModified {
   // Register an investor's subscription request, after checking that
   // 1) the requested amount exceeds the minimum subscription amount and
   // 2) the investor's total allocation is not exceeded
-  function requestSubscription(address _addr, uint _amount)
+  function requestEthSubscription(address _investor, uint _amount)
     onlyFund
     constant
     returns (uint, uint)
   {
-    // var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = newFund.getInvestor(_addr);
+    var (investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
 
     // if (sharesOwned == 0) {
     //   require(_amount >= newFund.minInitialSubscriptionUsd().div(dataFeed.esdEth()));

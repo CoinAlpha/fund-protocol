@@ -53,6 +53,7 @@ contract NewFund is DestructiblePausable {
   // ========================================== EVENTS ===========================================
 
   event LogWhiteListInvestor(address investor, uint investorType);
+  event LogEthSubscriptionRequest(address indexed investor, uint eth);
 
   event LogModuleChanged(string module, address oldAddress, address newAddress);
 
@@ -79,7 +80,7 @@ contract NewFund is DestructiblePausable {
   // ====================================== SUBSCRIPTIONS ======================================
 
   // Whitelist an investor
-  // TODO: Delegates logic to the InvestorActions module
+  // Delegates logic to the FundStorage module
   function whiteListInvestor(address _investor, uint _investorType)
     onlyManager
     returns (bool isSuccess)
@@ -89,6 +90,21 @@ contract NewFund is DestructiblePausable {
     return true;
   }
 
+  // [INVESTOR METHOD] Issue a subscription request by transferring ether into the fund
+  // Delegates logic to the InvestorActions module
+  // usdEthBasis is expressed in USD cents.  For example, for a rate of 300.01, _usdEthBasis = 30001
+  function requestEthSubscription()
+    whenNotPaused
+    payable
+    returns (bool success)
+  {
+    // var (_ethPendingSubscription, _totalEthPendingSubscription) = investorActions.requestEthSubscription(msg.sender, msg.value);
+    // investors[msg.sender].ethPendingSubscription = _ethPendingSubscription;
+    // totalEthPendingSubscription = _totalEthPendingSubscription;
+
+    // LogEthSubscriptionRequest(msg.sender, msg.value);
+    return true;
+  }
 
   // ========================================== ADMIN ==========================================
 

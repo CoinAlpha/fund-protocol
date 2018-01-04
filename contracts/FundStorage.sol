@@ -67,8 +67,6 @@ contract IFundStorage {
     returns (bool wasModified) {}
   function updateNav(uint _shareClassIndex, uint _shareNav)
     returns (bool wasUpdated) {}
-  function getNumberOfShareClasses()
-    returns (uint numberOfShareClasses) {}
 }
 
 // ==================================== CONTRACT ====================================
@@ -162,7 +160,8 @@ contract FundStorage is DestructibleModified {
     uint     _minInitialSubscriptionUsd,
     uint     _minSubscriptionUsd,
     uint     _minRedemptionShares,
-    uint     _adminFeeBps, // DETAILS OF INITIAL SHARE CLASS
+    // DETAILS OF INITIAL SHARE CLASS
+    uint     _adminFeeBps,
     uint     _mgmtFeeBps,
     uint     _performFeeBps
   ) // "Falcon", "FALC", 1000000, 500000, 100000, 100, 100, 20000
@@ -173,9 +172,9 @@ contract FundStorage is DestructibleModified {
     minSubscriptionUsd = _minSubscriptionUsd;
     minInitialSubscriptionUsd = _minInitialSubscriptionUsd;
     minRedemptionShares = _minRedemptionShares;
-    // Create initial share class
-    // numberOfShareClasses = 1;
-    // shareClasses[0] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, 10000, now);
+    // Create initial base share class
+    numberOfShareClasses = 1;
+    shareClasses[0] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, 10000, now);
   }
 
 
@@ -318,16 +317,11 @@ contract FundStorage is DestructibleModified {
     LogModifiedInvestor(_description, _investorType, _amountPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
   }
 
+  // ********* INVESTOR SHARE FUNCTIONS *********
+
+
   // ********* SHARECLASS FUNCTIONS *********
   
-  function getNumberOfShareClasses()
-    constant
-    public
-    returns (uint numberOfShareClasses)
-  {
-    return numberOfShareClasses;
-  }
-
   // Get share class details
   function getShareClass(uint _shareClassIndex)
     constant

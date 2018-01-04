@@ -32,7 +32,9 @@ contract('FundStorage', (accounts) => {
       .then(_fundStorage => fundStorage = _fundStorage)
       .then(() => fundStorage.setFund(FUND, { from: MANAGER }))
       .then(() => fundStorage.getInvestorAddresses.call({ from: MANAGER }))
-      .then((_investorAddresses) => assert.strictEqual(_investorAddresses.length, 0, 'investor list is not empty'))
+      .then(_investorAddresses => assert.strictEqual(_investorAddresses.length, 0, 'investor list is not empty'))
+      .then(() => fundStorage.numberOfShareClasses.call({ from: MANAGER }))
+      .then(_numberOfShareClasses => assert.strictEqual(Number(_numberOfShareClasses), 1, 'number of share classes is not 1'))
       .catch(err => assert.throw(`failed to initialize fundStorage: ${err.toString()}`));
   });
 
@@ -143,9 +145,9 @@ contract('FundStorage', (accounts) => {
   }); // describe
 
   describe('Share Classes', () => {
-    it('initializes ShareClasses', () => fundStorage.getNumberOfShareClasses()
-      .then(_numberOfShareClasses => assert.strictEqual(Number(_numberOfShareClasses), 0, 'num of share classes is not zero'))
-      .catch(err => assert.throw(`Error retrieving num of share classes ${err.toString()}`))
+    it('initializes ShareClasses with base', () => fundStorage.numberOfShareClasses.call()
+      .then(_numberOfShareClasses => assert.strictEqual(Number(_numberOfShareClasses), 1, 'num of share classes is not one'))
+      .catch(err => assert.throw(`Error retrieving number of share classes ${err.toString()}`))
     );
 
     const shareVariables = ['numberOfShareClasses', 'totalShareSupply'];
@@ -157,7 +159,7 @@ contract('FundStorage', (accounts) => {
     });
 
     const shareClassA = {
-      shareClassIndex: 0,
+      shareClassIndex: 1,
       adminFeeBps: 100,
       mgmtFeeBps: 100,
       performFeeBps: 2000,
@@ -165,7 +167,7 @@ contract('FundStorage', (accounts) => {
       shareNav: 100,
     }
     const shareClassB = {
-      shareClassIndex: 1,
+      shareClassIndex: 2,
       adminFeeBps: 100,
       mgmtFeeBps: 50,
       performFeeBps: 1500,
@@ -173,7 +175,7 @@ contract('FundStorage', (accounts) => {
       shareNav: 100,
     }
     const shareClassC = {
-      shareClassIndex: 2,
+      shareClassIndex: 3,
       adminFeeBps: 100,
       mgmtFeeBps: 0,
       performFeeBps: 1000,
