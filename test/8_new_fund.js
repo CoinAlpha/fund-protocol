@@ -12,7 +12,7 @@ if (typeof web3.eth.getAccountsPromise === "undefined") {
 
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
 
-const { getInvestorData } = require('../utils');
+const { getInvestorData, getContractFieldsData } = require('../utils');
 
 contract('New Fund', (accounts) => {
   accounts.pop(); // Remove Oraclize account
@@ -31,6 +31,15 @@ contract('New Fund', (accounts) => {
   const usdInvestors = investors.slice(11, 16);
 
   let newFund, fundStorage;
+
+  const fundStorageFields = [
+    'name',
+    'symbol',
+    'decimals',
+    'minInitialSubscriptionUsd',
+    'minSubscriptionUsd',
+    'minRedemptionShares',
+  ];
 
   before('before: should prepare', () => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
@@ -51,6 +60,8 @@ contract('New Fund', (accounts) => {
       ]))
       .then(_addresses => _addresses.forEach(_address => assert.notEqual(_address, '0x0000000000000000000000000000000000000000', 'Contract address not set')))
       .catch(err => `  Error retrieving variables: ${err.toString()}`)
+      .then(() => getContractFieldsData('FundStorage Fields Data', fundStorage, fundStorageFields))
+      .catch(err => assert.throw(`failed to get fundStorage data: ${err.toString()}`));
   });
 
   describe('getFundDetails()', () => {
@@ -85,22 +96,24 @@ contract('New Fund', (accounts) => {
     ethInvestors.forEach((_investor, index) => {
       it(`should whitelist an ETH investor [${index}] ${_investor}`, () => getInvestorData(fundStorage, _investor)
         .then(_investorData => assert.strictEqual(_investorData.investorType, 0, 'investor type not initialized'))
-        .then(() => newFund.whiteListInvestor(_investor, 1, { from: MANAGER }))
+        .catch(err => assert.throw(`Error getting investor 1: ${err.toString()}`))
+        .then(() => newFund.whiteListInvestor(_investor, 1, 0, { from: MANAGER }))
         .catch(err => assert.throw(`Error whitelisting investor ${_investor}: ${err.toString()}`))
         .then(() => getInvestorData(fundStorage, _investor))
         .then(_investorData => assert.strictEqual(_investorData.investorType, 1, 'incorrect investor type'))
-        .catch(err => assert.throw(`Error getting investor: ${err.toString()}`))
+        .catch(err => assert.throw(`Error getting investor 2: ${err.toString()}`))
       );
     });
 
     usdInvestors.forEach((_investor, index) => {
       it(`should whitelist an USD investor [${index}] ${_investor}`, () => getInvestorData(fundStorage, _investor)
         .then(_investorData => assert.strictEqual(_investorData.investorType, 0, 'investor type not initialized'))
-        .then(() => newFund.whiteListInvestor(_investor, 2, { from: MANAGER }))
+        .catch(err => assert.throw(`Error getting investor 1: ${err.toString()}`))
+        .then(() => newFund.whiteListInvestor(_investor, 2, 0, { from: MANAGER }))
         .catch(err => assert.throw(`Error whitelisting investor ${_investor}: ${err.toString()}`))
         .then(() => getInvestorData(fundStorage, _investor))
         .then(_investorData => assert.strictEqual(_investorData.investorType, 2, 'incorrect investor type'))
-        .catch(err => assert.throw(`Error getting investor: ${err.toString()}`))
+        .catch(err => assert.throw(`Error getting investor 2: ${err.toString()}`))
       );
     });
 

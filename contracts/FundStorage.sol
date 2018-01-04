@@ -28,7 +28,7 @@ contract IFundStorage {
     returns (bool wasUpdated) {}
 
   // Investor Functions
-  function addInvestor(address _investor, uint _investorType)
+  function whiteListInvestor(address _investor, uint _investorType, uint _shareClass)
     returns(bool wasAdded) {}
   function removeInvestor(address _investor)
     returns (bool success) {}
@@ -51,6 +51,10 @@ contract IFundStorage {
       uint sharesPendingRedemption,
       uint amountPendingWithdrawal
     ) {}
+  
+  // Subscribe / Redeem Functions
+  function updateEthPendingSubscription(address _investor, uint _totalAmount)
+    returns(bool wasAdded) {}
 
   // Share Class Functions
   function getShareClass(uint _shareClassIndex)
@@ -140,7 +144,7 @@ contract FundStorage is DestructibleModified {
 
   // Fund Events
   event LogUpdatedDetails(string updatedField, uint oldValue, uint newValue);
-  event LogAddedInvestor(address newInvestor, uint investorType);
+  event LogWhiteListedInvestor(address newInvestor, uint investorType, uint shareClass);
   event LogRemovedInvestor(address removedInvestor, uint investorType);
   event LogModifiedInvestor(string _description, uint _investorType, uint _amountPendingSubscription, uint _sharesOwned, uint _shareClass, uint _sharesPendingRedemption, uint _amountPendingWithdrawal);
 
@@ -148,6 +152,9 @@ contract FundStorage is DestructibleModified {
   event LogModifiedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint modifiedAt);
   event LogModifiedShareCount(uint shareClassIndex, uint previousShareSupply, uint previousTotalShareSupply, uint newShareSupply, uint newTotalShareSupply);
   event LogNavUpdate(uint shareClassIndex, uint previousNav, uint newNav);
+
+  // Investor Events
+  event LogUpdatedAmountPendingSubscription(string _type, address investor, uint totalAmount);
 
   // Administrative Events
   event LogSetFundAddress(address oldFundAddress, address newFundAddress);
@@ -233,19 +240,6 @@ contract FundStorage is DestructibleModified {
     return (investor.investorType, investor.amountPendingSubscription, investor.sharesOwned, investor.shareClass, investor.sharesPendingRedemption, investor.amountPendingWithdrawal);
   }
 
-  // Whitelist an investor and specify investor type: [1] ETH investor | [2] USD investor
-  function addInvestor(address _investor, uint _investorType)
-    onlyFundOrOwner
-    returns(bool wasAdded)
-  {
-    require(containsInvestor[_investor] == 0 && _investorType > 0 && _investorType < 3);
-    containsInvestor[_investor] = _investorType;
-    investorAddresses.push(_investor);
-    investors[_investor].investorType = _investorType;
-    LogAddedInvestor(_investor, _investorType);
-    return true;
-  }
-
   // Remove investor address from list
   function removeInvestor(address _investor)
     onlyFundOrOwner
@@ -296,7 +290,6 @@ contract FundStorage is DestructibleModified {
     return investorAddresses;
   }
 
-
   // Generalized function for use in updating an investor record, used for subscription
   // and redemptions.  Note that all logic should be performed outside of this function
   function modifyInvestor(
@@ -315,6 +308,31 @@ contract FundStorage is DestructibleModified {
     require(containsInvestor[_investor] > 0);
     investors[_investor] = InvestorStruct(_investorType, _amountPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
     LogModifiedInvestor(_description, _investorType, _amountPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
+  }
+
+
+  // Whitelist an investor and specify investor type: [1] ETH investor | [2] USD investor
+  function whiteListInvestor(address _investor, uint _investorType, uint _shareClass)
+    onlyFundOrOwner
+    returns(bool wasAdded)
+  {
+    require(containsInvestor[_investor] == 0 && _investorType > 0 && _investorType < 3 && _shareClass < numberOfShareClasses);
+    containsInvestor[_investor] = _investorType;
+    investorAddresses.push(_investor);
+    investors[_investor].investorType = _investorType;
+    investors[_investor].shareClass = _shareClass;
+    LogWhiteListedInvestor(_investor, _investorType, _shareClass);
+    return true;
+  }
+
+  // Add pendingEthSubscription to investor when subscription is requested
+  function updateEthPendingSubscription(address _investor, uint _totalAmount)
+    onlyFund
+    returns(bool wasAdded)
+  {
+    investors[_investor].amountPendingSubscription = _totalAmount;
+    LogUpdatedAmountPendingSubscription("ETH", _investor, _totalAmount);
+    return true;
   }
 
   // ********* INVESTOR SHARE FUNCTIONS *********

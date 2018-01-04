@@ -113,16 +113,17 @@ contract NewInvestorActions is DestructibleModified {
   {
     var (investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
 
-    // if (sharesOwned == 0) {
-    //   require(_amount >= newFund.minInitialSubscriptionUsd().div(dataFeed.esdEth()));
-    // } else {
-    //   require(_amount >= newFund.minInitialSubscriptionUsd().div(dataFeed.esdEth()));
-    // }
-    // require(ethTotalAllocation >= _amount.add(ethPendingSubscription).add(newFund.sharesToEth(sharesOwned)));
+    require(investorType == 1);
 
-    // return (ethPendingSubscription.add(_amount),                                 // new investor.ethPendingSubscription
-    //         newFund.totalEthPendingSubscription().add(_amount)                      // new totalEthPendingSubscription
-    //        );
+    if (sharesOwned == 0) {
+      require(_amount >= fundStorage.minInitialSubscriptionUsd().div(dataFeed.usdEth()));
+    } else {
+      require(_amount >= fundStorage.minSubscriptionUsd().div(dataFeed.usdEth()));
+    }
+
+    return (amountPendingSubscription.add(_amount),                                 // new investor.ethPendingSubscription
+            newFund.totalEthPendingSubscription().add(_amount)                      // new totalEthPendingSubscription
+           );
   }
 
   // Handles an investor's subscription cancellation, after checking that

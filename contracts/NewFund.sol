@@ -11,7 +11,8 @@ import "./zeppelin/DestructiblePausable.sol";
 // ==================================== NewFund Interface ======================================
 
 contract INewFund {
-
+  uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
+  uint    public totalUsdPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in USD (tracking purposes only)
 }
 
 
@@ -27,6 +28,7 @@ contract NewFund is DestructiblePausable {
 
   // ** FUND BALANCES **
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
+  uint    public totalUsdPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in USD (tracking purposes only)
   uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
   uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
   uint    public totalSupply;                    // total number of shares outstanding
@@ -52,7 +54,7 @@ contract NewFund is DestructiblePausable {
 
   // ========================================== EVENTS ===========================================
 
-  event LogWhiteListInvestor(address investor, uint investorType);
+  event LogWhiteListInvestor(address indexed investor, uint investorType, uint shareClass);
   event LogEthSubscriptionRequest(address indexed investor, uint eth);
 
   event LogModuleChanged(string module, address oldAddress, address newAddress);
@@ -81,12 +83,12 @@ contract NewFund is DestructiblePausable {
 
   // Whitelist an investor
   // Delegates logic to the FundStorage module
-  function whiteListInvestor(address _investor, uint _investorType)
+  function whiteListInvestor(address _investor, uint _investorType, uint _shareClass)
     onlyManager
     returns (bool isSuccess)
   {
-    fundStorage.addInvestor(_investor, _investorType);
-    LogWhiteListInvestor(_investor, _investorType);
+    fundStorage.whiteListInvestor(_investor, _investorType, _shareClass);
+    LogWhiteListInvestor(_investor, _investorType, _shareClass);
     return true;
   }
 
@@ -98,11 +100,11 @@ contract NewFund is DestructiblePausable {
     payable
     returns (bool success)
   {
-    // var (_ethPendingSubscription, _totalEthPendingSubscription) = investorActions.requestEthSubscription(msg.sender, msg.value);
-    // investors[msg.sender].ethPendingSubscription = _ethPendingSubscription;
-    // totalEthPendingSubscription = _totalEthPendingSubscription;
+    var (_ethPendingSubscription, _totalEthPendingSubscription) = investorActions.requestEthSubscription(msg.sender, msg.value);
+    fundStorage.updateEthPendingSubscription(msg.sender, _ethPendingSubscription);
+    totalEthPendingSubscription = _totalEthPendingSubscription;
 
-    // LogEthSubscriptionRequest(msg.sender, msg.value);
+    LogEthSubscriptionRequest(msg.sender, msg.value);
     return true;
   }
 

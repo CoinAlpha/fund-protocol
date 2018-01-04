@@ -18,7 +18,7 @@ const ethToWei = (eth) => eth * 1e18;
 // DataFeed settings
 const SECONDS_BETWEEN_QUERIES = 300;
 
-const USD_ETH_EXCHANGE_RATE = 450;
+const USD_ETH_EXCHANGE_RATE = 1000;
 const USD_BTC_EXCHANGE_RATE = 10000;
 const USD_LTC_EXCHANGE_RATE = 100;
 const DATA_FEED_GAS_RESERVE = 1;

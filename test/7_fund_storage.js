@@ -18,13 +18,15 @@ contract('FundStorage', (accounts) => {
   const FUND = accounts[2];
   const FUND2 = accounts[3];
   const NOTAUTHORIZED = accounts[4];
-  const investors = accounts.slice(5);
+  const investors = accounts.slice(5, 10);
   const INVESTOR1 = investors[0];
   const INVESTOR2 = investors[1];
   const INVESTOR3 = investors[2];
   const INVESTOR4 = investors[3];
+  const INVESTOR5 = investors[4];
 
   let fundStorage;
+  let shareClasses;
 
   before('before: should prepare', () => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
@@ -60,7 +62,7 @@ contract('FundStorage', (accounts) => {
     const usdInvestors = included.slice(0).splice(0, split);
 
     ethInvestors.forEach((_investor) => {
-      it('should add ETH investors', () => fundStorage.addInvestor(_investor, 1, { from: FUND })
+      it('should add ETH investors', () => fundStorage.whiteListInvestor(_investor, 1, 0, { from: FUND })
         .then(() => fundStorage.queryContainsInvestor.call(_investor))
         .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added'))
         .then(() => fundStorage.getInvestor.call(_investor))
@@ -70,7 +72,7 @@ contract('FundStorage', (accounts) => {
     });
 
     usdInvestors.forEach((_investor) => {
-      it('should add USD investors', () => fundStorage.addInvestor(_investor, 2, { from: FUND })
+      it('should add USD investors', () => fundStorage.whiteListInvestor(_investor, 2, 0, { from: FUND })
         .then(() => fundStorage.queryContainsInvestor.call(_investor))
         .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added'))
         .then(() => fundStorage.getInvestor.call(_investor))
@@ -82,7 +84,7 @@ contract('FundStorage', (accounts) => {
     excluded.forEach((_investor) => {
       it('should not remove non-existent investors', () => fundStorage.removeInvestor.call(_investor, { from: FUND })
         .then(
-        () => assert.throw('should removed investor'),
+        () => assert.throw('removed non-existetnt investor'),
         e => assert.isAtLeast(e.message.indexOf('revert'), 0)
         )
         .catch(assert.throw)
@@ -107,21 +109,21 @@ contract('FundStorage', (accounts) => {
 
   describe('Function Permissions', () => {
 
-    it('add and remove an investor', () => fundStorage.addInvestor(INVESTOR1, 1, { from: MANAGER })
+    it('add and remove an investor', () => fundStorage.whiteListInvestor(INVESTOR1, 1, 0, { from: MANAGER })
       .then(() => fundStorage.queryContainsInvestor.call(INVESTOR1))
       .catch(err => assert.throw(`Manager could not add an investor ${err.toString()}`))
       .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added by manager'))
       .then(() => fundStorage.getInvestor.call(INVESTOR1))
       .then(_investor => assert.strictEqual(Number(_investor[0]), 1, 'incorrect investor type'))
 
-      .then(() => fundStorage.addInvestor(INVESTOR2, 2, { from: FUND }))
+      .then(() => fundStorage.whiteListInvestor(INVESTOR2, 2, 0, { from: FUND }))
       .then(() => fundStorage.queryContainsInvestor.call(INVESTOR2))
       .catch(err => assert.throw(`Manager could not add an investor ${err.toString()}`))
       .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added by manager'))
       .then(() => fundStorage.getInvestor.call(INVESTOR2))
       .then(_investor => assert.strictEqual(Number(_investor[0]), 2, 'incorrect investor type'))
 
-      .then(() => fundStorage.addInvestor(INVESTOR3, 2, { from: NOTAUTHORIZED }))
+      .then(() => fundStorage.whiteListInvestor(INVESTOR3, 2, 0, { from: NOTAUTHORIZED }))
       .then(
       () => assert.throw('should removed investor'),
       e => assert.isAtLeast(e.message.indexOf('revert'), 0)
@@ -182,7 +184,7 @@ contract('FundStorage', (accounts) => {
       shareSupply: 0,
       shareNav: 100,
     }
-    const shareClasses = [shareClassA, shareClassB, shareClassC];
+    shareClasses = [shareClassA, shareClassB, shareClassC];
 
     describe('add share classes', () => {
       shareClasses.forEach((_shareClass) => {
@@ -202,6 +204,10 @@ contract('FundStorage', (accounts) => {
             assert.isAbove(Number(_resShareClass[6]), 0, 'incorrect lastCalc');
           }))
       });
+
+      it(`should have the correct number of share classes [${1 + shareClasses.length}]`, () => fundStorage.numberOfShareClasses.call()
+        .then(_numberOfShareClasses => assert.strictEqual(Number(_numberOfShareClasses), 1 + shareClasses.length, 'incorrect number of share classes'))
+      );
     });   // describe add share classes 
 
     describe('should modify share classes', () => {
@@ -224,6 +230,7 @@ contract('FundStorage', (accounts) => {
             }))
       });
     });   // describe modify share classes 
+
   });  // describe share classes
 
   const investorObj1 = {
@@ -254,7 +261,13 @@ contract('FundStorage', (accounts) => {
     shareClass: 0,
     shares: 400000,
   };
-  const investorsToSubscribe = [investorObj1, investorObj2, investorObj3, investorObj4];
+  const investorsToSubscribe = investors.map((_investor) => ({
+    investor: _investor,
+    type: Math.round(Math.random() * 1) + 1,
+    subscribeAmount: Math.round(Math.random() * 10000000),
+    shareClass: Math.round(Math.random() * shareClasses.length),
+    shares: Math.round(Math.random() * 10000000),
+  }));
 
   describe('Subscribe investor', () => {
 
@@ -263,7 +276,8 @@ contract('FundStorage', (accounts) => {
     let shareClassCount;
 
     investorsToSubscribe.forEach((_investor, index) => {
-      it(`should white list investor ${index}`, () => fundStorage.addInvestor(_investor.investor, _investor.type, { from: FUND })
+      console.log(_investor);
+      it(`should white list investor ${index}`, () => fundStorage.whiteListInvestor(_investor.investor, _investor.type, _investor.shareClass, { from: FUND })
         .catch(err => assert.throw(`Error adding investor: ${err.toString()}`))
 
         // request subscription
