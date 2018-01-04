@@ -12,6 +12,29 @@ if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
+// DEPLOY PARAMETERS
+const {
+  SECONDS_BETWEEN_QUERIES,
+  USD_ETH_EXCHANGE_RATE,
+  USD_BTC_EXCHANGE_RATE,
+  USD_LTC_EXCHANGE_RATE,
+  DATA_FEED_GAS_RESERVE,
+  FUND_NAME,
+  FUND_SYMBOL,
+  FUND_DECIMALS,
+  MANAGER_USD_ETH_BASIS,
+  MIN_INITIAL_SUBSCRIPTION_ETH,
+  MIN_SUBSCRIPTION_ETH,
+  MIN_INITIAL_SUBSCRIPTION_USD,
+  MIN_SUBSCRIPTION_USD,
+  MIN_REDEMPTION_SHARES,
+  ADMIN_FEE,
+  MGMT_FEE,
+  PERFORM_FEE,
+} = require('../config');
+
+// TODO: Update for NewFund
+
 contract('Initialize Fund', (accounts) => {
   // helpers
   const getBalancePromise = address => web3.eth.getBalancePromise(address);
@@ -24,19 +47,8 @@ contract('Initialize Fund', (accounts) => {
   const INITIAL_NAV = web3.toWei(1, 'ether');
 
   const GAS_AMT = 500000;
-  const USD_ETH_EXCHANGE_RATE = 450;
-  const USD_BTC_EXCHANGE_RATE = 10000;
-  const USD_LTC_EXCHANGE_RATE = 100;
-  const SECONDS_BETWEEN_QUERIES = 300;
 
-  const MIN_INITIAL_SUBSCRIPTION = 20;
   const INVESTOR_ALLOCATION = 21;
-  const MIN_SUBSCRIPTION = 5;
-  const MIN_REDEMPTION_SHARES = 100000;
-  const ADMIN_FEE = 1;
-  const MGMT_FEE = 0;
-  const PERFORM_FEE = 20;
-  const MANAGER_USD_ETH_BASIS = 30000;
   
   let fund;
   let navCalculator;
@@ -72,8 +84,8 @@ contract('Initialize Fund', (accounts) => {
         'TestFund',                         // _name
         'TEST',                             // _symbol
         4,                                  // _decimals
-        ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
-        ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
+        ethToWei(MIN_INITIAL_SUBSCRIPTION_ETH), // _minInitialSubscriptionEth
+        ethToWei(MIN_SUBSCRIPTION_ETH),         // _minSubscriptionEth
         MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
         ADMIN_FEE * 100,                    // _adminFeeBps
         MGMT_FEE * 100,                     // _mgmtFeeBps

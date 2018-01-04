@@ -12,6 +12,27 @@ if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
+// DEPLOY PARAMETERS
+const {
+  SECONDS_BETWEEN_QUERIES,
+  USD_ETH_EXCHANGE_RATE,
+  USD_BTC_EXCHANGE_RATE,
+  USD_LTC_EXCHANGE_RATE,
+  DATA_FEED_GAS_RESERVE,
+  FUND_NAME,
+  FUND_SYMBOL,
+  FUND_DECIMALS,
+  MANAGER_USD_ETH_BASIS,
+  MIN_INITIAL_SUBSCRIPTION_ETH,
+  MIN_SUBSCRIPTION_ETH,
+  MIN_INITIAL_SUBSCRIPTION_USD,
+  MIN_SUBSCRIPTION_USD,
+  MIN_REDEMPTION_SHARES,
+  ADMIN_FEE,
+  MGMT_FEE,
+  PERFORM_FEE,
+} = require('../config');
+
 // helpers
 const getBalancePromise = address => web3.eth.getBalancePromise(address);
 const weiToNum = wei => web3.fromWei(wei, 'ether');
@@ -32,26 +53,17 @@ contract('FundActions', (accounts) => {
 
   // test parameters
   const GAS_AMT = 500000;
-  const USD_ETH_EXCHANGE_RATE = 450;
-  const USD_BTC_EXCHANGE_RATE = 10000;
-  const USD_LTC_EXCHANGE_RATE = 100;
-  const SECONDS_BETWEEN_QUERIES = 300;
 
-  const MIN_INITIAL_SUBSCRIPTION = 20;
   const INVESTOR_ALLOCATION = 21;
-  const MIN_SUBSCRIPTION = 5;
   const MIN_REDEMPTION_SHARES = 100000;
-  const ADMIN_FEE = 1;
-  const MGMT_FEE = 0;
-  const PERFORM_FEE = 20;
-  const USD_ETH_BASIS = 30000;
   const ETH_INCREMENT = 1;
   const PRECISION = 1000000000;
+  const USD_ETH_BASIS = USD_ETH_EXCHANGE_RATE * (0.8 + (0.4 * Math.random()));
 
   // test for boundaries and a mid value
   const investors = [
-    { name: 'Subscribe for minimum amount', investor: MIN_INVESTOR, amount: MIN_INITIAL_SUBSCRIPTION },
-    { name: 'Subscribe for mid amount', investor: MID_INVESTOR, amount: (MIN_INITIAL_SUBSCRIPTION + INVESTOR_ALLOCATION) / 2 },
+    { name: 'Subscribe for minimum amount', investor: MIN_INVESTOR, amount: MIN_INITIAL_SUBSCRIPTION_ETH },
+    { name: 'Subscribe for mid amount', investor: MID_INVESTOR, amount: (MIN_INITIAL_SUBSCRIPTION_ETH + INVESTOR_ALLOCATION) / 2 },
     { name: 'Subscribe for max amount', investor: MAX_INVESTOR, amount: INVESTOR_ALLOCATION }
   ];
 
@@ -89,13 +101,13 @@ contract('FundActions', (accounts) => {
         'TestFund',                         // _name
         'TEST',                             // _symbol
         4,                                  // _decimals
-        ethToWei(MIN_INITIAL_SUBSCRIPTION), // _minInitialSubscriptionEth
-        ethToWei(MIN_SUBSCRIPTION),         // _minSubscriptionEth
+        ethToWei(MIN_INITIAL_SUBSCRIPTION_ETH), // _minInitialSubscriptionEth
+        ethToWei(MIN_SUBSCRIPTION_ETH),         // _minSubscriptionEth
         MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
         ADMIN_FEE * 100,                    // _adminFeeBps
         MGMT_FEE * 100,                     // _mgmtFeeBps
         PERFORM_FEE * 100,                  // _performFeeBps
-        USD_ETH_BASIS,                      // _managerUsdEthBasis
+        MANAGER_USD_ETH_BASIS,              // _managerUsdEthBasis
         { from: OWNER }
       );
     })
@@ -150,8 +162,8 @@ contract('FundActions', (accounts) => {
       describe('throw errors for invalid subscription requests', () => {
         // INVESTOR ACTION: Subscription Requests
         it('should reject subscription requests lower than minInitialSubscriptionEth', () => {
-          const amt = MIN_INITIAL_SUBSCRIPTION - ETH_INCREMENT;
-          return fund.requestSubscription(USD_ETH_BASIS, { from: investor, value: ethToWei(amt), gas: GAS_AMT })
+          const amt = MIN_INITIAL_SUBSCRIPTION_ETH - ETH_INCREMENT;
+          return fund.requestSubscription(USD_ETH_EXCHANGE_RATE * (0.8 + (0.4 * Math.random())), { from: investor, value: ethToWei(amt), gas: GAS_AMT })
             .then(
               () => assert.throw('should not have accepted request lower than minInitialSubscriptionEth'),
               e => assert.isAtLeast(e.message.indexOf('revert'), 0)
@@ -160,7 +172,7 @@ contract('FundActions', (accounts) => {
 
         it('should reject subscription requests higher than allocation', () => {
           const amt = INVESTOR_ALLOCATION + ETH_INCREMENT;
-          return fund.requestSubscription(USD_ETH_BASIS, { from: investor, value: ethToWei(amt), gas: GAS_AMT })
+          return fund.requestSubscription(USD_ETH_EXCHANGE_RATE * (0.8 + (0.4 * Math.random())), { from: investor, value: ethToWei(amt), gas: GAS_AMT })
             .then(
               () => assert.throw('should not have accepted request amount higher than allocation'),
               e => assert.isAtLeast(e.message.indexOf('revert'), 0)
@@ -232,7 +244,7 @@ contract('FundActions', (accounts) => {
 
 
   describe('fund.totalEthPendingSubscription', () => {
-    const added = MIN_INITIAL_SUBSCRIPTION + ((INVESTOR_ALLOCATION - MIN_INITIAL_SUBSCRIPTION) * Math.random());
+    const added = MIN_INITIAL_SUBSCRIPTION_ETH + ((INVESTOR_ALLOCATION - MIN_INITIAL_SUBSCRIPTION_ETH) * Math.random());
 
     // MANAGER ACTION: Get total subscriptions
     it('should get correct amount of total subscription requests | calculate incremental change', () => {
