@@ -1,19 +1,19 @@
-const DataFeed = artifacts.require("./DataFeed.sol");
-const NavCalculator = artifacts.require("./NavCalculator.sol");
+const DataFeed = artifacts.require('./DataFeed.sol');
+const NavCalculator = artifacts.require('./NavCalculator.sol');
 
 // TO BE REPLACED
-const InvestorActions = artifacts.require("./InvestorActions.sol");
-const Fund = artifacts.require("./Fund.sol");
+const InvestorActions = artifacts.require('./InvestorActions.sol');
+const Fund = artifacts.require('./Fund.sol');
 
 // NEW CONTRACTS
-const NewInvestorActions = artifacts.require("./NewInvestorActions.sol");
-const NewFund = artifacts.require("./NewFund.sol");
-const FundStorage = artifacts.require("./FundStorage.sol");
+const NewInvestorActions = artifacts.require('./NewInvestorActions.sol');
+const NewFund = artifacts.require('./NewFund.sol');
+const FundStorage = artifacts.require('./FundStorage.sol');
 
 const dataFeedInfo = require('../config/datafeed.js');
 
 // helpers
-const ethToWei = (eth) => eth * 1e18;
+const ethToWei = eth => eth * 1e18;
 
 // DEPLOY PARAMETERS
 const {
@@ -47,8 +47,7 @@ module.exports = function (deployer, network, accounts) {
   const useOraclize = true;
   const dataFeedReserve = ethToWei(DATA_FEED_GAS_RESERVE);
 
-  if (network == "development") {
-
+  if (network === 'development') {
     console.log('******** Deploy environment: development *********');
 
     deployer.deploy(
@@ -114,13 +113,15 @@ module.exports = function (deployer, network, accounts) {
         MANAGER,                        // _manager
         EXCHANGE,                       // _exchange
         NavCalculator.address,          // _navCalculator
-        NewInvestorActions.address,        // _investorActions
+        NewInvestorActions.address,     // _investorActions
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
         { from: ADMINISTRATOR }
       ))
       .then(() => FundStorage.deployed())
       .then(_fundStorage => _fundStorage.setFund(Fund.address))
+      .then(() => NewInvestorActions.deployed())
+      .then(_newInvestorActions => _newInvestorActions.setFund(Fund.address))
       .then(() => console.log('  Contract addresses:'))
       .then(() => console.log(`  - DataFeed           | ${DataFeed.address}`))
       .then(() => console.log(`  - NAV                | ${NavCalculator.address}`))
@@ -139,12 +140,12 @@ module.exports = function (deployer, network, accounts) {
     deployer.deploy(
       NavCalculator,
       DATA_FEED_ADDRESS,
-      { from: ADMINISTRATOR }
+      { from: ADMINISTRATOR },
     )
       .then(() => deployer.deploy(
         InvestorActions,
         DATA_FEED_ADDRESS,
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
         FundStorage,
@@ -157,7 +158,7 @@ module.exports = function (deployer, network, accounts) {
         ADMIN_FEE * 100,                // _adminFeeBps
         MGMT_FEE * 100,                 // _mgmtFeeBps
         PERFORM_FEE * 100,              // _performFeeBps
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
         Fund,
@@ -176,13 +177,13 @@ module.exports = function (deployer, network, accounts) {
         MGMT_FEE * 100,                 // _mgmtFeeBps
         PERFORM_FEE * 100,              // _performFeeBps
         MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
         NewInvestorActions,
         DATA_FEED_ADDRESS,               // _dataFeed
         FundStorage.address,            // _fundStorage
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
         NewFund,
@@ -192,9 +193,11 @@ module.exports = function (deployer, network, accounts) {
         InvestorActions.address,        // _investorActions
         DATA_FEED_ADDRESS,              // _dataFeed
         FundStorage.address,            // _fundStorage
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
       .then(() => FundStorage.deployed())
-      .then(_fundStorage => _fundStorage.setFund(Fund.address));
+      .then(_fundStorage => _fundStorage.setFund(Fund.address))
+      .then(() => NewInvestorActions.deployed())
+      .then(_newInvestorActions => _newInvestorActions.setFund(Fund.address));
   }
 };

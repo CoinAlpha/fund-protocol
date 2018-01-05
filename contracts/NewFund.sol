@@ -35,10 +35,10 @@ contract NewFund is DestructiblePausable {
 
   // ========================================= MODULES ==========================================
   // Where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
-  INavCalculator   public navCalculator;         // calculating net asset value
+  INavCalculator      public navCalculator;         // calculating net asset value
   INewInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
-  IDataFeed        public dataFeed;              // fetching external data like total portfolio value and exchange rates
-  IFundStorage     public fundStorage;           // data storage module
+  IDataFeed           public dataFeed;              // fetching external data like total portfolio value and exchange rates
+  IFundStorage        public fundStorage;           // data storage module
 
 
   // ========================================= MODIFIERS =========================================

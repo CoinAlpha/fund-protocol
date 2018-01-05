@@ -4,16 +4,28 @@ const Promise = require('bluebird');
 const NewFund = artifacts.require('./NewFund.sol');
 const FundStorage = artifacts.require('./FundStorage.sol');
 const DataFeed = artifacts.require('./DataFeed.sol');
+const NewInvestorActions = artifacts.require('./NewInvestorActions.sol');
 
 const scriptName = path.basename(__filename);
 
-if (typeof web3.eth.getAccountsPromise === "undefined") {
-  Promise.promisifyAll(web3.eth, { suffix: "Promise" });
+if (typeof web3.eth.getAccountsPromise === 'undefined') {
+  Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
 
-const { getInvestorData, getContractNumericalData } = require('../utils');
+const { ethToWei, getInvestorData, getContractNumericalData } = require('../utils');
+
+// DEPLOY PARAMETERS
+const {
+  USD_ETH_EXCHANGE_RATE,
+  MIN_INITIAL_SUBSCRIPTION_USD,
+  MIN_SUBSCRIPTION_USD,
+  MIN_REDEMPTION_SHARES,
+  ADMIN_FEE,
+  MGMT_FEE,
+  PERFORM_FEE,
+} = require('../config');
 
 contract('New Fund', (accounts) => {
   accounts.pop(); // Remove Oraclize account
@@ -31,7 +43,19 @@ contract('New Fund', (accounts) => {
   const ethInvestors = investors.slice(5, 10);
   const usdInvestors = investors.slice(11, 16);
 
-  let newFund, fundStorage, dataFeed;
+  const ETH_INVESTOR1 = ethInvestors[0];
+  const USD_INVESTOR1 = usdInvestors[0];
+
+  const WEI_MIN_INITIAL = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD) / USD_ETH_EXCHANGE_RATE);
+  const WEI_BELOW_MIN_INITIAL = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD - 1) / USD_ETH_EXCHANGE_RATE);
+  const WEI_MIN_SUB = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD) / USD_ETH_EXCHANGE_RATE);
+  const WEI_BELOW_MIN_SUB = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD - 1) / USD_ETH_EXCHANGE_RATE);
+
+  // Contract instances
+  let newFund;
+  let fundStorage;
+  let dataFeed;
+  let investorActions;
 
   const fundStorageFields = [
     'decimals',
@@ -50,11 +74,18 @@ contract('New Fund', (accounts) => {
 
   before('before: should prepare', () => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
-    return Promise.all([NewFund.deployed(), FundStorage.deployed(), DataFeed.deployed()])
-      .then(_instances => [newFund, fundStorage, dataFeed] = _instances)
+    return Promise.all([
+      NewFund.deployed(),
+      FundStorage.deployed(),
+      DataFeed.deployed(),
+      NewInvestorActions.deployed(),
+    ])
+      .then(_instances => [newFund, fundStorage, dataFeed, investorActions] = _instances)
       .catch(err => assert.throw(`failed to get instances: ${err.toString()}`))
       .then(() => fundStorage.setFund(newFund.address, { from: MANAGER }))
       .catch(err => assert.throw(`failed - fundStorage.setFund(): ${err.toString()}`))
+      .then(() => investorActions.setFund(newFund.address, { from: MANAGER }))
+      .catch(err => assert.throw(`failed - investorActions.setFund(): ${err.toString()}`))
       .then(() => fundStorage.queryContainsInvestor(INVESTOR1))
       .then(contains => assert.strictEqual(Number(contains), 0, 'investor already whitelisted'))
       .catch(err => assert.throw(`failed queryContainsInvestor: ${err.toString()}`))
@@ -63,7 +94,7 @@ contract('New Fund', (accounts) => {
         newFund.exchange.call(),
         newFund.navCalculator.call(),
         newFund.investorActions.call(),
-        newFund.fundStorage.call()
+        newFund.fundStorage.call(),
       ]))
       .then(_addresses => _addresses.forEach(_address => assert.notEqual(_address, '0x0000000000000000000000000000000000000000', 'Contract address not set')))
       .catch(err => `  Error retrieving variables: ${err.toString()}`)
@@ -75,7 +106,6 @@ contract('New Fund', (accounts) => {
   });
 
   describe('getFundDetails()', () => {
-
     let newFundDetails;
     let fundStorageDetails;
 
@@ -87,7 +117,7 @@ contract('New Fund', (accounts) => {
         fundStorage.symbol(),
         fundStorage.minInitialSubscriptionUsd(),
         fundStorage.minSubscriptionUsd(),
-        fundStorage.minRedemptionShares()
+        fundStorage.minRedemptionShares(),
       ]))
       .then(_details => fundStorageDetails = _details)
       .then(() => newFundDetails.forEach((_detail, index) => {
@@ -96,9 +126,8 @@ contract('New Fund', (accounts) => {
         } else {
           assert.strictEqual(Number(_detail), Number(fundStorageDetails[index]), 'number details do not match');
         }
-      }))
-    );
-  })  // describe
+      })));
+  });  // describe
 
   describe('whiteListInvestor', () => {
     it('should have a whiteListInvestor function', () => assert.isDefined(newFund.whiteListInvestor, 'function undefined'));
@@ -111,8 +140,7 @@ contract('New Fund', (accounts) => {
         .catch(err => assert.throw(`Error whitelisting investor ${_investor}: ${err.toString()}`))
         .then(() => getInvestorData(fundStorage, _investor))
         .then(_investorData => assert.strictEqual(_investorData.investorType, 1, 'incorrect investor type'))
-        .catch(err => assert.throw(`Error getting investor 2: ${err.toString()}`))
-      );
+        .catch(err => assert.throw(`Error getting investor 2: ${err.toString()}`)));
     });
 
     usdInvestors.forEach((_investor, index) => {
@@ -123,20 +151,28 @@ contract('New Fund', (accounts) => {
         .catch(err => assert.throw(`Error whitelisting investor ${_investor}: ${err.toString()}`))
         .then(() => getInvestorData(fundStorage, _investor))
         .then(_investorData => assert.strictEqual(_investorData.investorType, 2, 'incorrect investor type'))
-        .catch(err => assert.throw(`Error getting investor 2: ${err.toString()}`))
-      );
+        .catch(err => assert.throw(`Error getting investor 2: ${err.toString()}`)));
     });
-
   }); // describe
 
   describe('requestEthSubscription', () => {
-    it('not allow ETH subscription below minimumInitialSubscriptionUsd', () => {
+    it('not allow ETH subscription request below minimumInitialSubscriptionUsd', () => getInvestorData(fundStorage, ETH_INVESTOR1)
+      .then(_investorData => assert.strictEqual(Number(_investorData.investorType), 1, 'incorrect investor type'))
+      .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
+      .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_BELOW_MIN_INITIAL }))
+      .then(
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+      )
+    ); // it
 
-    });
-    
-    it('subscribe ETH investor', () => {
-      
-    });
+    it('accept valid requestEthSubscription request', () => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_MIN_INITIAL })
+      .then(
+        () => assert.throw('==> IT should have reached here'),
+        e => assert.throw(`marker: ${e.toString()}`)
+      )
+      .catch(err => assert.throw(`Error getting investor 2: ${err.toString()}`))
+    );
 
     it('not allow USD subscription below minimumInitialSubscriptionUsd', () => {
 
@@ -196,7 +232,6 @@ contract('New Fund', (accounts) => {
     it('subscribe repeat USD investor', () => {
 
     });
-
   }); // describe subscribeInvestors
 
   xdescribe('changeModule', () => {
@@ -216,5 +251,4 @@ contract('New Fund', (accounts) => {
 
     });
   }); // describe changeModule
-
 }); // contract

@@ -19,6 +19,8 @@ contract IFundStorage {
   uint     public minSubscriptionUsd;           // minimum amount of USD that an existing investor can subscribe
   uint     public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
 
+  address  public fundAddress;
+
   // Fund Details Functions
   function updateMinInitialSubscriptionUsd(uint _minInitialSubscriptionUsd)
     returns (bool wasUpdated) {}

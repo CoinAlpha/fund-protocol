@@ -5,15 +5,15 @@ const DataFeed = artifacts.require('./DataFeed.sol');
 
 const scriptName = path.basename(__filename);
 
-if (typeof web3.eth.getAccountsPromise === "undefined") {
-  Promise.promisifyAll(web3.eth, { suffix: "Promise" });
+if (typeof web3.eth.getAccountsPromise === 'undefined') {
+  Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
 
 contract(`****** START TEST [ ${scriptName} ]*******`, (accounts) => {
-  let MANAGER = accounts[0];
-  let EXCHANGE = accounts[1];
+  const MANAGER = accounts[0];
+  const EXCHANGE = accounts[1];
 
   let dataFeed;
   let value, usdEth, usdBtc, usdLtc;

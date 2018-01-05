@@ -9,6 +9,7 @@
   },
   "scripts": {},
   "dependencies": {
+    "eslint-plugin-react": "^7.5.1",
     "solc": "0.4.13",
     "zeppelin-solidity": "^1.1.0"
   },

@@ -1,9 +1,7 @@
 module.exports = {
     "extends": "airbnb",
     "rules": {
-        "comma-dangle" : ["error", {
-            "functions": "ignore"
-        }],
+        "comma-dangle" : ["error"],
         "no-console": "off",
         "no-multi-spaces": ["error", { ignoreEOLComments: true }],
         "no-return-assign": "off",
@@ -21,6 +19,7 @@ module.exports = {
         "beforeEach" : true,
         "contract": true,
         "describe": true,
+        "xdescribe": true,
         "dataFeed": true,
         "getBal": true,
         "it" : true,

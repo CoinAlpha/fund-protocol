@@ -1,4 +1,5 @@
 const path = require('path');
+
 const scriptName = path.basename(__filename);
 
 const { allArtifacts, constructors } = require('../migrations/artifacts.js');
@@ -31,7 +32,6 @@ contract('OwnableModified', (accounts) => {
 
   Object.keys(constructors).forEach((name) => {
     describe(name, () => {
-
       before(`should deploy a new ${name}`, () => {
         if (name === 'OwnableModified') {
           return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed)
@@ -156,6 +156,7 @@ contract('OwnableModified', (accounts) => {
   });
 
   it('should have correct number of functions', () => constructors.OwnableModified(owner0)
-    .then(owned => assert.strictEqual(Object.keys(owned).length, 15)));
-  // Expected: [ 'constructor','abi','contract','owners','getOwnersLength','addOwner','getOwners','transferOwnership','LogOwnershipTransferred','LogOwnerAdded', 'sendTransaction','send','allEvents','address','transactionHash' ]
+    .then(_owned => assert.strictEqual(Object.keys(_owned).length, 15)));
+  // Expected: [ 'constructor','abi','contract','owners','getOwnersLength','addOwner','getOwners',
+  // 'transferOwnership', 'LogOwnershipTransferred', 'LogOwnerAdded', 'sendTransaction', 'send', 'allEvents', 'address', 'transactionHash' ]
 });

@@ -5,11 +5,20 @@ const FundStorage = artifacts.require('./FundStorage.sol');
 
 const scriptName = path.basename(__filename);
 
-if (typeof web3.eth.getAccountsPromise === "undefined") {
-  Promise.promisifyAll(web3.eth, { suffix: "Promise" });
+if (typeof web3.eth.getAccountsPromise === 'undefined') {
+  Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
+
+const { ethToWei } = require('../utils');
+
+// DEPLOY PARAMETERS
+const {
+  USD_ETH_EXCHANGE_RATE,
+  MIN_INITIAL_SUBSCRIPTION_USD,
+} = require('../config');
+
 
 contract('FundStorage', (accounts) => {
   accounts.pop(); // Remove Oraclize account
@@ -18,12 +27,14 @@ contract('FundStorage', (accounts) => {
   const FUND = accounts[2];
   const FUND2 = accounts[3];
   const NOTAUTHORIZED = accounts[4];
-  const investors = accounts.slice(5, 10);
+  const investors = accounts.slice(5, 11);
   const INVESTOR1 = investors[0];
   const INVESTOR2 = investors[1];
   const INVESTOR3 = investors[2];
   const INVESTOR4 = investors[3];
   const INVESTOR5 = investors[4];
+
+  const ETH_INVESTOR1 = investors[5];
 
   let fundStorage;
   let shareClasses;
@@ -328,5 +339,35 @@ contract('FundStorage', (accounts) => {
       );  // it
     }); // forEach
   }) // describe subscribe investor
+
+  describe('Subscribe ETH investor', () => {
+
+    let totalSupply;
+    let selectedShareClass;
+    let shareClassCount;
+
+    const amount = ethToWei(MIN_INITIAL_SUBSCRIPTION_USD / USD_ETH_EXCHANGE_RATE);
+
+    it('should have an updateEthPendingSubscription function', () => assert.isDefined(fundStorage.updateEthPendingSubscription, 'function undefined'));
+
+    console.log(ETH_INVESTOR1);
+    it(`should white list investor ${ETH_INVESTOR1}`, () => fundStorage.whiteListInvestor(ETH_INVESTOR1, 1, 0, { from: FUND })
+      .catch(err => assert.throw(`Error adding investor: ${err.toString()}`))
+
+      .then(() => fundStorage.fundAddress.call())
+      .then(_fundAddress => assert.strictEqual(_fundAddress, FUND))
+      .catch(err => `Error retrieving fundAddress ${err.toString()}`)
+
+      // request subscription
+      .then(() => fundStorage.updateEthPendingSubscription(ETH_INVESTOR1, Number(amount), { from: FUND }))
+      .catch(err => assert.throw(`Error updateEthPendingSubscription: ${err.toString()}`))
+      .then(() => fundStorage.getInvestor(ETH_INVESTOR1))
+      .then(_investorStruct => assert.strictEqual(
+        Number(_investorStruct[1]),
+        Number(amount),
+        'amountPendingSubscription does not match'))
+    );  // it
+
+  }) // describe subscribe ETH investor
 
 }); // contract

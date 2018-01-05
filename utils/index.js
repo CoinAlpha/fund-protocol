@@ -1,3 +1,5 @@
+const ethToWei = eth => web3.toWei(eth, 'ether');
+
 const transferExactAmountPromise = (from, to, _eth) => {
   const tx = {
     from,
@@ -19,8 +21,8 @@ const getInvestorData = (fundStorageInstance, investor) => fundStorageInstance.g
   .catch(err => assert.throw(`Error getInvestorData: ${err.toString()}`));
 
 const hexToString = (hex) => {
-  var string = '';
-  for (var i = 0; i < hex.length; i += 2) {
+  let string = '';
+  for (let i = 0; i < hex.length; i += 2) {
     string += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
   }
   return string;
@@ -42,4 +44,5 @@ module.exports = {
   transferExactAmountPromise,
   getInvestorData,
   getContractNumericalData,
+  ethToWei,
 };

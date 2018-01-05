@@ -11,8 +11,8 @@ const scriptName = path.basename(__filename);
 
 const keys = ['date2', 'navPerShare', 'lossCarryforward', 'accumulatedMgmtFees', 'accumulatedAdminFees'];
 
-if (typeof web3.eth.getAccountsPromise === "undefined") {
-  Promise.promisifyAll(web3.eth, { suffix: "Promise" });
+if (typeof web3.eth.getAccountsPromise === 'undefined') {
+  Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
 contract('NavCalculator', (accounts) => {
