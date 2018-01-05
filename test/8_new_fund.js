@@ -14,7 +14,9 @@ if (typeof web3.eth.getAccountsPromise === 'undefined') {
 
 web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
 
-const { ethToWei, getInvestorData, getContractNumericalData } = require('../utils');
+const {
+  ethToWei, getInvestorData, getContractNumericalData, getBalancePromise,
+} = require('../utils');
 
 // DEPLOY PARAMETERS
 const {
@@ -56,6 +58,9 @@ contract('New Fund', (accounts) => {
   let fundStorage;
   let dataFeed;
   let investorActions;
+
+  // Temp variables
+  let fundBalance;
 
   const fundStorageFields = [
     'decimals',
@@ -166,12 +171,15 @@ contract('New Fund', (accounts) => {
       )
     ); // it
 
-    it('accept valid requestEthSubscription request', () => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_MIN_INITIAL })
-      .then(
-        () => assert.throw('==> IT should have reached here'),
-        e => assert.throw(`marker: ${e.toString()}`)
-      )
-      .catch(err => assert.throw(`Error getting investor 2: ${err.toString()}`))
+    it('accept valid requestEthSubscription request', () => getBalancePromise(newFund.address)
+      .then(_bal => fundBalance = Number(_bal))
+      .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_MIN_INITIAL }))
+      .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
+      .catch(err => assert.throw(`Error requesting Eth subscription: ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.amountPendingSubscription), Number(WEI_MIN_INITIAL), 'incorrect amountPendingSubscription amount'))
+      .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
+      .then(() => getBalancePromise(newFund.address))
+      .then(_bal => assert.strictEqual(Number(_bal), fundBalance + Number(WEI_MIN_INITIAL), 'incorrect fund balance increase'))
     );
 
     it('not allow USD subscription below minimumInitialSubscriptionUsd', () => {

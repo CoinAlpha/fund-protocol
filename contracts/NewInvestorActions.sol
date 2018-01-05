@@ -116,9 +116,9 @@ contract NewInvestorActions is DestructibleModified {
     require(investorType == 1);
 
     if (sharesOwned == 0) {
-      require(_amount >= fundStorage.minInitialSubscriptionUsd().div(dataFeed.usdEth()));
+      require(_amount >= fundStorage.minInitialSubscriptionUsd().div(dataFeed.usdEth()).mul(1e18));
     } else {
-      require(_amount >= fundStorage.minSubscriptionUsd().div(dataFeed.usdEth()));
+      require(_amount >= fundStorage.minSubscriptionUsd().div(dataFeed.usdEth()).mul(1e18));
     }
 
     return (amountPendingSubscription.add(_amount),                                 // new investor.ethPendingSubscription

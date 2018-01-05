@@ -1,4 +1,5 @@
 const ethToWei = eth => web3.toWei(eth, 'ether');
+const getBalancePromise = address => web3.eth.getBalancePromise(address);
 
 const transferExactAmountPromise = (from, to, _eth) => {
   const tx = {
@@ -36,7 +37,6 @@ const getContractNumericalData = (label, contractInstance, fields) => Promise.al
     });
     console.log(`${label} Details`);
     console.log(result);
-    return;
   })
   .catch(err => assert.throw(`Error getting contract field data: ${err.toString()}`));
 
@@ -45,4 +45,5 @@ module.exports = {
   getInvestorData,
   getContractNumericalData,
   ethToWei,
+  getBalancePromise,
 };
