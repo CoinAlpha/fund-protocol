@@ -200,7 +200,7 @@ contract('New Fund', (accounts) => {
     );
   }); // describe requestEthSubscription
 
-  xdescribe('cancelEthSubscription', () => {
+  describe('cancelEthSubscription', () => {
     it('not allow cancel ETH subscription for investor with no pending subscription amount', () => getInvestorData(fundStorage, ETH_INVESTOR2)
       .then((_investorData) => {
         assert.strictEqual(Number(_investorData.investorType), 1, 'incorrect investor type');
@@ -226,6 +226,7 @@ contract('New Fund', (accounts) => {
       })
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.cancelEthSubscription({ from: ETH_INVESTOR1 }))
+      .then(() => assert.throw('test'));
       .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
       .catch(err => assert.throw(`Error requesting cancelEthSubscription: ${err.toString()}`))
       .then(_investorData => assert.strictEqual(Number(_investorData.amountPendingSubscription), 0, 'amountPendingSubscription amount is not 0'))

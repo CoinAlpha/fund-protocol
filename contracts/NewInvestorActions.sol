@@ -26,8 +26,8 @@ contract INewInvestorActions {
   function requestEthSubscription(address _addr, uint _amount)
     returns (uint, uint) {}
 
-  function cancelSubscription(address _addr)
-    returns (uint, uint, uint, uint) {}
+  function cancelEthSubscription(address _addr)
+    returns (uint, uint) {}
   
   function subscribe(address _addr)
     returns (uint, uint, uint, uint, uint, uint) {}
@@ -126,25 +126,19 @@ contract NewInvestorActions is DestructibleModified {
            );
   }
 
-  // Handles an investor's subscription cancellation, after checking that
-  // the fund balance has enough ether to cover the withdrawal.
-  // The amount is then moved from ethPendingSubscription to ethPendingWithdrawal
-  // so that it can be withdrawn by the investor.
-  function cancelSubscription(address _addr)
+  // Handles an investor's subscription cancellation
+  function cancelEthSubscription(address _investor)
     onlyFund
     constant
-    returns (uint, uint, uint, uint)
+    returns (uint, uint)
   {
-    // var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
+    var (investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
 
-    // uint otherPendingSubscriptions = fund.totalEthPendingSubscription().sub(ethPendingSubscription);
-    // require(ethPendingSubscription <= fund.balance.sub(fund.totalEthPendingWithdrawal()).sub(otherPendingSubscriptions));
+    require(investorType == 1 && amountPendingSubscription > 0);
 
-    // return (0,                                                                  // new investor.ethPendingSubscription
-    //         ethPendingWithdrawal.add(ethPendingSubscription),                   // new investor.ethPendingWithdrawal
-    //         fund.totalEthPendingSubscription().sub(ethPendingSubscription),     // new totalEthPendingSubscription
-    //         fund.totalEthPendingWithdrawal().add(ethPendingSubscription)        // new totalEthPendingWithdrawal
-    //        );
+    return (amountPendingSubscription,                                               // amount cancelled
+            newFund.totalEthPendingSubscription().sub(amountPendingSubscription)     // new totalEthPendingSubscription
+           );
   }
 
   // Processes an investor's subscription request and mints new shares at the current navPerShare

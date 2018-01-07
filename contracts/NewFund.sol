@@ -56,6 +56,7 @@ contract NewFund is DestructiblePausable {
 
   event LogWhiteListInvestor(address indexed investor, uint investorType, uint shareClass);
   event LogEthSubscriptionRequest(address indexed investor, uint eth);
+  event LogCancelEthSubscriptionRequest(address indexed investor, uint eth);
 
   event LogModuleChanged(string module, address oldAddress, address newAddress);
 
@@ -92,9 +93,8 @@ contract NewFund is DestructiblePausable {
     return true;
   }
 
-  // [INVESTOR METHOD] Issue a subscription request by transferring ether into the fund
+  // Issue a subscription request by transferring ether into the fund
   // Delegates logic to the InvestorActions module
-  // usdEthBasis is expressed in USD cents.  For example, for a rate of 300.01, _usdEthBasis = 30001
   function requestEthSubscription()
     whenNotPaused
     payable
@@ -105,6 +105,22 @@ contract NewFund is DestructiblePausable {
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
     LogEthSubscriptionRequest(msg.sender, msg.value);
+    return true;
+  }
+
+  // Cancel pendingEthSubscription and transfer back funds to investor
+  // Delegates logic to the InvestorActions module
+  function cancelEthSubscription()
+    whenNotPaused
+    returns (bool success)
+  {
+    var (_cancelledEthAmount, _totalEthPendingSubscription) = investorActions.cancelEthSubscription(msg.sender);
+    fundStorage.updateEthPendingSubscription(msg.sender, 0);
+    totalEthPendingSubscription = _totalEthPendingSubscription;
+
+    msg.sender.transfer(_cancelledEthAmount);
+
+    LogCancelEthSubscriptionRequest(msg.sender, _cancelledEthAmount);
     return true;
   }
 

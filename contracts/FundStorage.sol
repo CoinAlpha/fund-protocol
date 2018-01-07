@@ -312,8 +312,10 @@ contract FundStorage is DestructibleModified {
     LogModifiedInvestor(_description, _investorType, _amountPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
   }
 
+  // ********* INVESTOR SUBSCRIBE FUNCTIONS *********
 
   // Whitelist an investor and specify investor type: [1] ETH investor | [2] USD investor
+  // TODO: move logic to newInvestorActions
   function whiteListInvestor(address _investor, uint _investorType, uint _shareClass)
     onlyFundOrOwner
     returns(bool wasAdded)
