@@ -226,7 +226,6 @@ contract('New Fund', (accounts) => {
       })
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.cancelEthSubscription({ from: ETH_INVESTOR1 }))
-      .then(() => assert.throw('test'));
       .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
       .catch(err => assert.throw(`Error requesting cancelEthSubscription: ${err.toString()}`))
       .then(_investorData => assert.strictEqual(Number(_investorData.amountPendingSubscription), 0, 'amountPendingSubscription amount is not 0'))
@@ -243,7 +242,41 @@ contract('New Fund', (accounts) => {
         e => assert.isAtLeast(e.message.indexOf('revert'), 0)
       )
     );
-  }); // describe requestEthSubscription
+  }); // describe cancelEthSubscription
+
+  xdescribe('subscribeUsdInvestor', () => {
+    it('not allow ETH subscription below minimumInitialSubscriptionUsd', () => {
+
+    });
+    
+    it('subscribe ETH investor', () => {
+      
+    });
+
+    it('not allow USD subscription below minimumInitialSubscriptionUsd', () => {
+
+    });
+
+    it('subscribe USD investor', () => {
+
+    });
+
+    it('not allow repeat ETH subscription below minimumSubscriptionUsd', () => {
+
+    });
+    
+    it('subscribe repeat ETH investor', () => {
+      
+    });
+
+    it('not allow repeat USD subscription below minimumSubscriptionUsd', () => {
+
+    });
+
+    it('subscribe repeat USD investor', () => {
+
+    });
+  }); // describe subscribeInvestors
 
   xdescribe('requestEthSubscription - Existing Investor', () => {
     it('not allow ETH subscription request below minimumSubscriptionUsd', () => getInvestorData(fundStorage, ETH_INVESTOR1)
