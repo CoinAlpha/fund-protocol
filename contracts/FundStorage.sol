@@ -73,6 +73,8 @@ contract IFundStorage {
     returns (bool wasModified) {}
   function updateNav(uint _shareClassIndex, uint _shareNav)
     returns (bool wasUpdated) {}
+  function getShareClassNavPerShare(uint _shareClass)
+    returns (uint navPerShare) {}
 }
 
 // ==================================== CONTRACT ====================================
@@ -417,6 +419,15 @@ contract FundStorage is DestructibleModified {
     shareClasses[_shareClassIndex].lastCalc = now;
     LogNavUpdate(_shareClassIndex, previousNav, _shareNav);
     return true;
+  }
+
+  // Get NAV per Share for specified ShareClass
+  function getShareClassNavPerShare(uint _shareClass)
+    constant
+    returns (uint navPerShare)
+  {
+    require(_shareClass < numberOfShareClasses);
+    return shareClasses[_shareClass].shareNav;
   }
 
   // ********* ADMIN *********

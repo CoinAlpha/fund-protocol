@@ -142,12 +142,13 @@ contract NewInvestorActions is DestructibleModified {
   }
 
   // Processes an investor's subscription request and mints new shares at the current navPerShare
-  function subscribe(address _addr)
+  // Can handle ETH and USD
+  function subscribe(address _addr, uint _amount)
     onlyFund
     constant
     returns (uint, uint, uint, uint, uint, uint)
   {
-    // var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
+    var (investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_addr);
 
     // Check that the fund balance has enough ether because the Fund contract's subscribe
     // function that calls this one will immediately transfer the subscribed amount of ether
@@ -269,6 +270,55 @@ contract NewInvestorActions is DestructibleModified {
     //         0,                                                                  // new investor.ethPendingWithdrawal
     //         fund.totalEthPendingWithdrawal().sub(ethPendingWithdrawal)          // new totalEthPendingWithdrawal
     //         );
+  }
+
+
+  // ********* CONVERSION CALCULATIONS *********
+
+  // Converts ether to a corresponding number of shares based on the current nav per share
+  function ethToShares(uint _shareClass, uint _eth)
+    constant
+    returns (uint shares)
+  {
+    return usdToShares(_shareClass, ethToUsd(_eth));
+  }
+
+  // Converts USD to a corresponding number of shares based on the current nav per share
+  function usdToShares(uint _shareClass, uint _usd)
+    constant
+    returns (uint shares)
+  {
+    return _usd.mul(10 ** fundStorage.decimals()).div(fundStorage.getShareClassNavPerShare(_shareClass));
+  }
+
+  // Converts shares to a corresponding amount of ether based on the current nav per share
+  function sharesToEth(uint _shareClass, uint _shares)
+    constant
+    returns (uint ethAmount)
+  {
+    return usdToEth(_shares.mul(fundStorage.getShareClassNavPerShare(_shareClass)).div(10 ** fundStorage.decimals()));
+  }
+
+  // Converts shares to a corresponding amount of ether based on the current nav per share
+  function sharesToUsd(uint _shareClass, uint _shares)
+    constant
+    returns (uint ethAmount)
+  {
+    return _shares.mul(fundStorage.getShareClassNavPerShare(_shareClass)).div(10 ** fundStorage.decimals());
+  }
+
+  function usdToEth(uint _usd) 
+    constant 
+    returns (uint eth)
+  {
+    return _usd.mul(1e18).div(dataFeed.usdEth());
+  }
+
+  function ethToUsd(uint _eth) 
+    constant 
+    returns (uint usd)
+  {
+    return _eth.mul(dataFeed.usdEth()).div(1e18);
   }
 
   // ********* ADMIN *********

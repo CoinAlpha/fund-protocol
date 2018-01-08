@@ -124,6 +124,24 @@ contract NewFund is DestructiblePausable {
     return true;
   }
 
+  // Subscribe USD investor
+  // This is for data reporting and tracking only
+  // USD fund flows are handled off-chain
+  function subscribeUsdInvester(address _investor, uint _usdAmount)
+    onlyManager
+    returns (bool wasSubscribed)
+  {
+
+  }
+
+  // Subscribe single Eth investor
+  function subscribeEthInvester(address _investor)
+    onlyManager
+    returns (bool wasSubscribed)
+  {
+
+  }
+
   // ========================================== ADMIN ==========================================
 
   function getFundDetails()
@@ -170,6 +188,17 @@ contract NewFund is DestructiblePausable {
     }
     LogModuleChanged(_module, oldAddress, _newAddress);
     return true;
+  }
+
+
+  // ********* HELPERS *********
+
+  // Returns the fund's balance less pending subscriptions and withdrawals
+  function getBalance()
+    constant
+    returns (uint ethAmount)
+  {
+    return this.balance.sub(totalEthPendingSubscription).sub(totalEthPendingWithdrawal);
   }
 
 } // END OF NewFund

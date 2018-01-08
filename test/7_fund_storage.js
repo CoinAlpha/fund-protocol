@@ -367,7 +367,17 @@ contract('FundStorage', (accounts) => {
         Number(amount),
         'amountPendingSubscription does not match'))
     );  // it
-
   }) // describe subscribe ETH investor
 
+  describe('getNavPerShare', () => {
+
+    const testNav = _shareClass => fundStorage.getShareClassNavPerShare(_shareClass)
+      .then(_nav => assert.strictEqual(Number(_nav), 10000, 'NAV is not equal to 10000'))
+      .catch(err => `Error getting NavPerShare: ${err.toString()}`);
+
+    for (let i = 0; i <= shareClasses.length; i += 1) {
+      it(`should get the shareClass ${i} NAV`, () => testNav(i))
+    }
+
+  }); // describe getNavPerShare
 }); // contract
