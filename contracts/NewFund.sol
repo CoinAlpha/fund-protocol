@@ -55,8 +55,8 @@ contract NewFund is DestructiblePausable {
   // ========================================== EVENTS ===========================================
 
   event LogWhiteListInvestor(address indexed investor, uint investorType, uint shareClass);
-  event LogEthSubscriptionRequest(address indexed investor, uint eth);
-  event LogCancelEthSubscriptionRequest(address indexed investor, uint eth);
+  event LogEthSubscriptionRequest(address indexed investor, uint _eth);
+  event LogCancelEthSubscriptionRequest(address indexed investor, uint _eth);
 
   event LogModuleChanged(string module, address oldAddress, address newAddress);
 
@@ -124,22 +124,32 @@ contract NewFund is DestructiblePausable {
     return true;
   }
 
-  // Subscribe USD investor
-  // This is for data reporting and tracking only
-  // USD fund flows are handled off-chain
+  /**
+    * Subscribe USD investor
+    * This is for data reporting and tracking only
+    * Actual USD fund flows are handled off-chain
+    * @param  _investor    USD investor address UUID
+    * @param  _usdAmount   USD amount in cents, 1 = $0.01
+    */
   function subscribeUsdInvester(address _investor, uint _usdAmount)
     onlyManager
     returns (bool wasSubscribed)
   {
-
+    // TODO:
+    return true;
   }
 
-  // Subscribe single Eth investor
+  /**
+    * Subscribe ETH investor
+    * Transfer subscription funds into exchange account
+    * @param  _investor    ETH wallet address
+    */
   function subscribeEthInvester(address _investor)
     onlyManager
     returns (bool wasSubscribed)
   {
-
+    // TODO:
+    return true;
   }
 
   // ========================================== ADMIN ==========================================

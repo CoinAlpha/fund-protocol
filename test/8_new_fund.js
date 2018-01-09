@@ -181,7 +181,7 @@ contract('New Fund', (accounts) => {
       .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_MIN_INITIAL }))
       .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
       .catch(err => assert.throw(`Error requesting Eth subscription: ${err.toString()}`))
-      .then(_investorData => assert.strictEqual(Number(_investorData.amountPendingSubscription), Number(WEI_MIN_INITIAL), 'incorrect amountPendingSubscription amount'))
+      .then(_investorData => assert.strictEqual(Number(_investorData.ethPendingSubscription), Number(WEI_MIN_INITIAL), 'incorrect ethPendingSubscription amount'))
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => getBalancePromise(newFund.address))
       .then(_bal => assert.strictEqual(Number(_bal), fundBalance + Number(WEI_MIN_INITIAL), 'incorrect fund balance increase'))
@@ -204,7 +204,7 @@ contract('New Fund', (accounts) => {
     it('not allow cancel ETH subscription for investor with no pending subscription amount', () => getInvestorData(fundStorage, ETH_INVESTOR2)
       .then((_investorData) => {
         assert.strictEqual(Number(_investorData.investorType), 1, 'incorrect investor type');
-        assert.strictEqual(Number(_investorData.amountPendingSubscription), 0, 'investor has an outstanding investor amount');
+        assert.strictEqual(Number(_investorData.ethPendingSubscription), 0, 'investor has an outstanding investor amount');
       })
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.cancelEthSubscription({ from: ETH_INVESTOR2 }))
@@ -221,14 +221,14 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error getting balance: ${err.toString()}`))
       .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
       .then((_investorData) => {
-        assert.isAbove(Number(_investorData.amountPendingSubscription), 0, 'incorrect amountPendingSubscription amount');
-        subscriptionBalance = Number(_investorData.amountPendingSubscription);
+        assert.isAbove(Number(_investorData.ethPendingSubscription), 0, 'incorrect ethPendingSubscription amount');
+        subscriptionBalance = Number(_investorData.ethPendingSubscription);
       })
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.cancelEthSubscription({ from: ETH_INVESTOR1 }))
       .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
       .catch(err => assert.throw(`Error requesting cancelEthSubscription: ${err.toString()}`))
-      .then(_investorData => assert.strictEqual(Number(_investorData.amountPendingSubscription), 0, 'amountPendingSubscription amount is not 0'))
+      .then(_investorData => assert.strictEqual(Number(_investorData.ethPendingSubscription), 0, 'ethPendingSubscription amount is not 0'))
       .then(() => getBalancePromise(newFund.address))
       .then(_bal => assert.strictEqual(Number(_bal), fundBalance - subscriptionBalance, 'incorrect fund balance increase'))
     );
@@ -294,7 +294,7 @@ contract('New Fund', (accounts) => {
       .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_MIN_INITIAL }))
       .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
       .catch(err => assert.throw(`Error requesting Eth subscription: ${err.toString()}`))
-      .then(_investorData => assert.strictEqual(Number(_investorData.amountPendingSubscription), Number(WEI_MIN_INITIAL), 'incorrect amountPendingSubscription amount'))
+      .then(_investorData => assert.strictEqual(Number(_investorData.ethPendingSubscription), Number(WEI_MIN_INITIAL), 'incorrect ethPendingSubscription amount'))
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => getBalancePromise(newFund.address))
       .then(_bal => assert.strictEqual(Number(_bal), fundBalance + Number(WEI_MIN_INITIAL), 'incorrect fund balance increase'))

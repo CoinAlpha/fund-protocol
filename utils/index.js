@@ -15,8 +15,10 @@ const transferExactAmountPromise = (from, to, _eth) => {
 
 const getInvestorData = (fundStorageInstance, investor) => fundStorageInstance.getInvestor.call(investor)
   .then((_investorData) => {
-    const [investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal] = _investorData.map(x => Number(x));
-    const investorData = { investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal };
+    const [investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal] = _investorData.map(x => Number(x));
+    const investorData = {
+      investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal,
+    };
     return investorData;
   })
   .catch(err => assert.throw(`Error getInvestorData: ${err.toString()}`));

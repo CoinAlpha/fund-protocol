@@ -365,7 +365,7 @@ contract('FundStorage', (accounts) => {
       .then(_investorStruct => assert.strictEqual(
         Number(_investorStruct[1]),
         Number(amount),
-        'amountPendingSubscription does not match'))
+        'ethPendingSubscription does not match'))
     );  // it
   }) // describe subscribe ETH investor
 

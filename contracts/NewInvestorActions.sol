@@ -29,7 +29,7 @@ contract INewInvestorActions {
   function cancelEthSubscription(address _addr)
     returns (uint, uint) {}
   
-  function subscribe(address _addr)
+  function subscribe(address _addr, uint _usdAmount)
     returns (uint, uint, uint, uint, uint, uint) {}
   
   function requestRedemption(address _addr, uint _shares)
@@ -111,7 +111,7 @@ contract NewInvestorActions is DestructibleModified {
     constant
     returns (uint, uint)
   {
-    var (investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
+    var (investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
 
     require(investorType == 1);
 
@@ -121,7 +121,7 @@ contract NewInvestorActions is DestructibleModified {
       require(_amount >= fundStorage.minSubscriptionUsd().div(dataFeed.usdEth()).mul(1e18));
     }
 
-    return (amountPendingSubscription.add(_amount),                                 // new investor.ethPendingSubscription
+    return (ethPendingSubscription.add(_amount),                                 // new investor.ethPendingSubscription
             newFund.totalEthPendingSubscription().add(_amount)                      // new totalEthPendingSubscription
            );
   }
@@ -132,31 +132,43 @@ contract NewInvestorActions is DestructibleModified {
     constant
     returns (uint, uint)
   {
-    var (investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
+    var (investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
 
-    require(investorType == 1 && amountPendingSubscription > 0);
+    require(investorType == 1 && ethPendingSubscription > 0);
 
-    return (amountPendingSubscription,                                               // amount cancelled
-            newFund.totalEthPendingSubscription().sub(amountPendingSubscription)     // new totalEthPendingSubscription
+    return (ethPendingSubscription,                                               // amount cancelled
+            newFund.totalEthPendingSubscription().sub(ethPendingSubscription)     // new totalEthPendingSubscription
            );
   }
 
   // Processes an investor's subscription request and mints new shares at the current navPerShare
   // Can handle ETH and USD
-  function subscribe(address _addr, uint _amount)
+  function subscribe(address _addr, uint _usdAmount)
     onlyFund
     constant
     returns (uint, uint, uint, uint, uint, uint)
   {
-    var (investorType, amountPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_addr);
+    var (investorType, ethPendingSubscription, sharesOwned, shareClass) = fundStorage.getSubscriptionShares(_addr);
 
-    // Check that the fund balance has enough ether because the Fund contract's subscribe
-    // function that calls this one will immediately transfer the subscribed amount of ether
-    // to the exchange account upon function return
-    // uint otherPendingSubscriptions = fund.totalEthPendingSubscription().sub(ethPendingSubscription);
-    // require(ethPendingSubscription <= fund.balance.sub(fund.totalEthPendingWithdrawal()).sub(otherPendingSubscriptions));
+    require(investorType > 0);
+
+    uint shares;
+    if (investorType == 1) {
+      // ETH subscribe
+      // Check that the fund balance has enough ether because the Fund contract's subscribe
+      // function that calls this one will immediately transfer the subscribed amount of ether
+      // to the exchange account upon function return
+      uint otherPendingSubscriptions = newFund.totalEthPendingSubscription().sub(ethPendingSubscription);
+      require(ethPendingSubscription <= newFund.balance.sub(otherPendingSubscriptions));
+
+      shares = ethToShares(shareClass, ethPendingSubscription);
+    } else {
+      // USD subcribe
+      shares = usdToShares(shareClass, _usdAmount);
+    }
+    // TODO:
     // uint shares = fund.ethToShares(ethPendingSubscription);
-
+    return (0,0,0,0,0,0);
     // return (0,                                                                  // new investor.ethPendingSubscription
     //         sharesOwned.add(shares),                                            // new investor.sharesOwned
     //         shares,                                                             // shares minted
@@ -275,7 +287,12 @@ contract NewInvestorActions is DestructibleModified {
 
   // ********* CONVERSION CALCULATIONS *********
 
-  // Converts USD to a corresponding number of shares based on the current nav per share
+  /**
+    * Convert USD cents amount into shares amount
+    * @param  _shareClass  Index representing share class: base class = 0 (zero indexed)
+    * @param  _usd         USD amount in cents, 1 = $0.01
+    * @return _shares      Share amount in decimal units, 1 = 0.01 shares
+    */
   function usdToShares(uint _shareClass, uint _usd)
     constant
     returns (uint shares)
@@ -283,7 +300,12 @@ contract NewInvestorActions is DestructibleModified {
     return _usd.mul(10 ** fundStorage.decimals()).div(fundStorage.getShareClassNavPerShare(_shareClass));
   }
 
-  // Converts ether to a corresponding number of shares based on the current nav per share
+  /**
+    * Convert Ether amount into shares
+    * @param  _shareClass  Index representing share class: base class = 0 (zero indexed)
+    * @param  _eth         ETH amount in wei
+    * @return _shares      Share amount in decimal units, 1 = 0.01 shares
+    */
   function ethToShares(uint _shareClass, uint _eth)
     constant
     returns (uint shares)
@@ -291,15 +313,25 @@ contract NewInvestorActions is DestructibleModified {
     return usdToShares(_shareClass, ethToUsd(_eth));
   }
 
-  // Converts shares to a corresponding amount of ether based on the current nav per share
+  /**
+    * Convert share amount into USD cents amount
+    * @param _shareClass  Index representing share class: base class = 0 (zero indexed)
+    * @param _shares      Share amount in decimal units, 1 = 0.01 shares
+    * @return usdAmount   USD amount in cents, 1 = $0.01
+    */
   function sharesToUsd(uint _shareClass, uint _shares)
     constant
-    returns (uint ethAmount)
+    returns (uint usdAmount)
   {
     return _shares.mul(fundStorage.getShareClassNavPerShare(_shareClass)).div(10 ** fundStorage.decimals());
   }
 
-  // Converts shares to a corresponding amount of ether based on the current nav per share
+  /**
+    * Convert share amount into Ether
+    * @param _shareClass  Index representing share class: base class = 0 (zero indexed)
+    * @param _shares      Share amount in decimal units, 1 = 0.01 shares
+    * @return ethAmount   ETH amount in wei
+    */
   function sharesToEth(uint _shareClass, uint _shares)
     constant
     returns (uint ethAmount)
@@ -307,13 +339,23 @@ contract NewInvestorActions is DestructibleModified {
     return usdToEth(_shares.mul(fundStorage.getShareClassNavPerShare(_shareClass)).div(10 ** fundStorage.decimals()));
   }
 
+  /**
+    * Convert USD into ETH
+    * @param _usd  USD amount in cents, 1 = $0.01
+    * @return eth  ETH amount in wei
+    */
   function usdToEth(uint _usd) 
     constant 
-    returns (uint eth)
+    returns (uint ethAmount)
   {
     return _usd.mul(1e18).div(dataFeed.usdEth());
   }
 
+  /**
+    * Convert ETH into USD
+    * @param  _eth  ETH amount in wei
+    * @return usd   USD amount in cents, 1 = $0.01
+    */
   function ethToUsd(uint _eth) 
     constant 
     returns (uint usd)

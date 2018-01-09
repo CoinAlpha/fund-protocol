@@ -37,7 +37,7 @@ contract IFundStorage {
   function modifyInvestor(
     address _investor,
     uint _investorType,
-    uint _amountPendingSubscription,
+    uint _ethPendingSubscription,
     uint _sharesOwned,
     uint _shareClass,
     uint _sharesPendingRedemption,
@@ -47,13 +47,20 @@ contract IFundStorage {
   function getInvestor(address _investor)
     returns (
       uint investorType,
-      uint amountPendingSubscription,
+      uint ethPendingSubscription,
       uint sharesOwned,
       uint shareClass,
       uint sharesPendingRedemption,
       uint amountPendingWithdrawal
     ) {}
-  
+  function getSubscriptionShares(address _investor)
+    returns (
+      uint investorType,
+      uint ethPendingSubscription,
+      uint sharesOwned,
+      uint shareClass
+    ) {}
+
   // Subscribe / Redeem Functions
   function updateEthPendingSubscription(address _investor, uint _totalAmount)
     returns(bool wasAdded) {}
@@ -120,7 +127,7 @@ contract FundStorage is DestructibleModified {
   // This struct tracks fund-related balances for a specific investor address
   struct InvestorStruct {
     uint investorType;                 // [0] no investor [1] ETH investor [2] USD investor 
-    uint amountPendingSubscription;    // Ether deposited by an investor not yet proceessed by the manager
+    uint ethPendingSubscription;    // Ether deposited by an investor not yet proceessed by the manager
     uint sharesOwned;                  // Balance of shares owned by an investor.  For investors, this is
                                        // identical to the ERC20 balances variable.
     uint shareClass;                   // Investor's fee class
@@ -150,7 +157,7 @@ contract FundStorage is DestructibleModified {
   event LogUpdatedDetails(string updatedField, uint oldValue, uint newValue);
   event LogWhiteListedInvestor(address newInvestor, uint investorType, uint shareClass);
   event LogRemovedInvestor(address removedInvestor, uint investorType);
-  event LogModifiedInvestor(string _description, uint _investorType, uint _amountPendingSubscription, uint _sharesOwned, uint _shareClass, uint _sharesPendingRedemption, uint _amountPendingWithdrawal);
+  event LogModifiedInvestor(string _description, uint _investorType, uint _ethPendingSubscription, uint _sharesOwned, uint _shareClass, uint _sharesPendingRedemption, uint _amountPendingWithdrawal);
 
   event LogAddedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint createdAt, uint numberOfShareClasses);
   event LogModifiedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint modifiedAt);
@@ -158,7 +165,7 @@ contract FundStorage is DestructibleModified {
   event LogNavUpdate(uint shareClassIndex, uint previousNav, uint newNav);
 
   // Investor Events
-  event LogUpdatedAmountPendingSubscription(string _type, address investor, uint totalAmount);
+  event LogUpdatedEthPendingSubscription(address indexed investor, uint totalAmount);
 
   // Administrative Events
   event LogSetFundAddress(address oldFundAddress, address newFundAddress);
@@ -233,7 +240,7 @@ contract FundStorage is DestructibleModified {
     public
     returns (
       uint investorType,
-      uint amountPendingSubscription,
+      uint ethPendingSubscription,
       uint sharesOwned,
       uint shareClass,
       uint sharesPendingRedemption,
@@ -241,7 +248,22 @@ contract FundStorage is DestructibleModified {
     )
   {
     InvestorStruct storage investor = investors[_investor];
-    return (investor.investorType, investor.amountPendingSubscription, investor.sharesOwned, investor.shareClass, investor.sharesPendingRedemption, investor.amountPendingWithdrawal);
+    return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass, investor.sharesPendingRedemption, investor.amountPendingWithdrawal);
+  }
+
+  // [INVESTOR METHOD] Returns the variables contained in the Investor struct for a given address
+  function getSubscriptionShares(address _investor)
+    constant
+    public
+    returns (
+      uint investorType,
+      uint ethPendingSubscription,
+      uint sharesOwned,
+      uint shareClass
+    )
+  {
+    InvestorStruct storage investor = investors[_investor];
+    return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass);
   }
 
   // Remove investor address from list
@@ -252,7 +274,7 @@ contract FundStorage is DestructibleModified {
     require(containsInvestor[_investor] > 0);
     InvestorStruct storage investor = investors[_investor];
 
-    require(investor.amountPendingSubscription == 0 && investor.sharesOwned == 0 && investor.sharesPendingRedemption == 0 && investor.amountPendingWithdrawal == 0);
+    require(investor.ethPendingSubscription == 0 && investor.sharesOwned == 0 && investor.sharesPendingRedemption == 0 && investor.amountPendingWithdrawal == 0);
 
     bool investorWasRemoved;
     for (uint i = 0; i < investorAddresses.length; i++) {
@@ -299,7 +321,7 @@ contract FundStorage is DestructibleModified {
   function modifyInvestor(
     address _investor,
     uint _investorType,
-    uint _amountPendingSubscription,
+    uint _ethPendingSubscription,
     uint _sharesOwned,
     uint _shareClass,
     uint _sharesPendingRedemption,
@@ -310,8 +332,8 @@ contract FundStorage is DestructibleModified {
     returns (bool wasModified)
   {
     require(containsInvestor[_investor] > 0);
-    investors[_investor] = InvestorStruct(_investorType, _amountPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
-    LogModifiedInvestor(_description, _investorType, _amountPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
+    investors[_investor] = InvestorStruct(_investorType, _ethPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
+    LogModifiedInvestor(_description, _investorType, _ethPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
   }
 
   // ********* INVESTOR SUBSCRIBE FUNCTIONS *********
@@ -336,8 +358,8 @@ contract FundStorage is DestructibleModified {
     onlyFund
     returns(bool wasAdded)
   {
-    investors[_investor].amountPendingSubscription = _totalAmount;
-    LogUpdatedAmountPendingSubscription("ETH", _investor, _totalAmount);
+    investors[_investor].ethPendingSubscription = _totalAmount;
+    LogUpdatedEthPendingSubscription(_investor, _totalAmount);
     return true;
   }
 
