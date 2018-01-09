@@ -21,6 +21,8 @@ contract IFundStorage {
 
   address  public fundAddress;
 
+  uint     public totalShareSupply;
+
   // Fund Details Functions
   function updateMinInitialSubscriptionUsd(uint _minInitialSubscriptionUsd)
     returns (bool wasUpdated) {}
@@ -65,6 +67,16 @@ contract IFundStorage {
   function updateEthPendingSubscription(address _investor, uint _totalAmount)
     returns(bool wasAdded) {}
 
+  function subscribeInvestor(
+    address _investor,
+    uint _shareClass,
+    uint _newSharesOwned,
+    uint _newShares,
+    uint _newShareClassSupply,
+    uint _newTotalShareSupply
+  )
+    returns (bool wasModified) {}
+
   // Share Class Functions
   function getShareClass(uint _shareClassIndex)
     returns (
@@ -82,6 +94,8 @@ contract IFundStorage {
     returns (bool wasUpdated) {}
   function getShareClassNavPerShare(uint _shareClass)
     returns (uint navPerShare) {}
+  function getShareClassSupply(uint _shareClass)
+    returns (uint shares) {}
 }
 
 // ==================================== CONTRACT ====================================
@@ -161,7 +175,7 @@ contract FundStorage is DestructibleModified {
 
   event LogAddedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint createdAt, uint numberOfShareClasses);
   event LogModifiedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint modifiedAt);
-  event LogModifiedShareCount(uint shareClassIndex, uint previousShareSupply, uint previousTotalShareSupply, uint newShareSupply, uint newTotalShareSupply);
+  event LogModifiedShareCount(uint shareClassIndex, uint previousShareSupply, uint newShareSupply, uint previousTotalShareSupply, uint newTotalShareSupply);
   event LogNavUpdate(uint shareClassIndex, uint previousNav, uint newNav);
 
   // Investor Events
@@ -365,6 +379,26 @@ contract FundStorage is DestructibleModified {
 
   // ********* INVESTOR SHARE FUNCTIONS *********
 
+  function subscribeInvestor(
+    address _investor,
+    uint _shareClass,
+    uint _newSharesOwned,
+    uint _newShares,
+    uint _newShareClassSupply,
+    uint _newTotalShareSupply
+  )
+    onlyFund
+    returns (bool wasModified)
+  {
+    require(containsInvestor[_investor] > 0 && investors[_investor].shareClass == _shareClass);
+    investors[_investor].ethPendingSubscription = 0;
+    investors[_investor].sharesOwned = _newSharesOwned;
+
+    modifyShareCount(_shareClass, _newShareClassSupply, _newTotalShareSupply);
+    LogModifiedInvestor("Subscription", 999, 0, _newSharesOwned, 999, 999, 999);
+    return true;
+  }
+
 
   // ********* SHARECLASS FUNCTIONS *********
   
@@ -418,16 +452,16 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  function modifyShareCount(uint _shareClassIndex, uint _shareSupply, uint _totalShareSupply)
+  function modifyShareCount(uint _shareClassIndex, uint _newShareSupply, uint _newTotalShareSupply)
     onlyFund
     returns (bool wasModified)
   {
     require(_shareClassIndex < numberOfShareClasses);
     uint previousShareSupply = shareClasses[_shareClassIndex].shareSupply;
     uint previousTotalShareSupply = totalShareSupply;
-    shareClasses[_shareClassIndex].shareSupply = _shareSupply;
-    totalShareSupply = _totalShareSupply;
-    LogModifiedShareCount(_shareClassIndex, previousShareSupply, previousTotalShareSupply, _shareSupply, _totalShareSupply);
+    shareClasses[_shareClassIndex].shareSupply = _newShareSupply;
+    totalShareSupply = _newTotalShareSupply;
+    LogModifiedShareCount(_shareClassIndex, previousShareSupply, _newShareSupply, previousTotalShareSupply, _newTotalShareSupply);
     return true;
   }
 
@@ -450,6 +484,15 @@ contract FundStorage is DestructibleModified {
   {
     require(_shareClass < numberOfShareClasses);
     return shareClasses[_shareClass].shareNav;
+  }
+
+  // Get NAV per Share for specified ShareClass
+  function getShareClassSupply(uint _shareClass)
+    constant
+    returns (uint shares)
+  {
+    require(_shareClass < numberOfShareClasses);
+    return shareClasses[_shareClass].shareSupply;
   }
 
   // ********* ADMIN *********

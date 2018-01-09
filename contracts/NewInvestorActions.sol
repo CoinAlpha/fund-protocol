@@ -29,6 +29,9 @@ contract INewInvestorActions {
   function cancelEthSubscription(address _addr)
     returns (uint, uint) {}
   
+  function calcSubscriptionShares(address _investor, uint _usdAmount)
+    returns (uint, uint, uint, uint, uint, uint) {}
+
   function subscribe(address _addr, uint _usdAmount)
     returns (uint, uint, uint, uint, uint, uint) {}
   
@@ -111,7 +114,7 @@ contract NewInvestorActions is DestructibleModified {
     constant
     returns (uint, uint)
   {
-    var (investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
+    var (investorType, ethPendingSubscription, sharesOwned, shareClass) = fundStorage.getSubscriptionShares(_investor);
 
     require(investorType == 1);
 
@@ -132,7 +135,7 @@ contract NewInvestorActions is DestructibleModified {
     constant
     returns (uint, uint)
   {
-    var (investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = fundStorage.getInvestor(_investor);
+    var (investorType, ethPendingSubscription, sharesOwned, shareClass) = fundStorage.getSubscriptionShares(_investor);
 
     require(investorType == 1 && ethPendingSubscription > 0);
 
@@ -141,42 +144,70 @@ contract NewInvestorActions is DestructibleModified {
            );
   }
 
-  // Processes an investor's subscription request and mints new shares at the current navPerShare
-  // Can handle ETH and USD
-  function subscribe(address _addr, uint _usdAmount)
+  /**
+    * Calculates new shares issued in subscription
+    * @param  _investor    Investor UID or ETH Wallet Address
+    * @param  _usdAmount   USD amount in cents, 1 = $0.01
+    * @return              [1] Share Class index
+    *                      [2] New total shares owned by investor
+    *                      [3] Newly created shares
+    *                      [4] New total supply of share class
+    *                      [5] New total share supply of fund
+    *                      [6] Subscription NAV in basis points: 1 = 0.01%
+    */
+  function calcSubscriptionShares(address _investor, uint _usdAmount)
     onlyFund
     constant
     returns (uint, uint, uint, uint, uint, uint)
   {
-    var (investorType, ethPendingSubscription, sharesOwned, shareClass) = fundStorage.getSubscriptionShares(_addr);
+    var (investorType, ethPendingSubscription, sharesOwned, shareClass) = fundStorage.getSubscriptionShares(_investor);
 
     require(investorType > 0);
 
     uint shares;
     if (investorType == 1) {
       // ETH subscribe
-      // Check that the fund balance has enough ether because the Fund contract's subscribe
-      // function that calls this one will immediately transfer the subscribed amount of ether
-      // to the exchange account upon function return
-      uint otherPendingSubscriptions = newFund.totalEthPendingSubscription().sub(ethPendingSubscription);
-      require(ethPendingSubscription <= newFund.balance.sub(otherPendingSubscriptions));
-
       shares = ethToShares(shareClass, ethPendingSubscription);
     } else {
       // USD subcribe
       shares = usdToShares(shareClass, _usdAmount);
     }
-    // TODO:
-    // uint shares = fund.ethToShares(ethPendingSubscription);
-    return (0,0,0,0,0,0);
-    // return (0,                                                                  // new investor.ethPendingSubscription
-    //         sharesOwned.add(shares),                                            // new investor.sharesOwned
-    //         shares,                                                             // shares minted
-    //         ethPendingSubscription,                                             // amount transferred to exchange
-    //         fund.totalSupply().add(shares),                                     // new totalSupply
-    //         fund.totalEthPendingSubscription().sub(ethPendingSubscription)      // new totalEthPendingSubscription
-    //        );
+
+    return (shareClass,                                                             
+            sharesOwned.add(shares),                                            // new investor.sharesOwned
+            shares,                                                             // shares minted
+            fundStorage.getShareClassSupply(shareClass).add(shares),                      // new Share Class supply
+            fundStorage.totalShareSupply().add(shares),                         // new totalSupply
+            fundStorage.getShareClassNavPerShare(shareClass)                    // subscription nav 
+           );
   }
+
+  /**
+    * Calculates new totalEthPendingSubscription and checks for sufficient balance in fund
+    * @param  _ethPendingSubscription            ETH amount in wei
+    * @return newTotalEthPendingSubscription     Share amount in decimal units, 1 = 0.01 shares
+    */
+  function calcEthPendingSubscription(uint _ethPendingSubscription)
+    internal
+    constant
+    returns (uint newTotalEthPendingSubscription)
+  {
+    // Check that the fund balance has enough ether because the Fund contract's subscribe
+    // function that calls this one will immediately transfer the subscribed amount of ether
+    // to the exchange account upon function return
+    uint otherPendingSubscriptions = newFund.totalEthPendingSubscription().sub(_ethPendingSubscription);
+    require(_ethPendingSubscription <= newFund.balance.sub(otherPendingSubscriptions).sub(newFund.totalEthPendingWithdrawal()));
+
+    return newFund.totalEthPendingSubscription().sub(_ethPendingSubscription);
+  }
+
+  // function addShares(uint _shareClass, uint _shares)
+  //   onlyFund
+  //   constant
+  //   returns (uint shareClass, uint newAmount, uint totalSupply)
+  // {
+
+  // }
 
   // Register an investor's redemption request, after checking that
   // 1) the requested amount exceeds the minimum redemption amount and

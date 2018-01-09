@@ -12,7 +12,7 @@ import "./zeppelin/DestructiblePausable.sol";
 
 contract INewFund {
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
-  uint    public totalUsdPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in USD (tracking purposes only)
+  uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
 }
 
 
@@ -28,10 +28,10 @@ contract NewFund is DestructiblePausable {
 
   // ** FUND BALANCES **
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
-  uint    public totalUsdPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in USD (tracking purposes only)
   uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
   uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
   uint    public totalSupply;                    // total number of shares outstanding
+
 
   // ========================================= MODULES ==========================================
   // Where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
@@ -52,13 +52,16 @@ contract NewFund is DestructiblePausable {
     _;
   }
 
+
   // ========================================== EVENTS ===========================================
 
   event LogWhiteListInvestor(address indexed investor, uint investorType, uint shareClass);
   event LogEthSubscriptionRequest(address indexed investor, uint _eth);
   event LogCancelEthSubscriptionRequest(address indexed investor, uint _eth);
+  event LogSubscription(string currency, address indexed investor, uint shareClass, uint newShares, uint nav);
 
   event LogModuleChanged(string module, address oldAddress, address newAddress);
+
 
   // ======================================== CONSTRUCTOR ========================================
   function NewFund(
@@ -135,7 +138,10 @@ contract NewFund is DestructiblePausable {
     onlyManager
     returns (bool wasSubscribed)
   {
-    // TODO:
+    var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcSubscriptionShares(_investor, _usdAmount);
+    fundStorage.subscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
+    totalSupply = _newTotalShareSupply;
+    LogSubscription("USD", _investor, _shareClass, _newShares, _nav);
     return true;
   }
 
