@@ -275,14 +275,6 @@ contract NewInvestorActions is DestructibleModified {
 
   // ********* CONVERSION CALCULATIONS *********
 
-  // Converts ether to a corresponding number of shares based on the current nav per share
-  function ethToShares(uint _shareClass, uint _eth)
-    constant
-    returns (uint shares)
-  {
-    return usdToShares(_shareClass, ethToUsd(_eth));
-  }
-
   // Converts USD to a corresponding number of shares based on the current nav per share
   function usdToShares(uint _shareClass, uint _usd)
     constant
@@ -291,12 +283,12 @@ contract NewInvestorActions is DestructibleModified {
     return _usd.mul(10 ** fundStorage.decimals()).div(fundStorage.getShareClassNavPerShare(_shareClass));
   }
 
-  // Converts shares to a corresponding amount of ether based on the current nav per share
-  function sharesToEth(uint _shareClass, uint _shares)
+  // Converts ether to a corresponding number of shares based on the current nav per share
+  function ethToShares(uint _shareClass, uint _eth)
     constant
-    returns (uint ethAmount)
+    returns (uint shares)
   {
-    return usdToEth(_shares.mul(fundStorage.getShareClassNavPerShare(_shareClass)).div(10 ** fundStorage.decimals()));
+    return usdToShares(_shareClass, ethToUsd(_eth));
   }
 
   // Converts shares to a corresponding amount of ether based on the current nav per share
@@ -305,6 +297,14 @@ contract NewInvestorActions is DestructibleModified {
     returns (uint ethAmount)
   {
     return _shares.mul(fundStorage.getShareClassNavPerShare(_shareClass)).div(10 ** fundStorage.decimals());
+  }
+
+  // Converts shares to a corresponding amount of ether based on the current nav per share
+  function sharesToEth(uint _shareClass, uint _shares)
+    constant
+    returns (uint ethAmount)
+  {
+    return usdToEth(_shares.mul(fundStorage.getShareClassNavPerShare(_shareClass)).div(10 ** fundStorage.decimals()));
   }
 
   function usdToEth(uint _usd) 
