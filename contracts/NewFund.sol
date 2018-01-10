@@ -138,9 +138,14 @@ contract NewFund is DestructiblePausable {
     onlyManager
     returns (bool wasSubscribed)
   {
+    require(fundStorage.getInvestorType(_investor) == 2);
+
     var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcSubscriptionShares(_investor, _usdAmount);
+    
     fundStorage.subscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
+    
     totalSupply = _newTotalShareSupply;
+    
     LogSubscription("USD", _investor, _shareClass, _newShares, _nav);
     return true;
   }

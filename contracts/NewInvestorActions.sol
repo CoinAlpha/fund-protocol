@@ -164,12 +164,16 @@ contract NewInvestorActions is DestructibleModified {
 
     require(investorType > 0);
 
+    uint minUsdAmount = sharesOwned == 0 ? fundStorage.minInitialSubscriptionUsd() : fundStorage.minSubscriptionUsd();
+
     uint shares;
     if (investorType == 1) {
       // ETH subscribe
+      require(ethToUsd(ethPendingSubscription) >= minUsdAmount);
       shares = ethToShares(shareClass, ethPendingSubscription);
     } else {
       // USD subcribe
+      require(_usdAmount >= minUsdAmount);
       shares = usdToShares(shareClass, _usdAmount);
     }
 
