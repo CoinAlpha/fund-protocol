@@ -52,10 +52,10 @@ contract('FundStorage', (accounts) => {
   });
 
   describe('Check if there are any investors', () => {
-    it('should have a hasInvestor function', () => assert.isDefined(fundStorage.queryContainsInvestor, 'function undefined'));
+    it('should have a hasInvestor function', () => assert.isDefined(fundStorage.getInvestorType, 'function undefined'));
 
     investors.forEach((_investor) => {
-      it('should not have the investor', () => fundStorage.queryContainsInvestor.call(_investor)
+      it('should not have the investor', () => fundStorage.getInvestorType.call(_investor)
         .then(_hasInvestor => assert.strictEqual(Number(_hasInvestor), 0, 'should be 0'))
         .catch(assert.throw)
       );
@@ -74,7 +74,7 @@ contract('FundStorage', (accounts) => {
 
     ethInvestors.forEach((_investor) => {
       it('should add ETH investors', () => fundStorage.whiteListInvestor(_investor, 1, 0, { from: FUND })
-        .then(() => fundStorage.queryContainsInvestor.call(_investor))
+        .then(() => fundStorage.getInvestorType.call(_investor))
         .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added'))
         .then(() => fundStorage.getInvestor.call(_investor))
         .then(_investor => assert.strictEqual(Number(_investor[0]), 1, 'incorrect investor type'))
@@ -84,7 +84,7 @@ contract('FundStorage', (accounts) => {
 
     usdInvestors.forEach((_investor) => {
       it('should add USD investors', () => fundStorage.whiteListInvestor(_investor, 2, 0, { from: FUND })
-        .then(() => fundStorage.queryContainsInvestor.call(_investor))
+        .then(() => fundStorage.getInvestorType.call(_investor))
         .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added'))
         .then(() => fundStorage.getInvestor.call(_investor))
         .then(_investor => assert.strictEqual(Number(_investor[0]), 2, 'incorrect investor type'))
@@ -105,7 +105,7 @@ contract('FundStorage', (accounts) => {
     included.sort(() => Math.random() - Math.random());
     included.forEach((_investor) => {
       it('should remove investors', () => fundStorage.removeInvestor(_investor, { from: FUND })
-        .then(() => fundStorage.queryContainsInvestor.call(_investor))
+        .then(() => fundStorage.getInvestorType.call(_investor))
         .then(_hasInvestor => assert.strictEqual(Number(_hasInvestor), 0, 'investor was not removed'))
         .catch(assert.throw)
       );
@@ -121,14 +121,14 @@ contract('FundStorage', (accounts) => {
   describe('Function Permissions', () => {
 
     it('add and remove an investor', () => fundStorage.whiteListInvestor(INVESTOR1, 1, 0, { from: MANAGER })
-      .then(() => fundStorage.queryContainsInvestor.call(INVESTOR1))
+      .then(() => fundStorage.getInvestorType.call(INVESTOR1))
       .catch(err => assert.throw(`Manager could not add an investor ${err.toString()}`))
       .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added by manager'))
       .then(() => fundStorage.getInvestor.call(INVESTOR1))
       .then(_investor => assert.strictEqual(Number(_investor[0]), 1, 'incorrect investor type'))
 
       .then(() => fundStorage.whiteListInvestor(INVESTOR2, 2, 0, { from: FUND }))
-      .then(() => fundStorage.queryContainsInvestor.call(INVESTOR2))
+      .then(() => fundStorage.getInvestorType.call(INVESTOR2))
       .catch(err => assert.throw(`Manager could not add an investor ${err.toString()}`))
       .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added by manager'))
       .then(() => fundStorage.getInvestor.call(INVESTOR2))
@@ -146,11 +146,11 @@ contract('FundStorage', (accounts) => {
       )
 
       .then(() => fundStorage.removeInvestor(INVESTOR1, { from: FUND }))
-      .then(() => fundStorage.queryContainsInvestor.call(INVESTOR1))
+      .then(() => fundStorage.getInvestorType.call(INVESTOR1))
       .then(_hasInvestor => assert.strictEqual(Number(_hasInvestor), 0, 'investor was not removed'))
 
       .then(() => fundStorage.removeInvestor(INVESTOR2, { from: MANAGER }))
-      .then(() => fundStorage.queryContainsInvestor.call(INVESTOR1))
+      .then(() => fundStorage.getInvestorType.call(INVESTOR1))
       .then(_hasInvestor => assert.strictEqual(Number(_hasInvestor), 0, 'investor was not removed'))
 
       .catch(assert.throw)

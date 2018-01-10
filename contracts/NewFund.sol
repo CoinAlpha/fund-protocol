@@ -134,7 +134,7 @@ contract NewFund is DestructiblePausable {
     * @param  _investor    USD investor address UUID
     * @param  _usdAmount   USD amount in cents, 1 = $0.01
     */
-  function subscribeUsdInvester(address _investor, uint _usdAmount)
+  function subscribeUsdInvestor(address _investor, uint _usdAmount)
     onlyManager
     returns (bool wasSubscribed)
   {

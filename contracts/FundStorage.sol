@@ -55,6 +55,8 @@ contract IFundStorage {
       uint sharesPendingRedemption,
       uint amountPendingWithdrawal
     ) {}
+  function getInvestorType(address _investor)
+    returns (uint investorType) {}
   function getSubscriptionShares(address _investor)
     returns (
       uint investorType,
@@ -171,7 +173,7 @@ contract FundStorage is DestructibleModified {
   event LogUpdatedDetails(string updatedField, uint oldValue, uint newValue);
   event LogWhiteListedInvestor(address newInvestor, uint investorType, uint shareClass);
   event LogRemovedInvestor(address removedInvestor, uint investorType);
-  event LogModifiedInvestor(string _description, uint _investorType, uint _ethPendingSubscription, uint _sharesOwned, uint _shareClass, uint _sharesPendingRedemption, uint _amountPendingWithdrawal);
+  event LogModifiedInvestor(string description, uint investorType, uint ethPendingSubscription, uint sharesOwned, uint shareClass, uint sharesPendingRedemption, uint amountPendingWithdrawal);
 
   event LogAddedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint createdAt, uint numberOfShareClasses);
   event LogModifiedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint modifiedAt);
@@ -314,7 +316,7 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  function queryContainsInvestor(address _investor)
+  function getInvestorType(address _investor)
     constant
     public
     returns (uint investorType)

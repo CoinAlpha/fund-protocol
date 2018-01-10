@@ -93,9 +93,9 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`failed - fundStorage.setFund(): ${err.toString()}`))
       .then(() => investorActions.setFund(newFund.address, { from: MANAGER }))
       .catch(err => assert.throw(`failed - investorActions.setFund(): ${err.toString()}`))
-      .then(() => fundStorage.queryContainsInvestor(INVESTOR1))
+      .then(() => fundStorage.getInvestorType(INVESTOR1))
       .then(contains => assert.strictEqual(Number(contains), 0, 'investor already whitelisted'))
-      .catch(err => assert.throw(`failed queryContainsInvestor: ${err.toString()}`))
+      .catch(err => assert.throw(`failed getInvestorType: ${err.toString()}`))
       .then(() => Promise.all([
         newFund.manager.call(),
         newFund.exchange.call(),
@@ -210,7 +210,7 @@ contract('New Fund', (accounts) => {
       .then(() => newFund.cancelEthSubscription({ from: ETH_INVESTOR2 }))
       .then(
         () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
       )
     ); // it
 
@@ -239,15 +239,18 @@ contract('New Fund', (accounts) => {
       .then(() => newFund.requestEthSubscription({ from: USD_INVESTOR1, value: WEI_MIN_INITIAL }))
       .then(
         () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
       )
     );
   }); // describe cancelEthSubscription
 
-  xdescribe('subscribeUsdInvestor', () => {
-    it('not allow ETH subscription below minimumInitialSubscriptionUsd', () => {
-
-    });
+  describe('subscribeUsdInvestor', () => {
+    it('not allow ETH investor to subscrbie via subscriptionUsdInvestor', () => newFund.subscribeUsdInvestor(ETH_INVESTOR1, 1000000, { from: MANAGER })
+      .then(
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+      )
+    );
     
     it('subscribe ETH investor', () => {
       
