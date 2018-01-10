@@ -50,8 +50,8 @@ contract('New Fund', (accounts) => {
   const USD_INVESTOR1 = usdInvestors[0];
   const USD_INVESTOR2 = usdInvestors[1];
 
-  const MIN_INITIAL_CENTS = MIN_INITIAL_SUBSCRIPTION_USD * 100;
-  const MIN_SUB_CENTS = MIN_SUBSCRIPTION_USD * 100;
+  const MIN_INITIAL_CENTS = MIN_INITIAL_SHARES = MIN_INITIAL_SUBSCRIPTION_USD * 100;
+  const MIN_SUB_CENTS = MIN_SUB_SHARES = MIN_SUBSCRIPTION_USD * 100;
 
   const WEI_MIN_INITIAL = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD) / USD_ETH_EXCHANGE_RATE);
   const WEI_BELOW_MIN_INITIAL = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD - 1) / USD_ETH_EXCHANGE_RATE);
@@ -249,7 +249,7 @@ contract('New Fund', (accounts) => {
   }); // describe cancelEthSubscription
 
   describe('subscribeUsdInvestor', () => {
-    it('not allow ETH investor to subscribe via subscriptionUsdInvestor', () => newFund.subscribeUsdInvestor(ETH_INVESTOR1, 1000000, { from: MANAGER })
+    it('not allow ETH investor to subscribe via subscribeUsdInvestor', () => newFund.subscribeUsdInvestor(ETH_INVESTOR1, 1000000, { from: MANAGER })
       .then(
         () => assert.throw('should not have reached here'),
         e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
@@ -265,14 +265,14 @@ contract('New Fund', (accounts) => {
 
     it('should allow investment at minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
-      .catch(err => `Error subscribing USD investor ${err.toString()}`)
-      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_CENTS, 'shares amount incorrect'))
+      .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES, 'shares amount incorrect'))
     );
 
     it('should allow investment at > minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR2, MIN_INITIAL_CENTS + 1, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR2))
-      .catch(err => `Error subscribing USD investor ${err.toString()}`)
-      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_CENTS + 1, 'shares amount incorrect'))
+      .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + 1, 'shares amount incorrect'))
     );
 
     it(`not allow repeat USD subscription below MIN_SUBSCRIPTION_USD: ${MIN_SUB_CENTS}`, () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_SUB_CENTS - 1, { from: MANAGER })
@@ -284,16 +284,63 @@ contract('New Fund', (accounts) => {
 
     it('should allow repeat investment at minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_SUB_CENTS, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
-      .catch(err => `Error subscribing USD investor ${err.toString()}`)
-      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_CENTS + MIN_SUB_CENTS, 'shares amount incorrect'))
+      .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + MIN_SUB_SHARES, 'shares amount incorrect'))
     );
 
     it('should allow repeat investment at > minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR2, MIN_SUB_CENTS + 1, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR2))
-      .catch(err => `Error subscribing USD investor ${err.toString()}`)
-      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_CENTS + MIN_SUB_CENTS + 2, 'shares amount incorrect'))
+      .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + MIN_SUB_SHARES + 2, 'shares amount incorrect'))
     );
-  }); // describe subscribeInvestors
+  }); // describe subscribeUsdInvestors
+
+  describe('subscribeEthInvestor', () => {
+    it('not allow USD investor to subscribe via subscribeEthInvestor', () => newFund.subscribeEthInvestor(USD_INVESTOR1, { from: MANAGER })
+      .then(
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+      )
+    );
+
+    xit(`not allow initial USD subscription below MIN_INITIAL_SUBSCRIPTION_USD: ${MIN_INITIAL_CENTS}`, () => newFund.subscribeEthInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS - 1, { from: MANAGER })
+      .then(
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+      )
+    );
+
+    xit('should allow investment at minimum amount', () => newFund.subscribEthdInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS, { from: MANAGER })
+      .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
+      .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES, 'shares amount incorrect'))
+    );
+
+    xit('should allow investment at > minimum amount', () => newFund.subscribEthdInvestor(USD_INVESTOR2, MIN_INITIAL_CENTS + 1, { from: MANAGER })
+      .then(() => getInvestorData(fundStorage, USD_INVESTOR2))
+      .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + 1, 'shares amount incorrect'))
+    );
+
+    xit(`not allow repeat USD subscription below MIN_SUBSCRIPTION_USD: ${MIN_SUB_CENTS}`, () => newFund.subscribeEthInvestor(USD_INVESTOR1, MIN_SUB_CENTS - 1, { from: MANAGER })
+      .then(
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+      )
+    );
+
+    xit('should allow repeat investment at minimum amount', () => newFund.subscribEthdInvestor(USD_INVESTOR1, MIN_SUB_CENTS, { from: MANAGER })
+      .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
+      .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + MIN_SUB_SHARES, 'shares amount incorrect'))
+    );
+
+    xit('should allow repeat investment at > minimum amount', () => newFund.subscribEthdInvestor(USD_INVESTOR2, MIN_SUB_CENTS + 1, { from: MANAGER })
+      .then(() => getInvestorData(fundStorage, USD_INVESTOR2))
+      .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + MIN_SUB_SHARES + 2, 'shares amount incorrect'))
+    );
+  }); // describe subscribeEthInvestors
 
   xdescribe('requestEthSubscription - Existing Investor', () => {
     it('not allow ETH subscription request below minimumSubscriptionUsd', () => getInvestorData(fundStorage, ETH_INVESTOR1)

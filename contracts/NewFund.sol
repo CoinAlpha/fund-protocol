@@ -58,7 +58,9 @@ contract NewFund is DestructiblePausable {
   event LogWhiteListInvestor(address indexed investor, uint investorType, uint shareClass);
   event LogEthSubscriptionRequest(address indexed investor, uint _eth);
   event LogCancelEthSubscriptionRequest(address indexed investor, uint _eth);
-  event LogSubscription(string currency, address indexed investor, uint shareClass, uint newShares, uint nav);
+  event LogSubscription(string currency, address indexed investor, uint shareClass, uint newShares, uint nav, uint USDETH);
+
+  event LogTransferToExchange(uint ethAmount);
 
   event LogModuleChanged(string module, address oldAddress, address newAddress);
 
@@ -85,8 +87,15 @@ contract NewFund is DestructiblePausable {
 
   // ====================================== SUBSCRIPTIONS ======================================
 
-  // Whitelist an investor
-  // Delegates logic to the FundStorage module
+  /**
+    * Whitelists investor: set type & share class for a new investor
+    * This is for data reporting and tracking only
+    * Actual USD fund flows are handled off-chain
+    * @param  _investor       USD investor address UID or ETH wallet address
+    * @param  _investorType   [1] ETH investor | [2] USD investor
+    * @param  _shareClass     Share class index
+    * @return isSuccess       Operation successful
+    */
   function whiteListInvestor(address _investor, uint _investorType, uint _shareClass)
     onlyManager
     returns (bool isSuccess)
@@ -96,8 +105,10 @@ contract NewFund is DestructiblePausable {
     return true;
   }
 
-  // Issue a subscription request by transferring ether into the fund
-  // Delegates logic to the InvestorActions module
+  /**
+    * ETH investor function: issue a subscription request by transferring ether into
+    * the fund
+    */
   function requestEthSubscription()
     whenNotPaused
     payable
@@ -138,7 +149,8 @@ contract NewFund is DestructiblePausable {
     onlyManager
     returns (bool wasSubscribed)
   {
-    require(fundStorage.getInvestorType(_investor) == 2);
+    // Check conditions for valid USD subscription
+    require(investorActions.checkUsdInvestment(_investor, _usdAmount));
 
     var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcSubscriptionShares(_investor, _usdAmount);
     
@@ -146,7 +158,7 @@ contract NewFund is DestructiblePausable {
     
     totalSupply = _newTotalShareSupply;
     
-    LogSubscription("USD", _investor, _shareClass, _newShares, _nav);
+    LogSubscription("USD", _investor, _shareClass, _newShares, _nav, dataFeed.usdEth());
     return true;
   }
 
@@ -155,12 +167,23 @@ contract NewFund is DestructiblePausable {
     * Transfer subscription funds into exchange account
     * @param  _investor    ETH wallet address
     */
-  function subscribeEthInvester(address _investor)
+  function subscribeEthInvestor(address _investor)
     onlyManager
     returns (bool wasSubscribed)
   {
-    // TODO:
-    return true;
+    // Calculate new totalEthPendingSubscription as well as check ETH Investor conditions
+    var (ethPendingSubscription, _totalEthPendingSubscription) = investorActions.calcEthSubscription(_investor);
+    
+    var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcSubscriptionShares(_investor, 0);
+    
+    fundStorage.subscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
+    
+    totalSupply = _newTotalShareSupply;
+    totalEthPendingSubscription = _totalEthPendingSubscription;
+    exchange.transfer(ethPendingSubscription);
+
+    LogSubscription("ETH", _investor, _shareClass, _newShares, _nav, dataFeed.usdEth());
+    LogTransferToExchange(ethPendingSubscription);
   }
 
   // ========================================== ADMIN ==========================================

@@ -64,6 +64,10 @@ contract IFundStorage {
       uint sharesOwned,
       uint shareClass
     ) {}
+  function getEthSubscriptionData(address _investor)
+    returns (uint investorType, uint ethPendingSubscription) {}
+  function getUsdSubscriptionData(address _investor)
+    returns (uint investorType, uint sharesOwned) {}
 
   // Subscribe / Redeem Functions
   function updateEthPendingSubscription(address _investor, uint _totalAmount)
@@ -267,7 +271,7 @@ contract FundStorage is DestructibleModified {
     return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass, investor.sharesPendingRedemption, investor.amountPendingWithdrawal);
   }
 
-  // [INVESTOR METHOD] Returns the variables contained in the Investor struct for a given address
+  // [INVESTOR METHOD] Returns the variables required to calculate share subscription
   function getSubscriptionShares(address _investor)
     constant
     public
@@ -280,6 +284,24 @@ contract FundStorage is DestructibleModified {
   {
     InvestorStruct storage investor = investors[_investor];
     return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass);
+  }
+
+  // [INVESTOR METHOD] Returns the variables required to calculate Eth subscription
+  function getEthSubscriptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint ethPendingSubscription)
+  {
+    return (investors[_investor].investorType, investors[_investor].ethPendingSubscription);
+  }
+
+  // [INVESTOR METHOD] Returns the variables required to calculate Usd subscription
+  function getUsdSubscriptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint sharesOwned)
+  {
+    return (investors[_investor].investorType, investors[_investor].sharesOwned);
   }
 
   // Remove investor address from list
