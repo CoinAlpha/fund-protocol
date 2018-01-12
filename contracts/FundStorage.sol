@@ -83,6 +83,19 @@ contract IFundStorage {
   )
     returns (bool wasModified) {}
 
+  function redeemInvestor(
+    address _investor,
+    uint _shareClass,
+    uint _newSharesOwned,
+    uint _newShareClassSupply,
+    uint _newTotalShareSupply
+  )
+    returns (bool wasModified)
+  {}
+
+  function getUsdRedemptionData(address _investor)
+    returns (uint investorType, uint shareClass, uint sharesOwned) {}
+
   // Share Class Functions
   function getShareClass(uint _shareClassIndex)
     returns (
@@ -304,6 +317,15 @@ contract FundStorage is DestructibleModified {
     return (investors[_investor].investorType, investors[_investor].sharesOwned);
   }
 
+  // [INVESTOR METHOD] Returns the variables required to calculate Usd redemption
+  function getUsdRedemptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint shareClass, uint sharesOwned)
+  {
+    return (investors[_investor].investorType, investors[_investor].shareClass, investors[_investor].sharesOwned);
+  }
+
   // Remove investor address from list
   function removeInvestor(address _investor)
     onlyFundOrOwner
@@ -423,6 +445,23 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
+  function redeemInvestor(
+    address _investor,
+    uint _shareClass,
+    uint _newSharesOwned,
+    uint _newShareClassSupply,
+    uint _newTotalShareSupply
+  )
+    onlyFund
+    returns (bool wasModified)
+  {
+    require(containsInvestor[_investor] > 0 && investors[_investor].shareClass == _shareClass);
+    investors[_investor].sharesOwned = _newSharesOwned;
+
+    modifyShareCount(_shareClass, _newShareClassSupply, _newTotalShareSupply);
+    LogModifiedInvestor("Redemption", 999, 999, _newSharesOwned, 999, 999, 999);
+    return true;
+  }
 
   // ********* SHARECLASS FUNCTIONS *********
   

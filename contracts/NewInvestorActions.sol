@@ -17,34 +17,26 @@ import "./math/SafeMath.sol";
  */
 
 contract INewInvestorActions {
-  // function modifyAllocation(address _addr, uint _allocation)
-  //   returns (uint _ethTotalAllocation) {}
-
-  // function getAvailableAllocation(address _addr)
-  //   returns (uint ethAvailableAllocation) {}
 
   function requestEthSubscription(address _addr, uint _amount)
     returns (uint, uint) {}
-
   function cancelEthSubscription(address _addr)
     returns (uint, uint) {}
-  
   function calcSubscriptionShares(address _investor, uint _usdAmount)
     returns (uint, uint, uint, uint, uint, uint) {}
-
   function checkUsdInvestment(address _investor, uint _usdAmount)
     returns (bool) {}
-
   function calcEthSubscription(address _investor)
     returns (uint ethPendingSubscription, uint newTotalEthPendingSubscription) {}
-
   function subscribe(address _addr, uint _usdAmount)
     returns (uint, uint, uint, uint, uint, uint) {}
   
-  function requestRedemption(address _addr, uint _shares)
-    returns (uint, uint) {}
 
-  function cancelRedemption(address addr)
+  function calcRedeemUsdInvestor(address _investor, uint _shares)
+    returns (uint, uint, uint, uint, uint) {}
+  function requestEthRedemption(address _addr, uint _shares)
+    returns (uint, uint) {}
+  function cancelEthRedemption(address addr)
     returns (uint, uint) {}
 
   function redeem(address _addr)
@@ -55,6 +47,9 @@ contract INewInvestorActions {
 
   function withdraw(address _addr)
     returns (uint, uint, uint) {}
+  
+  function sharesToEth(uint _shareClass, uint _shares)
+    returns (uint ethAmount) {}
 
 }
 
@@ -199,7 +194,7 @@ contract NewInvestorActions is DestructibleModified {
             shares,                                                    // shares minted
             fundStorage.getShareClassSupply(shareClass).add(shares),   // new Share Class supply
             fundStorage.totalShareSupply().add(shares),                // new totalSupply
-            fundStorage.getShareClassNavPerShare(shareClass)          // subscription nav
+            fundStorage.getShareClassNavPerShare(shareClass)           // subscription nav
            );
   }
 
@@ -226,18 +221,54 @@ contract NewInvestorActions is DestructibleModified {
     return (_ethPendingSubscription, newFund.totalEthPendingSubscription().sub(_ethPendingSubscription));
   }
 
-  // function addShares(uint _shareClass, uint _shares)
-  //   onlyFund
-  //   constant
-  //   returns (uint shareClass, uint newAmount, uint totalSupply)
-  // {
+  // ====================================== REDEMPTIONS ======================================
 
-  // }
+  /**
+    * Calculates change in share ownership for USD investor redemption
+    * Confirm valid parameters for redemption
+    * @param  _investor    Investor UID or ETH Wallet Address
+    * @param  _shares      Amount in 1/100 shares: 1 unit = 0.01 shares
+    * @return              [1] Share Class index
+    *                      [2] New total net shares owned by investor after redemption
+    *                      [3] New total supply of share class
+    *                      [4] New total share supply of fund
+    *                      [5] Redemption NAV in basis points: 1 = 0.01%
+    */
+
+  function calcRedeemUsdInvestor(address _investor, uint _shares)
+    onlyFund
+    constant
+    returns (uint, uint, uint, uint, uint)
+  {
+    require(_shares >= fundStorage.minRedemptionShares());
+    var (investorType, shareClass, sharesOwned) = fundStorage.getUsdRedemptionData(_investor);
+    require(investorType == 2 && _shares <= sharesOwned);
+
+    return (shareClass,                                                             
+            sharesOwned.sub(_shares),                                  // new investor.sharesOwned
+            fundStorage.getShareClassSupply(shareClass).sub(_shares),  // new Share Class supply
+            fundStorage.totalShareSupply().sub(_shares),               // new totalSupply
+            fundStorage.getShareClassNavPerShare(shareClass)           // redemption nav
+           );
+  }
+
+
+  /**
+    * Calculates new shares issued in subscription
+    * @param  _investor    Investor UID or ETH Wallet Address
+    * @param  _shares      Amount in 1/100 shares: 1 unit = 0.01 shares
+    * @return              [1] Share Class index
+    *                      [2] New total shares owned by investor
+    *                      [3] Newly created shares
+    *                      [4] New total supply of share class
+    *                      [5] New total share supply of fund
+    *                      [6] Subscription NAV in basis points: 1 = 0.01%
+    */
 
   // Register an investor's redemption request, after checking that
   // 1) the requested amount exceeds the minimum redemption amount and
   // 2) the investor can't redeem more than the shares they own
-  function requestRedemption(address _addr, uint _shares)
+  function requestEthRedemption(address _investor, uint _shares)
     onlyFund
     constant
     returns (uint, uint)

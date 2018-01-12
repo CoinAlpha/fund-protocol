@@ -59,6 +59,10 @@ contract NewFund is DestructiblePausable {
   event LogEthSubscriptionRequest(address indexed investor, uint _eth);
   event LogCancelEthSubscriptionRequest(address indexed investor, uint _eth);
   event LogSubscription(string currency, address indexed investor, uint shareClass, uint newShares, uint nav, uint USDETH);
+  
+  event LogEthRedemptionRequest(address indexed investor, uint shares);
+  event LogEthRedemptionCancellation(address indexed investor);
+  event LogRedemption(string currency, address indexed investor, uint shareClass, uint shares, uint nav, uint USDETH, uint proceeds);
 
   event LogTransferToExchange(uint ethAmount);
 
@@ -122,8 +126,10 @@ contract NewFund is DestructiblePausable {
     return true;
   }
 
-  // Cancel pendingEthSubscription and transfer back funds to investor
-  // Delegates logic to the InvestorActions module
+  /** 
+    * Cancel pendingEthSubscription and transfer back funds to investor
+    * Delegates logic to the InvestorActions module
+    */
   function cancelEthSubscription()
     whenNotPaused
     returns (bool success)
@@ -185,6 +191,75 @@ contract NewFund is DestructiblePausable {
     LogSubscription("ETH", _investor, _shareClass, _newShares, _nav, dataFeed.usdEth());
     LogTransferToExchange(ethPendingSubscription);
   }
+
+  // ====================================== REDEMPTIONS ======================================
+
+
+  // Returns the total redemption requests not yet processed by the manager, denominated in ether
+  function totalEthPendingRedemption()
+    constant
+    returns (uint)
+  {
+    // return investorActions.sharesToEth(totalSharesPendingRedemption);
+  }
+
+
+  /**
+    * Redeem USD investor
+    * This is for data reporting and tracking only
+    * Actual USD fund flows are handled off-chain
+    * @param  _investor    USD investor address UUID
+    * @param  _shares      Share amount in decimal 0.01 unties: 1 = 0.01 shares
+    */
+  
+  // TODO: Stack too deep
+  function redeemUsdInvestor(address _investor, uint _shares)
+    onlyManager
+    returns (bool wasSubscribed)
+  {
+    // Check conditions for valid USD redemption and calculate change in shares
+    var (_shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcRedeemUsdInvestor(_investor, _shares);
+    
+    fundStorage.redeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
+    
+    totalSupply = _newTotalShareSupply;
+    
+    // LogRedemption("USD", _investor, _shareClass, _shares, _nav, dataFeed.usdEth(), _shares.mul(_nav).div(100));
+    return true;
+  }
+
+  /**
+    * ETH investor function: issue a redemption request
+    */
+  function requestEthRedemption(uint _shares)
+    whenNotPaused
+    returns (bool success)
+  {
+    // var (_ethPendingSubscription, _totalEthPendingSubscription) = investorActions.requestEthSubscription(msg.sender, msg.value);
+    // fundStorage.updateEthPendingSubscription(msg.sender, _ethPendingSubscription);
+    // totalEthPendingSubscription = _totalEthPendingSubscription;
+
+    // LogEthRedemptionRequest(msg.sender, _shares);
+    return true;
+  }
+
+  /** 
+    * ETH investor function: cancel redemption request
+    */
+  // function cancelEthRedemption()
+  //   whenNotPaused
+  //   returns (bool success)
+  // {
+  //   var (_cancelledEthAmount, _totalEthPendingSubscription) = investorActions.cancelEthSubscription(msg.sender);
+  //   fundStorage.updateEthPendingSubscription(msg.sender, 0);
+  //   totalEthPendingSubscription = _totalEthPendingSubscription;
+
+  //   msg.sender.transfer(_cancelledEthAmount);
+
+  //   LogCancelEthSubscriptionRequest(msg.sender, _cancelledEthAmount);
+  //   return true;
+  // }
+
 
   // ========================================== ADMIN ==========================================
 
