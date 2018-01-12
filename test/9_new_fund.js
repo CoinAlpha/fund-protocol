@@ -50,13 +50,15 @@ contract('New Fund', (accounts) => {
   const USD_INVESTOR1 = usdInvestors[0];
   const USD_INVESTOR2 = usdInvestors[1];
 
-  const MIN_INITIAL_CENTS = MIN_INITIAL_SHARES = MIN_INITIAL_SUBSCRIPTION_USD * 100;
-  const MIN_SUB_CENTS = MIN_SUB_SHARES = MIN_SUBSCRIPTION_USD * 100;
+  const MIN_INITIAL_CENTS = MIN_INITIAL_SUBSCRIPTION_USD * 100;
+  const MIN_INITIAL_SHARES = MIN_INITIAL_CENTS;
+  const MIN_SUB_CENTS = MIN_SUBSCRIPTION_USD * 100;
+  const MIN_SUB_SHARES = MIN_SUB_CENTS;
 
   const WEI_MIN_INITIAL = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD) / USD_ETH_EXCHANGE_RATE);
   const WEI_BELOW_MIN_INITIAL = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD - 1) / USD_ETH_EXCHANGE_RATE);
-  const WEI_MIN_SUB = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD) / USD_ETH_EXCHANGE_RATE);
-  const WEI_BELOW_MIN_SUB = ethToWei((MIN_INITIAL_SUBSCRIPTION_USD - 1) / USD_ETH_EXCHANGE_RATE);
+  const WEI_MIN_SUB = ethToWei((MIN_SUBSCRIPTION_USD) / USD_ETH_EXCHANGE_RATE);
+  const WEI_BELOW_MIN_SUB = ethToWei((MIN_SUBSCRIPTION_USD - 1) / USD_ETH_EXCHANGE_RATE);
 
   // Contract instances
   let newFund;
@@ -172,8 +174,8 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_BELOW_MIN_INITIAL }))
       .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0)
       )
     ); // it
 
@@ -198,8 +200,8 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.requestEthSubscription({ from: USD_INVESTOR1, value: WEI_MIN_INITIAL }))
       .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0)
       )
     );
   }); // describe requestEthSubscription
@@ -213,8 +215,8 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.cancelEthSubscription({ from: ETH_INVESTOR2 }))
       .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
       )
     ); // it
 
@@ -242,8 +244,8 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.requestEthSubscription({ from: USD_INVESTOR1, value: WEI_MIN_INITIAL }))
       .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
       )
     );
   }); // describe cancelEthSubscription
@@ -251,15 +253,15 @@ contract('New Fund', (accounts) => {
   describe('subscribeUsdInvestor', () => {
     it('not allow ETH investor to subscribe via subscribeUsdInvestor', () => newFund.subscribeUsdInvestor(ETH_INVESTOR1, 1000000, { from: MANAGER })
       .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
       )
     );
 
     it(`not allow initial USD subscription below MIN_INITIAL_SUBSCRIPTION_USD: ${MIN_INITIAL_CENTS}`, () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS - 1, { from: MANAGER })
       .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
       )
     );
 
@@ -277,8 +279,8 @@ contract('New Fund', (accounts) => {
 
     it(`not allow repeat USD subscription below MIN_SUBSCRIPTION_USD: ${MIN_SUB_CENTS}`, () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_SUB_CENTS - 1, { from: MANAGER })
       .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
       )
     );
 
@@ -298,8 +300,8 @@ contract('New Fund', (accounts) => {
   describe('subscribeEthInvestor', () => {
     it('not allow USD investor to subscribe via subscribeEthInvestor', () => newFund.subscribeEthInvestor(USD_INVESTOR1, { from: MANAGER })
       .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
       )
     );
 
@@ -343,87 +345,128 @@ contract('New Fund', (accounts) => {
 
   }); // describe subscribeEthInvestors
 
-  xdescribe('requestEthSubscription - Existing Investor', () => {
-    it('not allow ETH subscription request below minimumSubscriptionUsd', () => getInvestorData(fundStorage, ETH_INVESTOR1)
-      .then(_investorData => assert.strictEqual(Number(_investorData.investorType), 1, 'incorrect investor type'))
-      .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
-      .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_BELOW_MIN_INITIAL }))
-      .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
-      )
-    ); // it
-
-    it('accept valid requestEthSubscription request', () => getBalancePromise(newFund.address)
-      .then(_bal => fundBalance = Number(_bal))
-      .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_MIN_INITIAL }))
-      .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
-      .catch(err => assert.throw(`Error requesting Eth subscription: ${err.toString()}`))
-      .then(_investorData => assert.strictEqual(Number(_investorData.ethPendingSubscription), Number(WEI_MIN_INITIAL), 'incorrect ethPendingSubscription amount'))
-      .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
-      .then(() => getBalancePromise(newFund.address))
-      .then(_bal => assert.strictEqual(Number(_bal), fundBalance + Number(WEI_MIN_INITIAL), 'incorrect fund balance increase'))
+  describe('subscribeUsdInvestor - repeat investor', () => {
+    it('investors should have existing shares', () => getInvestorData(fundStorage, USD_INVESTOR1)
+      .then(_investorData => assert.isAbove(Number(_investorData.sharesOwned), 0, 'investor 1 does not have any shares'))
+      .catch(err => assert.throw(`Error retrieving investor data: ${err.toString()}`))
+      .then(() => getInvestorData(fundStorage, USD_INVESTOR2))
+      .then(_investorData => assert.isAbove(Number(_investorData.sharesOwned), 0, 'investor 2 does not have any shares'))
+      .catch(err => assert.throw(`Error retrieving investor data: ${err.toString()}`))
     );
 
-    it('not allow USD investor to request ETH subscription', () => getInvestorData(fundStorage, USD_INVESTOR1)
-      .then(_investorData => assert.strictEqual(Number(_investorData.investorType), 2, 'incorrect investor type'))
-      .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
-      .then(() => newFund.requestEthSubscription({ from: USD_INVESTOR1, value: WEI_MIN_INITIAL }))
-      .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
-      )
-    );
+    xit('subscribe ETH investor', () => {
 
-    xit('not allow repeat ETH subscription below minimumSubscriptionUsd', () => getInvestorData(fundStorage, ETH_INVESTOR1)
-      .then(_investorData => assert.strictEqual(Number(_investorData.investorType), 1, 'incorrect investor type'))
-      .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
-      .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_BELOW_MIN_INITIAL }))
-      .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
-      )
-    );
-
-    xit('accept valid repeat investor\'s requestEthSubscription request', () => {
-      
     });
 
-  }); // describe requestEthSubscription
+    xit('not allow USD subscription below minimumInitialSubscriptionUsd', () => {
 
-  xdescribe('subscribeUsdInvestors', () => {
-    it('not allow ETH subscription below minimumInitialSubscriptionUsd', () => {
+    });
+
+    xit('subscribe USD investor', () => {
+
+    });
+
+    xit('not allow repeat ETH subscription below minimumSubscriptionUsd', () => {
 
     });
     
-    it('subscribe ETH investor', () => {
+    xit('subscribe repeat ETH investor', () => {
       
     });
 
-    it('not allow USD subscription below minimumInitialSubscriptionUsd', () => {
+    xit('not allow repeat USD subscription below minimumSubscriptionUsd', () => {
 
     });
 
-    it('subscribe USD investor', () => {
-
-    });
-
-    it('not allow repeat ETH subscription below minimumSubscriptionUsd', () => {
-
-    });
-    
-    it('subscribe repeat ETH investor', () => {
-      
-    });
-
-    it('not allow repeat USD subscription below minimumSubscriptionUsd', () => {
-
-    });
-
-    it('subscribe repeat USD investor', () => {
+    xit('subscribe repeat USD investor', () => {
 
     });
   }); // describe subscribeInvestors
+
+  describe('requestEthSubscription - Existing Investor', () => {
+
+    it('investors should have existing shares', () => getInvestorData(fundStorage, ETH_INVESTOR1)
+      .then(_investorData => assert.isAbove(Number(_investorData.sharesOwned), 0, 'investor 1 does not have any shares'))
+      .catch(err => assert.throw(`Error retrieving investor data: ${err.toString()}`))
+    );
+
+    it('not allow ETH subscription request below minimumSubscriptionUsd', () => getInvestorData(fundStorage, ETH_INVESTOR1)
+      .then(_investorData => assert.strictEqual(Number(_investorData.investorType), 1, 'incorrect investor type'))
+      .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
+      .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_BELOW_MIN_SUB }))
+      .then(
+      () => assert.throw('should not have reached here'),
+      e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+      )
+    ); // it
+
+    let ETH_SHARES1;
+    
+    it('accept valid requestEthSubscription request', () => getBalancePromise(newFund.address)
+      .then(_bal => fundBalance = Number(_bal))
+      .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_MIN_SUB }))
+      .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
+      .catch(err => assert.throw(`Error requesting Eth subscription: ${err.toString()}`))
+      .then((_investorData) => {
+        assert.strictEqual(Number(_investorData.ethPendingSubscription), Number(WEI_MIN_SUB), 'incorrect ethPendingSubscription amount');
+        ETH_SHARES1 = Number(_investorData.sharesOwned);
+      })
+      .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
+      .then(() => getBalancePromise(newFund.address))
+      .then(_bal => assert.strictEqual(Number(_bal), fundBalance + Number(WEI_MIN_SUB), 'incorrect fund balance increase'))
+    );
+
+    let EXCHANGE_BALANCE;
+    let ETH_BALANCE1;
+
+    it('subscribe Eth Investor', () => Promise.all([getBalancePromise(newFund.address), getBalancePromise(ETH_INVESTOR1), getBalancePromise(EXCHANGE)])
+      .then((_balances) => {
+        [fundBalance, ETH_BALANCE1, EXCHANGE_BALANCE] = _balances.map(x => Number(x));
+      })
+      .then(() => newFund.totalEthPendingSubscription())
+      .then(_amount => assert.strictEqual(Number(_amount), Number(WEI_MIN_SUB), 'totalEthPendingSubscription is incorrect'))
+
+      .then(() => newFund.subscribeEthInvestor(ETH_INVESTOR1, { from: MANAGER }))
+      .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
+      .catch(err => assert.throw(`Error subscribing ETH investor ${err.toString()}`))
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), ETH_SHARES1 + MIN_SUB_SHARES, 'shares amount incorrect'))
+      .catch(err => assert.throw(`Error retrieving investor data: ${err.toString()}`))
+
+      .then(() => Promise.all([getBalancePromise(newFund.address), getBalancePromise(ETH_INVESTOR1), getBalancePromise(EXCHANGE)]))
+      .then((_balances) => {
+        const [newFundBalance, NEW_ETH_BALANCE1, NEW_EXCHANGE_BALANCE] = _balances.map(x => Number(x));
+        assert.strictEqual(newFundBalance, 0, 'fund balance did not decrease by the correct amount');
+        assert.strictEqual(NEW_EXCHANGE_BALANCE - EXCHANGE_BALANCE, Number(WEI_MIN_SUB), 'incorrect amount transferred to exchange');
+      })
+    );
+
+  }); // describe requestEthSubscription - repeat
+  
+  xdescribe('redeemUsdInvestor', () => {
+    it('not allow redemption below minimum shares', () => {
+
+    });
+
+    it('allow redemption for minimum shares', () => {
+
+    });
+  });
+
+  xdescribe('requestEthRedemption', () => {
+    it('not allow request below minimum shares', () => {
+
+    });
+
+    it('allow request for minimum shares', () => {
+
+    });
+  });
+
+  xdescribe('redeemEthInvestor', () => {
+    it('redeem an investor', () => {
+
+    });
+  });
 
   xdescribe('changeModule', () => {
     it('NavCalculator', () => {

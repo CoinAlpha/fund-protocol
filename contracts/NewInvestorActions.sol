@@ -130,8 +130,8 @@ contract NewInvestorActions is DestructibleModified {
       require(_amount >= fundStorage.minSubscriptionUsd().div(dataFeed.usdEth()).mul(1e18));
     }
 
-    return (ethPendingSubscription.add(_amount),                                 // new investor.ethPendingSubscription
-            newFund.totalEthPendingSubscription().add(_amount)                      // new totalEthPendingSubscription
+    return (ethPendingSubscription.add(_amount),                        // new investor.ethPendingSubscription
+            newFund.totalEthPendingSubscription().add(_amount)          // new totalEthPendingSubscription
            );
   }
 

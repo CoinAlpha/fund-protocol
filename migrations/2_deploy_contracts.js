@@ -77,7 +77,7 @@ module.exports = function (deployer, network, accounts) {
         FUND_DECIMALS,                      // _decimals
         MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionUsd
         MIN_SUBSCRIPTION_USD * 100,         // _minSubscriptionUsd
-        MIN_REDEMPTION_SHARES,              // _minRedemptionShares,
+        MIN_REDEMPTION_SHARES * 100,        // _minRedemptionShares,
         ADMIN_FEE * 100,                    // _adminFeeBps
         MGMT_FEE * 100,                     // _mgmtFeeBps
         PERFORM_FEE * 100,                  // _performFeeBps
