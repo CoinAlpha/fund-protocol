@@ -96,6 +96,12 @@ contract IFundStorage {
   function getUsdRedemptionData(address _investor)
     returns (uint investorType, uint shareClass, uint sharesOwned) {}
 
+  function getRequestEthRedemptionData(address _investor)
+    returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption) {}
+
+  function setRequestEthRedemption(address _investor, uint _sharesPendingRedemption)
+    returns (bool isSuccess) {}
+
   // Share Class Functions
   function getShareClass(uint _shareClassIndex)
     returns (
@@ -264,10 +270,9 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
+  // ========================================= INVESTOR FUNCTIONS =========================================
 
-  // ********* INVESTOR FUNCTIONS *********
-
-  // [INVESTOR METHOD] Returns the variables contained in the Investor struct for a given address
+  // Returns the variables contained in the Investor struct for a given address
   function getInvestor(address _investor)
     constant
     public
@@ -284,7 +289,7 @@ contract FundStorage is DestructibleModified {
     return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass, investor.sharesPendingRedemption, investor.amountPendingWithdrawal);
   }
 
-  // [INVESTOR METHOD] Returns the variables required to calculate share subscription
+  // Returns the variables required to calculate share subscription
   function getSubscriptionShares(address _investor)
     constant
     public
@@ -299,7 +304,7 @@ contract FundStorage is DestructibleModified {
     return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass);
   }
 
-  // [INVESTOR METHOD] Returns the variables required to calculate Eth subscription
+  // Returns the variables required to calculate Eth subscription
   function getEthSubscriptionData(address _investor)
     constant
     public
@@ -308,7 +313,7 @@ contract FundStorage is DestructibleModified {
     return (investors[_investor].investorType, investors[_investor].ethPendingSubscription);
   }
 
-  // [INVESTOR METHOD] Returns the variables required to calculate Usd subscription
+  // Returns the variables required to calculate Usd subscription
   function getUsdSubscriptionData(address _investor)
     constant
     public
@@ -317,7 +322,7 @@ contract FundStorage is DestructibleModified {
     return (investors[_investor].investorType, investors[_investor].sharesOwned);
   }
 
-  // [INVESTOR METHOD] Returns the variables required to calculate Usd redemption
+  // Returns the variables required to calculate Usd redemption
   function getUsdRedemptionData(address _investor)
     constant
     public
@@ -325,6 +330,17 @@ contract FundStorage is DestructibleModified {
   {
     return (investors[_investor].investorType, investors[_investor].shareClass, investors[_investor].sharesOwned);
   }
+
+  // Returns the variables required to calculate Eth redemption request
+  function getRequestEthRedemptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption)
+  {
+    return (investors[_investor].investorType, investors[_investor].sharesOwned, investors[_investor].sharesPendingRedemption);
+  }
+
+  // ========================================= ADMIN =========================================
 
   // Remove investor address from list
   function removeInvestor(address _investor)
@@ -460,6 +476,16 @@ contract FundStorage is DestructibleModified {
 
     modifyShareCount(_shareClass, _newShareClassSupply, _newTotalShareSupply);
     LogModifiedInvestor("Redemption", 999, 999, _newSharesOwned, 999, 999, 999);
+    return true;
+  }
+
+  // Updates for Eth redemption request
+  function setRequestEthRedemption(address _investor, uint _sharesPendingRedemption)
+    constant
+    public
+    returns (bool isSuccess)
+  {
+    investors[_investor].sharesPendingRedemption = _sharesPendingRedemption;
     return true;
   }
 

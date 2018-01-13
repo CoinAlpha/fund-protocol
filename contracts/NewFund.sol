@@ -13,6 +13,7 @@ import "./zeppelin/DestructiblePausable.sol";
 contract INewFund {
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
   uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
+  uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
 }
 
 
@@ -234,11 +235,11 @@ contract NewFund is DestructiblePausable {
     whenNotPaused
     returns (bool success)
   {
-    // var (_ethPendingSubscription, _totalEthPendingSubscription) = investorActions.requestEthSubscription(msg.sender, msg.value);
-    // fundStorage.updateEthPendingSubscription(msg.sender, _ethPendingSubscription);
-    // totalEthPendingSubscription = _totalEthPendingSubscription;
+    var (_newSharesPendingRedemption, _totalSharesPendingRedemption) = investorActions.requestEthRedemption(msg.sender, _shares);
+    fundStorage.setRequestEthRedemption(msg.sender, _newSharesPendingRedemption);
+    totalSharesPendingRedemption = _totalSharesPendingRedemption;
 
-    // LogEthRedemptionRequest(msg.sender, _shares);
+    LogEthRedemptionRequest(msg.sender, _shares);
     return true;
   }
 

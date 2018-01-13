@@ -273,17 +273,16 @@ contract NewInvestorActions is DestructibleModified {
     constant
     returns (uint, uint)
   {
-    // require(_shares >= fund.minRedemptionShares());
+    require(_shares >= fundStorage.minRedemptionShares());
+    var (investorType, sharesOwned, sharesPendingRedemption) = fundStorage.getRequestEthRedemptionData(_investor);
 
-    // var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
+    // Investor's shares owned should be larger than their existing redemption requests
+    // plus this new redemption request
+    require(investorType == 1 && sharesOwned >= _shares.add(sharesPendingRedemption));
 
-    // // Investor's shares owned should be larger than their existing redemption requests
-    // // plus this new redemption request
-    // require(sharesOwned >= _shares.add(sharesPendingRedemption));
-
-    // return (sharesPendingRedemption.add(_shares),                                // new investor.sharesPendingRedemption
-    //         fund.totalSharesPendingRedemption().add(_shares)                     // new totalSharesPendingRedemption
-    //        );
+    return (sharesPendingRedemption.add(_shares),                                   // new investor.sharesPendingRedemption
+            newFund.totalSharesPendingRedemption().add(_shares)                     // new totalSharesPendingRedemption
+           );
   }
 
   // Handles an investor's redemption cancellation, after checking that
