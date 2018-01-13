@@ -404,14 +404,79 @@ contract('New Fund', (accounts) => {
 
   }); // describe requestEthSubscription - repeat
   
-  xdescribe('redeemUsdInvestor', () => {
-    it('not allow redemption below minimum shares', () => {
+  describe('redeemUsdInvestor', () => {
 
-    });
+    let USD_INVESTOR1_SHARES;
+    let USD_INVESTOR2_SHARES;
+    let ETH_INVESTOR1_SHARES;
+    let SHARECLASS_SUPPLY;
+    let FUNDSTORAGE_TOTAL_SUPPLY;
+    let NEWFUND_TOTAL_SUPPLY;
 
-    it('allow redemption for minimum shares', () => {
+    it('shareholders should own shares', () =>
+      Promise.all([
+        getInvestorData(fundStorage, USD_INVESTOR1), getInvestorData(fundStorage, USD_INVESTOR2), getInvestorData(fundStorage, ETH_INVESTOR1)
+      ])
+        .then((_investorsData) => {
+          _investorsData.map(_investorData => assert.isAbove(Number(_investorData.sharesOwned), 0, 'investor does not own shares'));
+          [USD_INVESTOR1_SHARES, USD_INVESTOR2_SHARES, ETH_INVESTOR1_SHARES] = _investorsData.map(_investorData => Number(_investorData.sharesOwned));
+        })
+        .catch(err => assert.throw(`Error retrieving investor date: ${err.toString()}`))
+        .then(() => Promise.all([newFund.totalSupply(), fundStorage.totalShareSupply(), fundStorage.getShareClassSupply(0)]))
+        .then(_supply => [NEWFUND_TOTAL_SUPPLY, FUNDSTORAGE_TOTAL_SUPPLY, SHARECLASS_SUPPLY] = _supply.map(x => Number(x)))
+        .catch(err => assert.throw(`Error retrieving share balances: ${err.toString()}`)));
 
-    });
+    it('should not allow redemption for ETH shareholder', () =>
+      newFund.redeemUsdInvestor(ETH_INVESTOR1, MIN_REDEMPTION_SHARES * 100, { from: MANAGER })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+        )
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    it('should not allow redemption below minimum shares', () =>
+      newFund.redeemUsdInvestor(USD_INVESTOR1, (MIN_REDEMPTION_SHARES * 100) - 1, { from: MANAGER })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+        )
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    it('should not allow redemption for shares > sharesOwned', () =>
+      newFund.redeemUsdInvestor(USD_INVESTOR1, USD_INVESTOR1_SHARES + 1, { from: MANAGER })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+        )
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    it('should allow redemption for shares = min redemption shares', () =>
+      newFund.redeemUsdInvestor(USD_INVESTOR1, MIN_REDEMPTION_SHARES * 100, { from: MANAGER })
+        .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
+        .catch(err => assert.throw(`Error calling redeemUsdInvestor: ${err.toString()}`))
+        .then(_investorData => assert.strictEqual(
+          Number(_investorData.sharesOwned),
+          USD_INVESTOR1_SHARES - (MIN_REDEMPTION_SHARES * 100),
+          'incorrect amount of share reduction'))
+        .catch(err => `Error retrieving investor data: ${err.toString()}`));
+
+    it('should allow redemption for all shares', () =>
+      newFund.redeemUsdInvestor(USD_INVESTOR2, USD_INVESTOR2_SHARES, { from: MANAGER })
+        .then(() => getInvestorData(fundStorage, USD_INVESTOR2))
+        .catch(err => assert.throw(`Error calling redeemUsdInvestor: ${err.toString()}`))
+        .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), 0, 'incorrect amount of share reduction'))
+        .catch(err => `Error retrieving investor data: ${err.toString()}`));
+
+    it('should have reduced the share balance in contracts by the correct amount', () =>
+      Promise.all([newFund.totalSupply(), fundStorage.totalShareSupply(), fundStorage.getShareClassSupply(0)])
+        .then((_supply) => {
+          const SHARES_REDEEMED = (MIN_REDEMPTION_SHARES * 100) + USD_INVESTOR2_SHARES;
+          const [NEWFUND_TOTAL_SUPPLY_NET, FUNDSTORAGE_TOTAL_SUPPLY_NET, SHARECLASS_SUPPLY_NET] = _supply.map(x => Number(x));
+          assert.strictEqual(NEWFUND_TOTAL_SUPPLY_NET, NEWFUND_TOTAL_SUPPLY - SHARES_REDEEMED, 'incorrect newFund balance');
+          assert.strictEqual(FUNDSTORAGE_TOTAL_SUPPLY_NET, FUNDSTORAGE_TOTAL_SUPPLY - SHARES_REDEEMED, 'incorrect newFund balance');
+          assert.strictEqual(SHARECLASS_SUPPLY_NET, SHARECLASS_SUPPLY - SHARES_REDEEMED, 'incorrect newFund balance');
+        })
+        .catch(err => assert.throw(`Error retrieving share balances: ${err.toString()}`)));
   });
 
   xdescribe('requestEthRedemption', () => {

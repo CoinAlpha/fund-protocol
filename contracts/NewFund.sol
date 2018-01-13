@@ -62,7 +62,7 @@ contract NewFund is DestructiblePausable {
   
   event LogEthRedemptionRequest(address indexed investor, uint shares);
   event LogEthRedemptionCancellation(address indexed investor);
-  event LogRedemption(string currency, address indexed investor, uint shareClass, uint shares, uint nav, uint USDETH, uint proceeds);
+  event LogRedemption(string currency, address indexed investor, uint shareClass, uint shares, uint nav, uint USDETH);
 
   event LogTransferToExchange(uint ethAmount);
 
@@ -212,10 +212,9 @@ contract NewFund is DestructiblePausable {
     * @param  _shares      Share amount in decimal 0.01 unties: 1 = 0.01 shares
     */
   
-  // TODO: Stack too deep
   function redeemUsdInvestor(address _investor, uint _shares)
     onlyManager
-    returns (bool wasSubscribed)
+    returns (bool)
   {
     // Check conditions for valid USD redemption and calculate change in shares
     var (_shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcRedeemUsdInvestor(_investor, _shares);
@@ -224,7 +223,7 @@ contract NewFund is DestructiblePausable {
     
     totalSupply = _newTotalShareSupply;
     
-    // LogRedemption("USD", _investor, _shareClass, _shares, _nav, dataFeed.usdEth(), _shares.mul(_nav).div(100));
+    LogRedemption("USD", _investor, _shareClass, _shares, _nav, dataFeed.usdEth());
     return true;
   }
 
