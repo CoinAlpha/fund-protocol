@@ -60,6 +60,8 @@ contract('New Fund', (accounts) => {
   const WEI_MIN_SUB = ethToWei((MIN_SUBSCRIPTION_USD) / USD_ETH_EXCHANGE_RATE);
   const WEI_BELOW_MIN_SUB = ethToWei((MIN_SUBSCRIPTION_USD - 1) / USD_ETH_EXCHANGE_RATE);
 
+  const MIN_REDEMPTION_SHARES_CENTS = MIN_REDEMPTION_SHARES * 100;
+
   // Contract instances
   let newFund;
   let fundStorage;
@@ -174,10 +176,9 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_BELOW_MIN_INITIAL }))
       .then(
-      () => assert.throw('should not have reached here'),
-      e => assert.isAtLeast(e.message.indexOf('revert'), 0)
-      )
-    ); // it
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+      )); // it
 
     it('accept valid requestEthSubscription request', () => getBalancePromise(newFund.address)
       .then(_bal => fundBalance = Number(_bal))
@@ -192,18 +193,16 @@ contract('New Fund', (accounts) => {
       .then(() => getBalancePromise(newFund.address))
       .then(_bal => assert.strictEqual(Number(_bal), fundBalance + Number(WEI_MIN_INITIAL), 'incorrect fund balance increase'))
       .then(() => newFund.totalEthPendingSubscription())
-      .then(_amount => assert.strictEqual(Number(_amount), Number(WEI_MIN_INITIAL), 'totalEthPendingSubscription is incorrect'))
-    );
+      .then(_amount => assert.strictEqual(Number(_amount), Number(WEI_MIN_INITIAL), 'totalEthPendingSubscription is incorrect')));
 
     it('not allow USD investor to request ETH subscription', () => getInvestorData(fundStorage, USD_INVESTOR1)
       .then(_investorData => assert.strictEqual(Number(_investorData.investorType), 2, 'incorrect investor type'))
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.requestEthSubscription({ from: USD_INVESTOR1, value: WEI_MIN_INITIAL }))
       .then(
-      () => assert.throw('should not have reached here'),
-      e => assert.isAtLeast(e.message.indexOf('revert'), 0)
-      )
-    );
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+      ));
   }); // describe requestEthSubscription
 
   describe('cancelEthSubscription', () => {
@@ -215,10 +214,9 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => newFund.cancelEthSubscription({ from: ETH_INVESTOR2 }))
       .then(
-      () => assert.throw('should not have reached here'),
-      e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
-      )
-    ); // it
+        () => assert.throw('should not have reached here'),
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
+      )); // it
 
     let subscriptionBalance;
 
@@ -236,8 +234,7 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error requesting cancelEthSubscription: ${err.toString()}`))
       .then(_investorData => assert.strictEqual(Number(_investorData.ethPendingSubscription), 0, 'ethPendingSubscription amount is not 0'))
       .then(() => getBalancePromise(newFund.address))
-      .then(_bal => assert.strictEqual(Number(_bal), fundBalance - subscriptionBalance, 'incorrect fund balance increase'))
-    );
+      .then(_bal => assert.strictEqual(Number(_bal), fundBalance - subscriptionBalance, 'incorrect fund balance increase')));
 
     it('not allow USD investor to request ETH subscription', () => getInvestorData(fundStorage, USD_INVESTOR1)
       .then(_investorData => assert.strictEqual(Number(_investorData.investorType), 2, 'incorrect investor type'))
@@ -246,8 +243,7 @@ contract('New Fund', (accounts) => {
       .then(
         () => assert.throw('should not have reached here'),
         e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error message: ${e.toString()}`)
-      )
-    );
+      ));
   }); // describe cancelEthSubscription
 
   describe('subscribeUsdInvestor', () => {
@@ -255,46 +251,41 @@ contract('New Fund', (accounts) => {
       .then(
         () => assert.throw('should not have reached here'),
         e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
-      )
-    );
+      ));
 
     it(`not allow initial USD subscription below MIN_INITIAL_SUBSCRIPTION_USD: ${MIN_INITIAL_CENTS}`, () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS - 1, { from: MANAGER })
       .then(
         () => assert.throw('should not have reached here'),
         e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
-      )
-    );
+      ));
 
     it('should allow investment at minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
       .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
-      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES, 'shares amount incorrect'))
-    );
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES, 'shares amount incorrect')));
 
     it('should allow investment at > minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR2, MIN_INITIAL_CENTS + 1, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR2))
       .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
-      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + 1, 'shares amount incorrect'))
-    );
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + 1, 'shares amount incorrect')));
 
-    it(`not allow repeat USD subscription below MIN_SUBSCRIPTION_USD: ${MIN_SUB_CENTS}`, () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_SUB_CENTS - 1, { from: MANAGER })
-      .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
-      )
-    );
+    it(`not allow repeat USD subscription below MIN_SUBSCRIPTION_USD: ${MIN_SUB_CENTS}`, () =>
+      newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_SUB_CENTS - 1, { from: MANAGER })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+        ));
 
     it('should allow repeat investment at minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_SUB_CENTS, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
       .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
-      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + MIN_SUB_SHARES, 'shares amount incorrect'))
-    );
+      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + MIN_SUB_SHARES, 'shares amount incorrect')));
 
     it('should allow repeat investment at > minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR2, MIN_SUB_CENTS + 1, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR2))
       .catch(err => assert.throw(`Error subscribing USD investor ${err.toString()}`))
-      .then(_investorData => assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + MIN_SUB_SHARES + 2, 'shares amount incorrect'))
-    );
+      .then(_investorData =>
+        assert.strictEqual(Number(_investorData.sharesOwned), MIN_INITIAL_SHARES + MIN_SUB_SHARES + 2, 'shares amount incorrect')));
   }); // describe subscribeUsdInvestors
 
   describe('subscribeEthInvestor', () => {
@@ -302,12 +293,11 @@ contract('New Fund', (accounts) => {
       .then(
         () => assert.throw('should not have reached here'),
         e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
-      )
-    );
+      ));
 
     let EXCHANGE_BALANCE;
     let ETH_BALANCE1;
-    
+
     it('subscribe Eth Investor', () => getInvestorData(fundStorage, ETH_INVESTOR1)
       .then(_investorData => assert.strictEqual(_investorData.ethPendingSubscription, 0, 'there is an existing ethPendingSubscription'))
       .catch(err => assert.throw(`Error retrieving investor data: ${err.toString()}`))
@@ -340,17 +330,14 @@ contract('New Fund', (accounts) => {
         const [newFundBalance, NEW_ETH_BALANCE1, NEW_EXCHANGE_BALANCE] = _balances.map(x => Number(x));
         assert.strictEqual(newFundBalance, 0, 'fund balance did not decrease by the correct amount');
         assert.strictEqual(NEW_EXCHANGE_BALANCE - EXCHANGE_BALANCE, Number(WEI_MIN_INITIAL), 'incorrect amount transferred to exchange');
-      })
-    );
-
+      }));
   }); // describe subscribeEthInvestors
 
   describe('requestEthSubscription - Existing Investor', () => {
 
     it('investors should have existing shares', () => getInvestorData(fundStorage, ETH_INVESTOR1)
       .then(_investorData => assert.isAbove(Number(_investorData.sharesOwned), 0, 'investor 1 does not have any shares'))
-      .catch(err => assert.throw(`Error retrieving investor data: ${err.toString()}`))
-    );
+      .catch(err => assert.throw(`Error retrieving investor data: ${err.toString()}`)));
 
     it('not allow ETH subscription request below minimumSubscriptionUsd', () => getInvestorData(fundStorage, ETH_INVESTOR1)
       .then(_investorData => assert.strictEqual(Number(_investorData.investorType), 1, 'incorrect investor type'))
@@ -359,11 +346,10 @@ contract('New Fund', (accounts) => {
       .then(
         () => assert.throw('should not have reached here'),
         e => assert.isAtLeast(e.message.indexOf('revert'), 0)
-      )
-    ); // it
+      )); // it
 
     let ETH_SHARES1;
-    
+
     it('accept valid requestEthSubscription request', () => getBalancePromise(newFund.address)
       .then(_bal => fundBalance = Number(_bal))
       .then(() => newFund.requestEthSubscription({ from: ETH_INVESTOR1, value: WEI_MIN_SUB }))
@@ -375,8 +361,7 @@ contract('New Fund', (accounts) => {
       })
       .catch(err => assert.throw(`Error getting investor data: ${err.toString()}`))
       .then(() => getBalancePromise(newFund.address))
-      .then(_bal => assert.strictEqual(Number(_bal), fundBalance + Number(WEI_MIN_SUB), 'incorrect fund balance increase'))
-    );
+      .then(_bal => assert.strictEqual(Number(_bal), fundBalance + Number(WEI_MIN_SUB), 'incorrect fund balance increase')));
 
     let EXCHANGE_BALANCE;
     let ETH_BALANCE1;
@@ -399,8 +384,7 @@ contract('New Fund', (accounts) => {
         const [newFundBalance, NEW_ETH_BALANCE1, NEW_EXCHANGE_BALANCE] = _balances.map(x => Number(x));
         assert.strictEqual(newFundBalance, 0, 'fund balance did not decrease by the correct amount');
         assert.strictEqual(NEW_EXCHANGE_BALANCE - EXCHANGE_BALANCE, Number(WEI_MIN_SUB), 'incorrect amount transferred to exchange');
-      })
-    );
+      }));
 
   }); // describe requestEthSubscription - repeat
   
@@ -427,7 +411,7 @@ contract('New Fund', (accounts) => {
         .catch(err => assert.throw(`Error retrieving share balances: ${err.toString()}`)));
 
     it('should not allow redemption for ETH shareholder', () =>
-      newFund.redeemUsdInvestor(ETH_INVESTOR1, MIN_REDEMPTION_SHARES * 100, { from: MANAGER })
+      newFund.redeemUsdInvestor(ETH_INVESTOR1, MIN_REDEMPTION_SHARES_CENTS, { from: MANAGER })
         .then(
           () => assert.throw('should not have reached here'),
           e => assert.isAtLeast(e.message.indexOf('revert'), 0)
@@ -435,7 +419,7 @@ contract('New Fund', (accounts) => {
         .catch(err => assert.throw(`Error: ${err.toString()}`)));
 
     it('should not allow redemption below minimum shares', () =>
-      newFund.redeemUsdInvestor(USD_INVESTOR1, (MIN_REDEMPTION_SHARES * 100) - 1, { from: MANAGER })
+      newFund.redeemUsdInvestor(USD_INVESTOR1, (MIN_REDEMPTION_SHARES_CENTS) - 1, { from: MANAGER })
         .then(
           () => assert.throw('should not have reached here'),
           e => assert.isAtLeast(e.message.indexOf('revert'), 0)
@@ -451,12 +435,12 @@ contract('New Fund', (accounts) => {
         .catch(err => assert.throw(`Error: ${err.toString()}`)));
 
     it('should allow redemption for shares = min redemption shares', () =>
-      newFund.redeemUsdInvestor(USD_INVESTOR1, MIN_REDEMPTION_SHARES * 100, { from: MANAGER })
+      newFund.redeemUsdInvestor(USD_INVESTOR1, MIN_REDEMPTION_SHARES_CENTS, { from: MANAGER })
         .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
         .catch(err => assert.throw(`Error calling redeemUsdInvestor: ${err.toString()}`))
         .then(_investorData => assert.strictEqual(
           Number(_investorData.sharesOwned),
-          USD_INVESTOR1_SHARES - (MIN_REDEMPTION_SHARES * 100),
+          USD_INVESTOR1_SHARES - (MIN_REDEMPTION_SHARES_CENTS),
           'incorrect amount of share reduction'))
         .catch(err => `Error retrieving investor data: ${err.toString()}`));
 
@@ -470,23 +454,62 @@ contract('New Fund', (accounts) => {
     it('should have reduced the share balance in contracts by the correct amount', () =>
       Promise.all([newFund.totalSupply(), fundStorage.totalShareSupply(), fundStorage.getShareClassSupply(0)])
         .then((_supply) => {
-          const SHARES_REDEEMED = (MIN_REDEMPTION_SHARES * 100) + USD_INVESTOR2_SHARES;
+          const SHARES_REDEEMED = (MIN_REDEMPTION_SHARES_CENTS) + USD_INVESTOR2_SHARES;
           const [NEWFUND_TOTAL_SUPPLY_NET, FUNDSTORAGE_TOTAL_SUPPLY_NET, SHARECLASS_SUPPLY_NET] = _supply.map(x => Number(x));
           assert.strictEqual(NEWFUND_TOTAL_SUPPLY_NET, NEWFUND_TOTAL_SUPPLY - SHARES_REDEEMED, 'incorrect newFund balance');
           assert.strictEqual(FUNDSTORAGE_TOTAL_SUPPLY_NET, FUNDSTORAGE_TOTAL_SUPPLY - SHARES_REDEEMED, 'incorrect newFund balance');
           assert.strictEqual(SHARECLASS_SUPPLY_NET, SHARECLASS_SUPPLY - SHARES_REDEEMED, 'incorrect newFund balance');
         })
-        .catch(err => assert.throw(`Error retrieving share balances: ${err.toString()}`)));
+        .catch(err => assert.throw(err.toString())));
   });
 
-  xdescribe('requestEthRedemption', () => {
-    it('not allow request below minimum shares', () => {
+  describe('requestEthRedemption', () => {
+    let sharesOwned;
 
-    });
+    it('investors should own enough shares to redeem', () => getInvestorData(fundStorage, ETH_INVESTOR1)
+      .then((_investorData) => {
+        sharesOwned = Number(_investorData.sharesOwned);
+        assert.isAtLeast(sharesOwned, MIN_REDEMPTION_SHARES_CENTS, 'not enough shares');
+      }));
 
-    it('allow request for minimum shares', () => {
+    it('should not allow redemption request below minimum shares', () =>
+      newFund.requestEthRedemption(MIN_REDEMPTION_SHARES_CENTS - 1, { from: ETH_INVESTOR1 })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+        )
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
 
-    });
+    it('should not allow redemption request for more than shares owned', () =>
+      newFund.requestEthRedemption(sharesOwned + 1, { from: ETH_INVESTOR1 })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0),
+        )
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    it('should allow redemption request for minimum redemption shares', () =>
+      newFund.requestEthRedemption(MIN_REDEMPTION_SHARES_CENTS, { from: ETH_INVESTOR1 })
+        .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
+        .catch(err => assert.throw(`Error requestEthRedemption ${err.toString()}`))
+        // .then(_investorData => console.log(_investorData))
+        .then(_investorData => assert.strictEqual(
+          Number(_investorData.sharesPendingRedemption),
+          MIN_REDEMPTION_SHARES_CENTS,
+          'incorrect shares pending redemption',
+        ))
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    it('should allow redemption request for remaining shares', () =>
+      newFund.requestEthRedemption(sharesOwned - MIN_REDEMPTION_SHARES_CENTS, { from: ETH_INVESTOR1 })
+        .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
+        .catch(err => assert.throw(`Error requestEthRedemption ${err.toString()}`))
+        .then(_investorData => assert.strictEqual(
+          Number(_investorData.sharesPendingRedemption),
+          sharesOwned,
+          'incorrect shares pending redemption',
+        ))
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
   });
 
   xdescribe('redeemEthInvestor', () => {
