@@ -548,10 +548,76 @@ contract('New Fund', (accounts) => {
       }));
   });
 
-  xdescribe('redeemEthInvestor', () => {
-    it('redeem an investor', () => {
+  describe('redeemEthInvestor', () => {
+    let sharesOwned;
+    let shareClassSupply;
+    let fundStorageTotalSupply;
+    let newFundTotalSupply;
+    let ethInvestor1Balance;
+    let ethProceeds;
 
-    });
+    it('eth shareholder should own shares > min redemption', () =>
+      Promise.all([
+        getInvestorData(fundStorage, ETH_INVESTOR1),
+        newFund.totalSupply(),
+        fundStorage.totalShareSupply(),
+        fundStorage.getShareClassSupply(0),
+      ])
+        .then((_shares) => {
+          sharesOwned = Number(_shares[0].sharesOwned);
+          assert.isAbove(sharesOwned, MIN_REDEMPTION_SHARES_CENTS, 'investor does not own enough shares');
+          [newFundTotalSupply, fundStorageTotalSupply, shareClassSupply] = _shares.slice(1).map(x => Number(x));
+          ethProceeds = Number(web3.toWei((sharesOwned / 100) / USD_ETH_EXCHANGE_RATE, 'ether'));
+        })
+        .catch(err => assert.throw(`Error retrieving share balances: ${err.toString()}`)));
+
+    it('should throw error if investor has not requested redemption', () =>
+      newFund.redeemEthInvestor(ETH_INVESTOR1, { from: ETH_INVESTOR1 })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0),
+        )
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    it('should allow redemption request for all shares', () =>
+      newFund.requestEthRedemption(sharesOwned, { from: ETH_INVESTOR1 })
+        .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
+        .catch(err => assert.throw(`Error requestEthRedemption ${err.toString()}`))
+        .then(_investorData => assert.strictEqual(
+          Number(_investorData.sharesPendingRedemption),
+          sharesOwned,
+          'incorrect shares pending redemption',
+        ))
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    it('redeem an Eth investor', () => web3.eth.sendTransactionPromise({ from: EXCHANGE, to: newFund.address, value: ethProceeds })
+      .then(() => Promise.all([web3.eth.getBalancePromise(ETH_INVESTOR1), web3.eth.getBalancePromise(newFund.address)]))
+      .then(_balances => [ethInvestor1Balance, fundBalance] = _balances.map(x => Number(x)))
+      .catch(err => assert.throw(`Error retrieving balances: ${err.toString()}`))
+      .then(() => newFund.redeemEthInvestor(ETH_INVESTOR1, { from: MANAGER }))
+      .catch(err => assert.throw(`Error sending from exchange: ${err.toString()}`))
+      .then(() => Promise.all([
+        getInvestorData(fundStorage, ETH_INVESTOR1),
+        newFund.totalSupply(),
+        fundStorage.totalShareSupply(),
+        fundStorage.getShareClassSupply(0),
+      ]))
+      .catch(err => assert.throw(`Error redeeming ETH investor: ${err.toString()}`))
+      .then((_shares) => {
+        assert.strictEqual(_shares[0].sharesOwned, 0, 'incorrect amount of shares');
+        const [netNewFundTotalSupply, netFundStorageTotalSupply, netShareClassSupply] = _shares.slice(1).map(x => Number(x));
+        assert.strictEqual(netNewFundTotalSupply, newFundTotalSupply - sharesOwned, 'incorrect newFund share supply');
+        assert.strictEqual(netFundStorageTotalSupply, fundStorageTotalSupply - sharesOwned, 'incorrect fund storage share supply');
+        assert.strictEqual(netShareClassSupply, shareClassSupply - sharesOwned, 'incorrect share class supply');
+      })
+      .catch(err => assert.throw(`Error retrieving share balances: ${err.toString()}`))
+      .then(() => Promise.all([web3.eth.getBalancePromise(ETH_INVESTOR1), web3.eth.getBalancePromise(newFund.address)]))
+      .then((_balances) => {
+        const [netEthInvestor1Balance, netFundBalance] = _balances.map(x => Number(x));
+        assert.strictEqual(netEthInvestor1Balance, ethInvestor1Balance + ethProceeds, 'incorrect amount of funds received');
+        assert.strictEqual(netFundBalance, fundBalance - ethProceeds, 'incorrect amount of funds received');
+      })
+      .catch(err => assert.throw(`Error retrieving balances: ${err.toString()}`)));
   });
 
   xdescribe('changeModule', () => {

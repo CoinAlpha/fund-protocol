@@ -96,11 +96,14 @@ contract IFundStorage {
   function getUsdRedemptionData(address _investor)
     returns (uint investorType, uint shareClass, uint sharesOwned) {}
 
-  function getEthRedemptionData(address _investor)
+  function getEthRequestRedemptionData(address _investor)
     returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption) {}
 
   function setEthPendingRedemption(address _investor, uint _sharesPendingRedemption)
     returns (bool isSuccess) {}
+
+  function getEthRedemptionData(address _investor)
+    returns (uint investorType, uint shareClass, uint sharesOwned, uint sharesPendingRedemption) {}
 
   // Share Class Functions
   function getShareClass(uint _shareClassIndex)
@@ -332,12 +335,27 @@ contract FundStorage is DestructibleModified {
   }
 
   // Returns the variables required to calculate Eth redemption request
-  function getEthRedemptionData(address _investor)
+  function getEthRequestRedemptionData(address _investor)
     constant
     public
     returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption)
   {
-    return (investors[_investor].investorType, investors[_investor].sharesOwned, investors[_investor].sharesPendingRedemption);
+    return (investors[_investor].investorType,
+            investors[_investor].sharesOwned,
+            investors[_investor].sharesPendingRedemption
+           );
+  }
+
+  // Returns the variables required to calculate Eth redemption processing
+  function getEthRedemptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint shareClass, uint sharesOwned, uint sharesPendingRedemption)
+  {
+    return (investors[_investor].investorType,
+            investors[_investor].shareClass,
+            investors[_investor].sharesOwned,
+            investors[_investor].sharesPendingRedemption);
   }
 
   // ========================================= ADMIN =========================================

@@ -38,6 +38,8 @@ contract INewInvestorActions {
     returns (uint, uint) {}
   function cancelEthRedemption(address addr)
     returns (uint, uint) {}
+  function calcRedeemEthInvestor(address _investor)
+    returns (uint, uint, uint, uint, uint, uint, uint) {}
 
   function redeem(address _addr)
     returns (uint, uint, uint, uint, uint, uint, uint) {}
@@ -50,7 +52,6 @@ contract INewInvestorActions {
   
   function sharesToEth(uint _shareClass, uint _shares)
     returns (uint ethAmount) {}
-
 }
 
 contract NewInvestorActions is DestructibleModified {
@@ -242,6 +243,7 @@ contract NewInvestorActions is DestructibleModified {
   {
     require(_shares >= fundStorage.minRedemptionShares());
     var (investorType, shareClass, sharesOwned) = fundStorage.getUsdRedemptionData(_investor);
+
     require(investorType == 2 && _shares <= sharesOwned);
 
     return (shareClass,                                                             
@@ -254,15 +256,11 @@ contract NewInvestorActions is DestructibleModified {
 
 
   /**
-    * Calculates new shares issued in subscription
+    * Calculates ethPendingRedemption nad checks request conditions
     * @param  _investor    Investor UID or ETH Wallet Address
     * @param  _shares      Amount in 1/100 shares: 1 unit = 0.01 shares
-    * @return              [1] Share Class index
-    *                      [2] New total shares owned by investor
-    *                      [3] Newly created shares
-    *                      [4] New total supply of share class
-    *                      [5] New total share supply of fund
-    *                      [6] Subscription NAV in basis points: 1 = 0.01%
+    * @return              [1] new sharesPendingRedemption
+    *                      [2] totalSharesPendingRedemption
     */
 
   // Register an investor's redemption request, after checking that
@@ -274,9 +272,9 @@ contract NewInvestorActions is DestructibleModified {
     returns (uint, uint)
   {
     require(_shares >= fundStorage.minRedemptionShares());
-    var (investorType, sharesOwned, sharesPendingRedemption) = fundStorage.getEthRedemptionData(_investor);
+    var (investorType, sharesOwned, sharesPendingRedemption) = fundStorage.getEthRequestRedemptionData(_investor);
 
-    // Investor's shares owned should be larger than their existing redemption requests
+    // Investor's shares owned should be larger than existing redemption requests
     // plus this new redemption request
     require(investorType == 1 && sharesOwned >= _shares.add(sharesPendingRedemption));
 
@@ -293,7 +291,7 @@ contract NewInvestorActions is DestructibleModified {
     constant
     returns (uint, uint)
   {
-    var (investorType, sharesOwned, sharesPendingRedemption) = fundStorage.getEthRedemptionData(_investor);
+    var (investorType, sharesOwned, sharesPendingRedemption) = fundStorage.getEthRequestRedemptionData(_investor);
 
     // Investor should be an Eth investor and have shares pending redemption
     require(investorType == 1 && sharesPendingRedemption > 0);
@@ -302,6 +300,42 @@ contract NewInvestorActions is DestructibleModified {
             newFund.totalSharesPendingRedemption().sub(sharesPendingRedemption)     // new totalSharesPendingRedemption
            );
   }
+
+  /**
+    * Calculates change in share ownership for ETH investor redemption and payment amount
+    * Confirm valid parameters for redemption
+    * @param  _investor    Investor ETH Wallet Address
+    * @return              [1] Share Class index
+    *                      [2] Redeemed shares
+    *                      [3] New total net shares owned by investor after redemption
+    *                      [4] New total supply of share class
+    *                      [5] New total share supply of fund
+    *                      [6] Redemption NAV in basis points: 1 = 0.01%
+    *                      [7] ETH payment amount
+    */
+
+  function calcRedeemEthInvestor(address _investor)
+    onlyFund
+    constant
+    returns (uint, uint, uint, uint, uint, uint, uint)
+  {
+    var (investorType, shareClass, sharesOwned, sharesPendingRedemption) = fundStorage.getEthRedemptionData(_investor);
+    require(investorType == 1 && sharesPendingRedemption > 0);
+
+    uint ethPayment = sharesToEth(shareClass, sharesPendingRedemption);
+    require(ethPayment <= newFund.balance.sub(newFund.totalEthPendingSubscription()).sub(newFund.totalEthPendingWithdrawal()));
+
+    uint nav = fundStorage.getShareClassNavPerShare(shareClass);                       // redemption nav
+    return (shareClass,                            
+            sharesPendingRedemption,                                                   // shares being redeemed
+            sharesOwned.sub(sharesPendingRedemption),                                  // new investor.sharesOwned
+            fundStorage.getShareClassSupply(shareClass).sub(sharesPendingRedemption),  // new Share Class supply
+            fundStorage.totalShareSupply().sub(sharesPendingRedemption),               // new totalSupply
+            nav,                                                                       // redemption nav
+            ethPayment                                                                 // amount to be paid to investor
+           );
+  }
+
 
   // Processes an investor's redemption request and annilates their shares at the current navPerShare
   function redeem(address _addr)

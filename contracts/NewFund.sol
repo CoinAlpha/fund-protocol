@@ -43,7 +43,7 @@ contract NewFund is DestructiblePausable {
 
 
   // ========================================= MODIFIERS =========================================
-  modifier onlyFromExchange {
+  modifier onlyExchange {
     require(msg.sender == exchange);
     _;
   }
@@ -64,8 +64,10 @@ contract NewFund is DestructiblePausable {
   event LogEthRedemptionRequest(address indexed investor, uint shares);
   event LogEthRedemptionCancellation(address indexed investor, uint shares);
   event LogRedemption(string currency, address indexed investor, uint shareClass, uint shares, uint nav, uint USDETH);
+  event LogRedemptionPayment(uint ethAmount);
 
   event LogTransferToExchange(uint ethAmount);
+  event LogTransferFromExchange(uint ethAmount);
 
   event LogModuleChanged(string module, address oldAddress, address newAddress);
 
@@ -258,6 +260,45 @@ contract NewFund is DestructiblePausable {
     return true;
   }
 
+  /**
+    * Redeem ETH investor
+    * Calculate shares, payment amount, and transfers Eth to investor
+    * @param  _investor    USD investor address UUID
+    */
+  
+  function redeemEthInvestor(address _investor)
+    onlyManager
+    returns (bool)
+  {
+    // Check conditions for valid USD redemption and calculate change in shares
+    var (_shareClass, _redeemedShares, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav, _redeemedEthAmount) = investorActions.calcRedeemEthInvestor(_investor);
+    
+    fundStorage.redeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
+    
+    totalSupply = _newTotalShareSupply;
+    msg.sender.transfer(_redeemedEthAmount);
+    
+    LogRedemption("ETH", _investor, _shareClass, _redeemedShares, _nav, dataFeed.usdEth());
+    LogRedemptionPayment(_redeemedEthAmount);
+    return true;
+  }
+
+  // Non-payable fallback function so that any attempt to send ETH directly to the contract is thrown
+  // TODO: handle receipt from non-whitelisted investor
+  function ()
+    payable
+    onlyExchange
+  { remitFromExchange(); }
+
+  // Utility function for exchange to send funds to contract
+  function remitFromExchange()
+    payable
+    onlyExchange
+    returns (bool success)
+  {
+    LogTransferFromExchange(msg.value);
+    return true;
+  }
 
   // ========================================== ADMIN ==========================================
 
