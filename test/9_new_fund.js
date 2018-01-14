@@ -385,7 +385,6 @@ contract('New Fund', (accounts) => {
         assert.strictEqual(newFundBalance, 0, 'fund balance did not decrease by the correct amount');
         assert.strictEqual(NEW_EXCHANGE_BALANCE - EXCHANGE_BALANCE, Number(WEI_MIN_SUB), 'incorrect amount transferred to exchange');
       }));
-
   }); // describe requestEthSubscription - repeat
   
   describe('redeemUsdInvestor', () => {
@@ -510,6 +509,43 @@ contract('New Fund', (accounts) => {
           'incorrect shares pending redemption',
         ))
         .catch(err => assert.throw(`Error: ${err.toString()}`)));
+  });
+
+  describe('cancelEthRedemption', () => {
+    let sharesPendingRedemption;
+    let totalSharesPendingRedemption;
+
+    it('newFund should have shares pending redemption', () => newFund.totalSharesPendingRedemption()
+      .then((_totalSharesPendingRedemption) => {
+        totalSharesPendingRedemption = Number(_totalSharesPendingRedemption);
+        assert.isAbove(totalSharesPendingRedemption, 0, 'not enough shares pending redemption');
+      }));
+
+    it('investors should own enough shares pending redemption', () => getInvestorData(fundStorage, ETH_INVESTOR1)
+      .then((_investorData) => {
+        sharesPendingRedemption = Number(_investorData.sharesPendingRedemption);
+        assert.isAbove(sharesPendingRedemption, 0, 'not enough shares pending redemption');
+      }));
+
+    it('should allow cancellation of redemption request', () =>
+      newFund.cancelEthRedemption({ from: ETH_INVESTOR1 })
+        .then(() => getInvestorData(fundStorage, ETH_INVESTOR1))
+        .catch(err => assert.throw(`Error requestEthRedemption ${err.toString()}`))
+        .then(_investorData => assert.strictEqual(
+          Number(_investorData.sharesPendingRedemption),
+          0,
+          'incorrect shares pending redemption',
+        ))
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    it('newFund shares pending redemption should have decreased', () => newFund.totalSharesPendingRedemption()
+      .then((_totalSharesPendingRedemption) => {
+        assert.strictEqual(
+          Number(_totalSharesPendingRedemption),
+          totalSharesPendingRedemption - sharesPendingRedemption,
+          'not enough shares pending redemption',
+        );
+      }));
   });
 
   xdescribe('redeemEthInvestor', () => {

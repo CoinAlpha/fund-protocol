@@ -274,7 +274,7 @@ contract NewInvestorActions is DestructibleModified {
     returns (uint, uint)
   {
     require(_shares >= fundStorage.minRedemptionShares());
-    var (investorType, sharesOwned, sharesPendingRedemption) = fundStorage.getRequestEthRedemptionData(_investor);
+    var (investorType, sharesOwned, sharesPendingRedemption) = fundStorage.getEthRedemptionData(_investor);
 
     // Investor's shares owned should be larger than their existing redemption requests
     // plus this new redemption request
@@ -288,19 +288,19 @@ contract NewInvestorActions is DestructibleModified {
   // Handles an investor's redemption cancellation, after checking that
   // the fund balance has enough ether to cover the withdrawal.
   // The amount is then moved from sharesPendingRedemption
-  function cancelRedemption(address addr)
+  function cancelEthRedemption(address _investor)
     onlyFund
     constant
     returns (uint, uint)
   {
-    // var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(addr);
+    var (investorType, sharesOwned, sharesPendingRedemption) = fundStorage.getEthRedemptionData(_investor);
 
-    // // Check that the total shares pending redemption is greator than the investor's shares pending redemption
-    // assert(fund.totalSharesPendingRedemption() >= sharesPendingRedemption);
+    // Investor should be an Eth investor and have shares pending redemption
+    require(investorType == 1 && sharesPendingRedemption > 0);
 
-    // return (0,                                                                  // new investor.sharesPendingRedemption
-    //         fund.totalSharesPendingRedemption().sub(sharesPendingRedemption)    // new totalSharesPendingRedemption
-    //        );
+    return (sharesPendingRedemption,                                                // new investor.sharesPendingRedemption
+            newFund.totalSharesPendingRedemption().sub(sharesPendingRedemption)     // new totalSharesPendingRedemption
+           );
   }
 
   // Processes an investor's redemption request and annilates their shares at the current navPerShare

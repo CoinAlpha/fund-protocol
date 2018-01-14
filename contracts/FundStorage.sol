@@ -96,10 +96,10 @@ contract IFundStorage {
   function getUsdRedemptionData(address _investor)
     returns (uint investorType, uint shareClass, uint sharesOwned) {}
 
-  function getRequestEthRedemptionData(address _investor)
+  function getEthRedemptionData(address _investor)
     returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption) {}
 
-  function setRequestEthRedemption(address _investor, uint _sharesPendingRedemption)
+  function setEthPendingRedemption(address _investor, uint _sharesPendingRedemption)
     returns (bool isSuccess) {}
 
   // Share Class Functions
@@ -332,7 +332,7 @@ contract FundStorage is DestructibleModified {
   }
 
   // Returns the variables required to calculate Eth redemption request
-  function getRequestEthRedemptionData(address _investor)
+  function getEthRedemptionData(address _investor)
     constant
     public
     returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption)
@@ -480,7 +480,7 @@ contract FundStorage is DestructibleModified {
   }
 
   // Updates for Eth redemption request
-  function setRequestEthRedemption(address _investor, uint _sharesPendingRedemption)
+  function setEthPendingRedemption(address _investor, uint _sharesPendingRedemption)
     constant
     public
     returns (bool isSuccess)

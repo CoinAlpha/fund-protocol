@@ -62,7 +62,7 @@ contract NewFund is DestructiblePausable {
   event LogSubscription(string currency, address indexed investor, uint shareClass, uint newShares, uint nav, uint USDETH);
   
   event LogEthRedemptionRequest(address indexed investor, uint shares);
-  event LogEthRedemptionCancellation(address indexed investor);
+  event LogEthRedemptionCancellation(address indexed investor, uint shares);
   event LogRedemption(string currency, address indexed investor, uint shareClass, uint shares, uint nav, uint USDETH);
 
   event LogTransferToExchange(uint ethAmount);
@@ -236,7 +236,7 @@ contract NewFund is DestructiblePausable {
     returns (bool success)
   {
     var (_newSharesPendingRedemption, _totalSharesPendingRedemption) = investorActions.requestEthRedemption(msg.sender, _shares);
-    fundStorage.setRequestEthRedemption(msg.sender, _newSharesPendingRedemption);
+    fundStorage.setEthPendingRedemption(msg.sender, _newSharesPendingRedemption);
     totalSharesPendingRedemption = _totalSharesPendingRedemption;
 
     LogEthRedemptionRequest(msg.sender, _shares);
@@ -246,19 +246,17 @@ contract NewFund is DestructiblePausable {
   /** 
     * ETH investor function: cancel redemption request
     */
-  // function cancelEthRedemption()
-  //   whenNotPaused
-  //   returns (bool success)
-  // {
-  //   var (_cancelledEthAmount, _totalEthPendingSubscription) = investorActions.cancelEthSubscription(msg.sender);
-  //   fundStorage.updateEthPendingSubscription(msg.sender, 0);
-  //   totalEthPendingSubscription = _totalEthPendingSubscription;
+  function cancelEthRedemption()
+    whenNotPaused
+    returns (bool success)
+  {
+    var (_redemptionCancelledShares, _totalSharesPendingRedemption) = investorActions.cancelEthRedemption(msg.sender);
+    fundStorage.setEthPendingRedemption(msg.sender, 0);
+    totalSharesPendingRedemption = _totalSharesPendingRedemption;
 
-  //   msg.sender.transfer(_cancelledEthAmount);
-
-  //   LogCancelEthSubscriptionRequest(msg.sender, _cancelledEthAmount);
-  //   return true;
-  // }
+    LogEthRedemptionCancellation(msg.sender, _redemptionCancelledShares);
+    return true;
+  }
 
 
   // ========================================== ADMIN ==========================================
