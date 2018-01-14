@@ -276,7 +276,7 @@ contract NewFund is DestructiblePausable {
     fundStorage.redeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
     
     totalSupply = _newTotalShareSupply;
-    msg.sender.transfer(_redeemedEthAmount);
+    _investor.transfer(_redeemedEthAmount);
     
     LogRedemption("ETH", _investor, _shareClass, _redeemedShares, _nav, dataFeed.usdEth());
     LogRedemptionPayment(_redeemedEthAmount);
