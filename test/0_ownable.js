@@ -20,7 +20,7 @@ contract('OwnableModified', (accounts) => {
     notOwnerAddress0,
     notOwnerAddress1,
     notOwnerAddress2,
-    notOwnerAddress3
+    notOwnerAddress3,
   ] = accounts;
 
   const addressZero = '0x0000000000000000000000000000000000000000';
