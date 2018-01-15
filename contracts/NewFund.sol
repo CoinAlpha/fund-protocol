@@ -107,6 +107,8 @@ contract NewFund is DestructiblePausable {
     onlyManager
     returns (bool isSuccess)
   {
+    // Check whitelist conditions
+    fundLogic.calcWhiteListInvestor(_investor, _investorType, _shareClass);
     fundStorage.setWhiteListInvestor(_investor, _investorType, _shareClass);
     LogWhiteListInvestor(_investor, _investorType, _shareClass);
     return true;

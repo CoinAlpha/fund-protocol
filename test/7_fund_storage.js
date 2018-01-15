@@ -114,7 +114,7 @@ contract('FundStorage', (accounts) => {
   }); // describe
 
   describe('Function Permissions', () => {
-    it('add and remove an investor', () => fundStorage.setWhiteListInvestor(INVESTOR1, 1, 0, { from: MANAGER })
+    it('add and remove an investor', () => fundStorage.setWhiteListInvestor(INVESTOR1, 1, 0, { from: FUND })
       .then(() => fundStorage.getInvestorType.call(INVESTOR1))
       .catch(err => assert.throw(`Manager could not add an investor ${err.toString()}`))
       .then(_hasInvestor => assert.isAbove(Number(_hasInvestor), 0, 'investor was not added by manager'))

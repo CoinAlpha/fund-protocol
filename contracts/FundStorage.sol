@@ -22,8 +22,9 @@ contract IFundStorage {
   address  public fundAddress;
 
   uint     public totalShareSupply;
+  uint     public numberOfShareClasses;
 
-  // Fund Details Functions
+  // Modify Fund Details Functions
   function updateMinInitialSubscriptionUsd(uint _minInitialSubscriptionUsd)
     returns (bool wasUpdated) {}
   function updateMinSubscriptionUsd(uint _minSubscriptionUsd)
@@ -32,6 +33,8 @@ contract IFundStorage {
     returns (bool wasUpdated) {}
 
   // Basic investor Functions
+  function getInvestorAddresses()
+    returns (address[]) {}
   function getInvestor(address _investor)
     returns (
       uint investorType,
@@ -43,8 +46,8 @@ contract IFundStorage {
     ) {}
   function getInvestorType(address _investor)
     returns (uint investorType) {}
-  function setWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
-    returns(bool wasAdded) {}
+  
+  // Admin functions
   function removeInvestor(address _investor)
     returns (bool success) {}
   function modifyInvestor(
@@ -59,6 +62,9 @@ contract IFundStorage {
   ) returns (bool wasModified) {}
 
   // Subscription Functions
+  function setWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
+    returns(bool wasAdded) {}
+
   function getUsdSubscriptionData(address _investor)
     returns (uint investorType, uint sharesOwned) {}
 
@@ -169,7 +175,7 @@ contract FundStorage is DestructibleModified {
   // This struct tracks fund-related balances for a specific investor address
   struct InvestorStruct {
     uint investorType;                 // [0] no investor [1] ETH investor [2] USD investor 
-    uint ethPendingSubscription;    // Ether deposited by an investor not yet proceessed by the manager
+    uint ethPendingSubscription;       // Ether deposited by an investor not yet proceessed by the manager
     uint sharesOwned;                  // Balance of shares owned by an investor.  For investors, this is
                                        // identical to the ERC20 balances variable.
     uint shareClass;                   // Investor's fee class
@@ -179,7 +185,6 @@ contract FundStorage is DestructibleModified {
 
   mapping(address => InvestorStruct) public investors;
   address[]                                 investorAddresses;
-  mapping(address => uint)                  containsInvestor;  // [0] no investor [1] ETH investor [2] USD investor 
 
   // This struct tracks different share classes and their terms
   struct ShareClassStruct {
@@ -194,6 +199,8 @@ contract FundStorage is DestructibleModified {
   mapping (uint => ShareClassStruct)  public  shareClasses;
   uint                                public  numberOfShareClasses;
   uint                                public  totalShareSupply;
+
+  // ==================================== EVENTS ====================================
 
   // Fund Events
   event LogUpdatedDetails(string updatedField, uint oldValue, uint newValue);
@@ -212,7 +219,7 @@ contract FundStorage is DestructibleModified {
   // Administrative Events
   event LogSetFundAddress(address oldFundAddress, address newFundAddress);
 
-  // ***** Constructor *****
+  // ==================================== CONSTRUCTOR ====================================
   function FundStorage(
     bytes32  _name,
     bytes32  _symbol,
@@ -238,8 +245,7 @@ contract FundStorage is DestructibleModified {
   }
 
 
-  // ********* FUND DETAIL FUNCTIONS *********
-  
+  // ==================================== FUND DETAILS ====================================
   function updateMinInitialSubscriptionUsd(uint _minInitialSubscriptionUsd)
     onlyFund
     returns (bool wasUpdated)
@@ -273,7 +279,16 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  // ========================================= INVESTOR FUNCTIONS =========================================
+  // ======================================= BASIC INVESTOR FUNCTIONS =======================================
+
+  // Get array of investor addresses
+  function getInvestorAddresses()
+    constant
+    onlyOwner
+    returns (address[])
+  {
+    return investorAddresses;
+  }
 
   // Returns the variables contained in the Investor struct for a given address
   function getInvestor(address _investor)
@@ -292,80 +307,23 @@ contract FundStorage is DestructibleModified {
     return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass, investor.sharesPendingRedemption, investor.amountPendingWithdrawal);
   }
 
-  // Returns the variables required to calculate share subscription
-  function getSubscriptionShares(address _investor)
+  // Returns the investor type: [0] not whitelisted, [1] Ether investor, [2] USD investor
+  function getInvestorType(address _investor)
     constant
     public
-    returns (
-      uint investorType,
-      uint ethPendingSubscription,
-      uint sharesOwned,
-      uint shareClass
-    )
+    returns (uint investorType)
   {
-    InvestorStruct storage investor = investors[_investor];
-    return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass);
+    return investors[_investor].investorType;
   }
 
-  // Returns the variables required to calculate Eth subscription
-  function getEthSubscriptionData(address _investor)
-    constant
-    public
-    returns (uint investorType, uint ethPendingSubscription)
-  {
-    return (investors[_investor].investorType, investors[_investor].ethPendingSubscription);
-  }
-
-  // Returns the variables required to calculate Usd subscription
-  function getUsdSubscriptionData(address _investor)
-    constant
-    public
-    returns (uint investorType, uint sharesOwned)
-  {
-    return (investors[_investor].investorType, investors[_investor].sharesOwned);
-  }
-
-  // Returns the variables required to calculate Usd redemption
-  function getUsdRedemptionData(address _investor)
-    constant
-    public
-    returns (uint investorType, uint shareClass, uint sharesOwned)
-  {
-    return (investors[_investor].investorType, investors[_investor].shareClass, investors[_investor].sharesOwned);
-  }
-
-  // Returns the variables required to calculate Eth redemption request
-  function getEthRequestRedemptionData(address _investor)
-    constant
-    public
-    returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption)
-  {
-    return (investors[_investor].investorType,
-            investors[_investor].sharesOwned,
-            investors[_investor].sharesPendingRedemption
-           );
-  }
-
-  // Returns the variables required to calculate Eth redemption processing
-  function getEthRedemptionData(address _investor)
-    constant
-    public
-    returns (uint investorType, uint shareClass, uint sharesOwned, uint sharesPendingRedemption)
-  {
-    return (investors[_investor].investorType,
-            investors[_investor].shareClass,
-            investors[_investor].sharesOwned,
-            investors[_investor].sharesPendingRedemption);
-  }
-
-  // ========================================= ADMIN =========================================
+  // ======================================= INVESTOR ADMIN =======================================
 
   // Remove investor address from list
   function removeInvestor(address _investor)
     onlyFundOrOwner
     returns (bool success)
   {
-    require(containsInvestor[_investor] > 0);
+    require(investors[_investor].investorType > 0);
     InvestorStruct storage investor = investors[_investor];
 
     require(investor.ethPendingSubscription == 0 && investor.sharesOwned == 0 && investor.sharesPendingRedemption == 0 && investor.amountPendingWithdrawal == 0);
@@ -388,26 +346,10 @@ contract FundStorage is DestructibleModified {
     if (!investorWasRemoved) {
       revert();
     }
-    containsInvestor[_investor] = 0;
+    investors[_investor].investorType = 0;
     investors[_investor] = InvestorStruct(0,0,0,0,0,0);
     LogRemovedInvestor(_investor, investor.investorType);
     return true;
-  }
-
-  function getInvestorType(address _investor)
-    constant
-    public
-    returns (uint investorType)
-  {
-    return containsInvestor[_investor];
-  }
-
-  function getInvestorAddresses()
-    constant
-    onlyOwner
-    returns (address[])
-  {
-    return investorAddresses;
   }
 
   // Generalized function for use in updating an investor record, used for subscription
@@ -425,26 +367,42 @@ contract FundStorage is DestructibleModified {
     onlyFund
     returns (bool wasModified)
   {
-    require(containsInvestor[_investor] > 0);
+    require(investors[_investor].investorType > 0);
     investors[_investor] = InvestorStruct(_investorType, _ethPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
     LogModifiedInvestor(_description, _investorType, _ethPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
   }
 
-  // ********* INVESTOR SUBSCRIBE FUNCTIONS *********
+
+  // =============================== INVESTOR SUBSCRIBE FUNCTIONS ===============================
 
   // Whitelist an investor and specify investor type: [1] ETH investor | [2] USD investor
-  // TODO: move logic to FundLogic
   function setWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
-    onlyFundOrOwner
+    onlyFund
     returns(bool wasAdded)
   {
-    require(containsInvestor[_investor] == 0 && _investorType > 0 && _investorType < 3 && _shareClass < numberOfShareClasses);
-    containsInvestor[_investor] = _investorType;
     investorAddresses.push(_investor);
     investors[_investor].investorType = _investorType;
     investors[_investor].shareClass = _shareClass;
     LogWhiteListedInvestor(_investor, _investorType, _shareClass);
     return true;
+  }
+
+  // Returns the variables required to calculate Usd subscription
+  function getUsdSubscriptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint sharesOwned)
+  {
+    return (investors[_investor].investorType, investors[_investor].sharesOwned);
+  }
+
+  // Returns the variables required to calculate Eth subscription
+  function getEthSubscriptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint ethPendingSubscription)
+  {
+    return (investors[_investor].investorType, investors[_investor].ethPendingSubscription);
   }
 
   // Add pendingEthSubscription to investor when subscription is requested
@@ -457,8 +415,22 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  // ********* INVESTOR SHARE FUNCTIONS *********
+  // Returns the variables required to calculate share subscription
+  function getSubscriptionShares(address _investor)
+    constant
+    public
+    returns (
+      uint investorType,
+      uint ethPendingSubscription,
+      uint sharesOwned,
+      uint shareClass
+    )
+  {
+    InvestorStruct storage investor = investors[_investor];
+    return (investor.investorType, investor.ethPendingSubscription, investor.sharesOwned, investor.shareClass);
+  }
 
+  // Update investor data for new subscription
   function setSubscribeInvestor(
     address _investor,
     uint _shareClass,
@@ -470,7 +442,7 @@ contract FundStorage is DestructibleModified {
     onlyFund
     returns (bool wasModified)
   {
-    require(containsInvestor[_investor] > 0 && investors[_investor].shareClass == _shareClass);
+    require(investors[_investor].investorType > 0 && investors[_investor].shareClass == _shareClass);
     investors[_investor].ethPendingSubscription = 0;
     investors[_investor].sharesOwned = _newSharesOwned;
 
@@ -479,22 +451,27 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  function setRedeemInvestor(
-    address _investor,
-    uint _shareClass,
-    uint _newSharesOwned,
-    uint _newShareClassSupply,
-    uint _newTotalShareSupply
-  )
-    onlyFund
-    returns (bool wasModified)
-  {
-    require(containsInvestor[_investor] > 0 && investors[_investor].shareClass == _shareClass);
-    investors[_investor].sharesOwned = _newSharesOwned;
+  // =============================== INVESTOR REDEEM FUNCTIONS ===============================
 
-    modifyShareCount(_shareClass, _newShareClassSupply, _newTotalShareSupply);
-    LogModifiedInvestor("Redemption", 999, 999, _newSharesOwned, 999, 999, 999);
-    return true;
+  // Returns the variables required to calculate Usd redemption
+  function getUsdRedemptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint shareClass, uint sharesOwned)
+  {
+    return (investors[_investor].investorType, investors[_investor].shareClass, investors[_investor].sharesOwned);
+  }
+
+  // Returns the variables required to calculate Eth redemption request
+  function getEthRequestRedemptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption)
+  {
+    return (investors[_investor].investorType,
+            investors[_investor].sharesOwned,
+            investors[_investor].sharesPendingRedemption
+           );
   }
 
   // Updates for Eth redemption request
@@ -507,7 +484,37 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  // ********* SHARECLASS FUNCTIONS *********
+  // Returns the variables required to calculate Eth redemption processing
+  function getEthRedemptionData(address _investor)
+    constant
+    public
+    returns (uint investorType, uint shareClass, uint sharesOwned, uint sharesPendingRedemption)
+  {
+    return (investors[_investor].investorType,
+            investors[_investor].shareClass,
+            investors[_investor].sharesOwned,
+            investors[_investor].sharesPendingRedemption);
+  }
+
+  function setRedeemInvestor(
+    address _investor,
+    uint _shareClass,
+    uint _newSharesOwned,
+    uint _newShareClassSupply,
+    uint _newTotalShareSupply
+  )
+    onlyFund
+    returns (bool wasModified)
+  {
+    require(investors[_investor].investorType > 0 && investors[_investor].shareClass == _shareClass);
+    investors[_investor].sharesOwned = _newSharesOwned;
+
+    modifyShareCount(_shareClass, _newShareClassSupply, _newTotalShareSupply);
+    LogModifiedInvestor("Redemption", 999, 999, _newSharesOwned, 999, 999, 999);
+    return true;
+  }
+
+  // ===================================== SHARECLASS FUNCTIONS =====================================
   
   // Get share class details
   function getShareClass(uint _shareClassIndex)
@@ -602,7 +609,7 @@ contract FundStorage is DestructibleModified {
     return shareClasses[_shareClass].shareSupply;
   }
 
-  // ********* ADMIN *********
+  // =========================================== ADMIN ===========================================
 
   // Update the address of the Fund contract
   function setFund(address _fundAddress)

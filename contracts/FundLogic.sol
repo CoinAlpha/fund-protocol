@@ -21,6 +21,8 @@ import "./math/SafeMath.sol";
 contract IFundLogic {
 
   // Fund subscription functions
+  function calcWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
+    returns (uint isValid) {}
   function calcRequestEthSubscription(address _addr, uint _amount)
     returns (uint, uint) {}
   function cancelEthSubscription(address _addr)
@@ -80,6 +82,23 @@ contract FundLogic is DestructibleModified {
   {
     dataFeed = IDataFeed(_dataFeed);
     fundStorage = IFundStorage(_fundStorage);
+  }
+
+  /** 
+    * Check that whitelist parameters are valid
+    * @param  _investor         Investor's ETH wallet address
+    * @param  _investorType     [1] Ether investor [2] USD ivnestor
+    * @param  _shareClass       Share class index [0] is base class
+    * @return isValid           Valid investor to whitelist
+    */
+  function calcWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
+    onlyFund
+    constant
+    returns (bool isValid)
+  {
+    require(_investorType > 0 && _investorType < 3);
+    require(fundStorage.getInvestorType(_investor) == 0 && _shareClass < fundStorage.numberOfShareClasses());
+    return true;
   }
 
   /** Register an ETH investor's subscription request, after checking that
