@@ -4,7 +4,7 @@ const Promise = require('bluebird');
 const NewFund = artifacts.require('./NewFund.sol');
 const FundStorage = artifacts.require('./FundStorage.sol');
 const DataFeed = artifacts.require('./DataFeed.sol');
-const NewInvestorActions = artifacts.require('./NewInvestorActions.sol');
+const FundLogic = artifacts.require('./FundLogic.sol');
 
 const scriptName = path.basename(__filename);
 
@@ -66,7 +66,7 @@ contract('New Fund', (accounts) => {
   let newFund;
   let fundStorage;
   let dataFeed;
-  let investorActions;
+  let fundLogic;
 
   // Temp variables
   let fundBalance;
@@ -93,14 +93,14 @@ contract('New Fund', (accounts) => {
       NewFund.deployed(),
       FundStorage.deployed(),
       DataFeed.deployed(),
-      NewInvestorActions.deployed(),
+      FundLogic.deployed(),
     ])
-      .then(_instances => [newFund, fundStorage, dataFeed, investorActions] = _instances)
+      .then(_instances => [newFund, fundStorage, dataFeed, fundLogic] = _instances)
       .catch(err => assert.throw(`failed to get instances: ${err.toString()}`))
       .then(() => fundStorage.setFund(newFund.address, { from: MANAGER }))
       .catch(err => assert.throw(`failed - fundStorage.setFund(): ${err.toString()}`))
-      .then(() => investorActions.setFund(newFund.address, { from: MANAGER }))
-      .catch(err => assert.throw(`failed - investorActions.setFund(): ${err.toString()}`))
+      .then(() => fundLogic.setFund(newFund.address, { from: MANAGER }))
+      .catch(err => assert.throw(`failed - fundLogic.setFund(): ${err.toString()}`))
       .then(() => fundStorage.getInvestorType(INVESTOR1))
       .then(contains => assert.strictEqual(Number(contains), 0, 'investor already whitelisted'))
       .catch(err => assert.throw(`failed getInvestorType: ${err.toString()}`))
@@ -108,7 +108,7 @@ contract('New Fund', (accounts) => {
         newFund.manager.call(),
         newFund.exchange.call(),
         newFund.navCalculator.call(),
-        newFund.investorActions.call(),
+        newFund.fundLogic.call(),
         newFund.fundStorage.call(),
       ]))
       .then(_addresses => _addresses.forEach(_address => assert.notEqual(_address, '0x0000000000000000000000000000000000000000', 'Contract address not set')))
@@ -388,7 +388,6 @@ contract('New Fund', (accounts) => {
   }); // describe requestEthSubscription - repeat
   
   describe('redeemUsdInvestor', () => {
-
     let USD_INVESTOR1_SHARES;
     let USD_INVESTOR2_SHARES;
     let ETH_INVESTOR1_SHARES;

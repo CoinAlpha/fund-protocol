@@ -1,7 +1,7 @@
 const path = require('path');
 const Promise = require('bluebird');
 
-const NewInvestorActions = artifacts.require('./NewInvestorActions.sol');
+const FundLogic = artifacts.require('./FundLogic.sol');
 
 const scriptName = path.basename(__filename);
 
@@ -20,13 +20,13 @@ const WEI_AMOUNT = ethToWei(ETH_AMOUNT);
 const USD_SHARES = USD_AMOUNT / (NAV / 100);
 const ETH_SHARES = (ETH_AMOUNT * USD_ETH_EXCHANGE_RATE) / (NAV / 100);
 
-contract('Investor Actions', (accounts) => {
+contract('Fund Logic', (accounts) => {
   // Contract instances
   let investorActions;
 
   before('before: should prepare', () => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
-    return NewInvestorActions.deployed()
+    return FundLogic.deployed()
       .then(_instance => investorActions = _instance)
       .catch(err => assert.throw(`failed to get instances: ${err.toString()}`));
   });

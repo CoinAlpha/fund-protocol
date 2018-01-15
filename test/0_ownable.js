@@ -10,7 +10,13 @@ web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMin
 const ethToWei = eth => web3.toWei(eth, 'ether');
 
 contract('OwnableModified', (accounts) => {
-  let owned, dataFeed, navCalculator, investorActions, fundStorage, newInvestorActions;
+  let owned;
+  let dataFeed;
+  let navCalculator;
+  let investorActions;
+  let fundStorage;
+  let fundLogic;
+
   const [
     owner0,
     owner1,
@@ -44,10 +50,10 @@ contract('OwnableModified', (accounts) => {
         } else if (name === 'Fund' || name === 'NewFund') {
           return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed, fundStorage)
             .then(instance => owned = instance);
-        } else if (name === 'NewInvestorActions') {
+        } else if (name === 'FundLogic') {
           return constructors[name](owner0, dataFeed.address, fundStorage.address)
             .then((instance) => {
-              owned = newInvestorActions = instance;
+              owned = fundLogic = instance;
             });
         } else {
           return constructors[name](owner0, dataFeed.address)

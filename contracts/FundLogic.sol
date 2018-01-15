@@ -7,16 +7,18 @@ import "./zeppelin/DestructibleModified.sol";
 import "./math/SafeMath.sol";
 
 /**
- * @title NewInvestorActions
+ * @title FundLogic
  * @author CoinAlpha, Inc. <contact@coinalpha.com>
  *
- * @dev This is a supporting module to the Fund contract that performs investor-related actions
- * such as subscription, redemption, allocation changes, and withdrawals.  By performing checks,
- * performing calculations and returning the updated variables to the Fund contract, this module
- * may be upgraded after the inception of the Fund contract.
+ * @dev This is a supporting module to the Fund contract that contains all the logic for the fund
+ * actions, including verification of transactions/conditions and all related calculations.
+ * [1] All standard fund calculations, such as share/currency conversions.
+ * [2] Investor-related actions such as subscription, redemption, and withdrawals.
+ * By performing checks and performing calculations and returning the updated variables to the
+ * Fund contract, this module may be upgraded after the inception of the Fund contract.
  */
 
-contract INewInvestorActions {
+contract IFundLogic {
 
   // Fund subscription functions
   function calcRequestEthSubscription(address _addr, uint _amount)
@@ -53,7 +55,7 @@ contract INewInvestorActions {
     returns (uint ethAmount) {}
 }
 
-contract NewInvestorActions is DestructibleModified {
+contract FundLogic is DestructibleModified {
   using SafeMath for uint;
 
   address public fundAddress;
@@ -71,7 +73,7 @@ contract NewInvestorActions is DestructibleModified {
   }
 
   // ======================================== CONSTRUCTOR ========================================
-  function NewInvestorActions(
+  function FundLogic(
     address _dataFeed,
     address _fundStorage
   )

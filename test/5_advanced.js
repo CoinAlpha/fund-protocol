@@ -217,5 +217,4 @@ contract('Advanced', (accounts) => {
       .then(() => { done(); })
       .catch(done);
   });
-
 });

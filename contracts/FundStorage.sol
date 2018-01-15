@@ -433,7 +433,7 @@ contract FundStorage is DestructibleModified {
   // ********* INVESTOR SUBSCRIBE FUNCTIONS *********
 
   // Whitelist an investor and specify investor type: [1] ETH investor | [2] USD investor
-  // TODO: move logic to newInvestorActions
+  // TODO: move logic to FundLogic
   function setWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
     onlyFundOrOwner
     returns(bool wasAdded)

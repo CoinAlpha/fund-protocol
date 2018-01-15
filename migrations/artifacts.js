@@ -29,7 +29,7 @@ const allArtifacts = {
   DataFeed: artifacts.require('./DataFeed.sol'),
   FundStorage: artifacts.require('./FundStorage.sol'),
   Fund: artifacts.require('./Fund.sol'),
-  NewInvestorActions: artifacts.require('./NewInvestorActions.sol'),
+  FundLogic: artifacts.require('./FundLogic.sol'),
   NewFund: artifacts.require('./NewFund.sol'),
 };
 
@@ -44,7 +44,7 @@ const constructors = {
     USD_BTC_EXCHANGE_RATE * 100,  // _initialUsdBtcRate
     USD_LTC_EXCHANGE_RATE * 100,  // _initialUsdLtcRate
     exchange,                     // _exchange
-    { from: owner, value: 0 }
+    { from: owner, value: 0 },
   ),
   NavCalculator: (owner, dataFeed) => allArtifacts.NavCalculator.new(dataFeed, { from: owner }),
   InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner }),
@@ -57,7 +57,7 @@ const constructors = {
     ADMIN_FEE * 100,                     // _adminFeeBps
     MGMT_FEE * 100,                      // _mgmtFeeBps
     PERFORM_FEE * 100,                   // _performFeeBps
-    { from: owner }
+    { from: owner },
   ),
   Fund: (owner, exchange, navCalculator, investorActions, dataFeed, fundStorage) =>
     allArtifacts.Fund.new(
@@ -76,21 +76,21 @@ const constructors = {
       MGMT_FEE * 100,                         // _mgmtFeeBps
       PERFORM_FEE * 100,                      // _performFeeBps
       MANAGER_USD_ETH_BASIS * 100,            // _managerUsdEthBasis
-      { from: owner }
+      { from: owner },
     ),
-  NewInvestorActions: (owner, dataFeed, fundStorage) => allArtifacts.NewInvestorActions.new(dataFeed, fundStorage, { from: owner }),
-  NewFund: (owner, exchange, navCalculator, newInvestorActions, dataFeed, fundStorage) =>
+  FundLogic: (owner, dataFeed, fundStorage) => allArtifacts.FundLogic.new(dataFeed, fundStorage, { from: owner }),
+  NewFund: (owner, exchange, navCalculator, fundLogic, dataFeed, fundStorage) =>
     allArtifacts.NewFund.new(
       owner,                     // _manager
       exchange,                  // _exchange
       navCalculator.address,     // _navCalculator
-      newInvestorActions.address,   // _investorActions
+      fundLogic.address,         // _fundLogic
       dataFeed.address,          // _dataFeed
       fundStorage.address,       // _fundStorage
       'TestFund',                // _name
       'TEST',                    // _symbol
       4,                         // _decimals
-      { from: owner }
+      { from: owner },
     ),
 };
 

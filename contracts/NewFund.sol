@@ -1,7 +1,7 @@
 pragma solidity ^0.4.13;
 
 import "./NavCalculator.sol";
-import "./NewInvestorActions.sol";
+import "./FundLogic.sol";
 import "./DataFeed.sol";
 import "./FundStorage.sol";
 import "./math/SafeMath.sol";
@@ -37,7 +37,7 @@ contract NewFund is DestructiblePausable {
   // ========================================= MODULES ==========================================
   // Where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
   INavCalculator      public navCalculator;         // calculating net asset value
-  INewInvestorActions public investorActions;       // performing investor actions such as subscriptions, redemptions, and withdrawals
+  IFundLogic          public fundLogic;             // performing investor actions such as subscriptions, redemptions, and withdrawals
   IDataFeed           public dataFeed;              // fetching external data like total portfolio value and exchange rates
   IFundStorage        public fundStorage;           // data storage module
 
@@ -77,7 +77,7 @@ contract NewFund is DestructiblePausable {
     address _manager,
     address _exchange,
     address _navCalculator,
-    address _investorActions,
+    address _fundLogic,
     address _dataFeed,
     address _fundStorage
   )
@@ -87,7 +87,7 @@ contract NewFund is DestructiblePausable {
     manager = _manager;
     exchange = _exchange;
     navCalculator = INavCalculator(_navCalculator);
-    investorActions = INewInvestorActions(_investorActions);
+    fundLogic = IFundLogic(_fundLogic);
     dataFeed = IDataFeed(_dataFeed);
     fundStorage = IFundStorage(_fundStorage);
   }  // End of constructor
@@ -122,7 +122,7 @@ contract NewFund is DestructiblePausable {
     payable
     returns (bool isSuccess)
   {
-    var (_ethPendingSubscription, _totalEthPendingSubscription) = investorActions.calcRequestEthSubscription(msg.sender, msg.value);
+    var (_ethPendingSubscription, _totalEthPendingSubscription) = fundLogic.calcRequestEthSubscription(msg.sender, msg.value);
     fundStorage.setEthPendingSubscription(msg.sender, _ethPendingSubscription);
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
@@ -139,7 +139,7 @@ contract NewFund is DestructiblePausable {
     whenNotPaused
     returns (bool isSuccess)
   {
-    var (cancelledEthAmount, newTotalEthPendingSubscription) = investorActions.cancelEthSubscription(msg.sender);
+    var (cancelledEthAmount, newTotalEthPendingSubscription) = fundLogic.cancelEthSubscription(msg.sender);
     fundStorage.setEthPendingSubscription(msg.sender, 0);
     totalEthPendingSubscription = newTotalEthPendingSubscription;
 
@@ -162,9 +162,9 @@ contract NewFund is DestructiblePausable {
     returns (bool wasSubscribed)
   {
     // Check conditions for valid USD subscription
-    require(investorActions.calcUsdSubscription(_investor, _usdAmount));
+    require(fundLogic.calcUsdSubscription(_investor, _usdAmount));
 
-    var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcSubscriptionShares(_investor, _usdAmount);
+    var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = fundLogic.calcSubscriptionShares(_investor, _usdAmount);
     
     fundStorage.setSubscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
     
@@ -185,9 +185,9 @@ contract NewFund is DestructiblePausable {
     returns (bool wasSubscribed)
   {
     // Calculate new totalEthPendingSubscription as well as check ETH Investor conditions
-    var (ethPendingSubscription, _totalEthPendingSubscription) = investorActions.calcEthSubscription(_investor);
+    var (ethPendingSubscription, _totalEthPendingSubscription) = fundLogic.calcEthSubscription(_investor);
     
-    var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcSubscriptionShares(_investor, 0);
+    var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = fundLogic.calcSubscriptionShares(_investor, 0);
     
     fundStorage.setSubscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
     
@@ -209,7 +209,7 @@ contract NewFund is DestructiblePausable {
     returns (uint)
   {
     // TODO:
-    // return investorActions.sharesToEth(totalSharesPendingRedemption);
+    // return fundLogic.sharesToEth(totalSharesPendingRedemption);
   }
 
 
@@ -226,7 +226,7 @@ contract NewFund is DestructiblePausable {
     returns (bool wasRedeemed)
   {
     // Check conditions for valid USD redemption and calculate change in shares
-    var (_shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcRedeemUsdInvestor(_investor, _shares);
+    var (_shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav) = fundLogic.calcRedeemUsdInvestor(_investor, _shares);
     
     fundStorage.setRedeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
     
@@ -245,7 +245,7 @@ contract NewFund is DestructiblePausable {
     whenNotPaused
     returns (bool isSuccess)
   {
-    var (_newSharesPendingRedemption, _totalSharesPendingRedemption) = investorActions.calcRequestEthRedemption(msg.sender, _shares);
+    var (_newSharesPendingRedemption, _totalSharesPendingRedemption) = fundLogic.calcRequestEthRedemption(msg.sender, _shares);
     fundStorage.setEthPendingRedemption(msg.sender, _newSharesPendingRedemption);
     totalSharesPendingRedemption = _totalSharesPendingRedemption;
 
@@ -261,7 +261,7 @@ contract NewFund is DestructiblePausable {
     whenNotPaused
     returns (bool isSuccess)
   {
-    var (_redemptionCancelledShares, _totalSharesPendingRedemption) = investorActions.cancelEthRedemption(msg.sender);
+    var (_redemptionCancelledShares, _totalSharesPendingRedemption) = fundLogic.cancelEthRedemption(msg.sender);
     fundStorage.setEthPendingRedemption(msg.sender, 0);
     totalSharesPendingRedemption = _totalSharesPendingRedemption;
 
@@ -280,7 +280,7 @@ contract NewFund is DestructiblePausable {
     returns (bool isSuccess)
   {
     // Check conditions for valid USD redemption and calculate change in shares
-    var (_shareClass, _redeemedShares, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav, _redeemedEthAmount) = investorActions.calcRedeemEthInvestor(_investor);
+    var (_shareClass, _redeemedShares, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav, _redeemedEthAmount) = fundLogic.calcRedeemEthInvestor(_investor);
     
     fundStorage.setRedeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
     
@@ -338,10 +338,10 @@ contract NewFund is DestructiblePausable {
       oldAddress = navCalculator;
       require(oldAddress != _newAddress);
       navCalculator = INavCalculator(_newAddress);
-    } else if (module == keccak256("InvestorActions")) {
-      oldAddress = investorActions;
+    } else if (module == keccak256("FundLogic")) {
+      oldAddress = fundLogic;
       require(oldAddress != _newAddress);
-      investorActions = INewInvestorActions(_newAddress);
+      fundLogic = IFundLogic(_newAddress);
     } else if (module == keccak256("DataFeed")) {
       oldAddress = dataFeed;
       require(oldAddress != _newAddress);

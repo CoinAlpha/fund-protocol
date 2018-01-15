@@ -5,7 +5,7 @@ const FundStorage = artifacts.require('./FundStorage.sol');
 const Fund = artifacts.require('./Fund.sol');
 const NewFund = artifacts.require('./NewFund.sol');
 const DataFeed = artifacts.require('./DataFeed.sol');
-const NewInvestorActions = artifacts.require('./NewInvestorActions.sol');
+const FundLogic = artifacts.require('./FundLogic.sol');
 const InvestorActions = artifacts.require('./InvestorActions.sol');
 
 const scriptName = path.basename(__filename);
@@ -22,7 +22,7 @@ let newFund;
 let fund;
 let fundStorage;
 let dataFeed;
-let newInvestorActions;
+let fundLogic;
 let investorActions;
 let txReceipts;
 
@@ -35,11 +35,11 @@ contract('Deployment costs', (accounts) => {
       FundStorage.deployed(),
       DataFeed.deployed(),
       InvestorActions.deployed(),
-      NewInvestorActions.deployed(),
+      FundLogic.deployed(),
     ])
       .then((_instances) => {
         instances = _instances;
-        [fund, newFund, fundStorage, dataFeed, investorActions, newInvestorActions] = _instances;
+        [fund, newFund, fundStorage, dataFeed, investorActions, fundLogic] = _instances;
       })
       .catch(err => assert.throw(`failed to get instances: ${err.toString()}`))
       .then(() => Promise.all(instances.map(x => web3.eth.getTransactionPromise(x.address))))
