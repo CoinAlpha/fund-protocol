@@ -18,32 +18,31 @@ import "./math/SafeMath.sol";
 
 contract INewInvestorActions {
 
-  function requestEthSubscription(address _addr, uint _amount)
+  // Fund subscription functions
+  function calcRequestEthSubscription(address _addr, uint _amount)
     returns (uint, uint) {}
   function cancelEthSubscription(address _addr)
     returns (uint, uint) {}
-  function calcSubscriptionShares(address _investor, uint _usdAmount)
-    returns (uint, uint, uint, uint, uint, uint) {}
-  function checkUsdInvestment(address _investor, uint _usdAmount)
+
+  function calcUsdSubscription(address _investor, uint _usdAmount)
     returns (bool) {}
   function calcEthSubscription(address _investor)
     returns (uint ethPendingSubscription, uint newTotalEthPendingSubscription) {}
-  function subscribe(address _addr, uint _usdAmount)
+
+  function calcSubscriptionShares(address _investor, uint _usdAmount)
     returns (uint, uint, uint, uint, uint, uint) {}
   
-
+  // Fund redemption functions
   function calcRedeemUsdInvestor(address _investor, uint _shares)
     returns (uint, uint, uint, uint, uint) {}
-  function requestEthRedemption(address _addr, uint _shares)
+  function calcRequestEthRedemption(address _addr, uint _shares)
     returns (uint, uint) {}
   function cancelEthRedemption(address addr)
     returns (uint, uint) {}
   function calcRedeemEthInvestor(address _investor)
     returns (uint, uint, uint, uint, uint, uint, uint) {}
 
-  function redeem(address _addr)
-    returns (uint, uint, uint, uint, uint, uint, uint) {}
-  
+  // TODO:
   function liquidate(address _addr)
     returns (uint, uint, uint, uint, uint, uint) {}
 
@@ -71,6 +70,7 @@ contract NewInvestorActions is DestructibleModified {
     _;
   }
 
+  // ======================================== CONSTRUCTOR ========================================
   function NewInvestorActions(
     address _dataFeed,
     address _fundStorage
@@ -80,41 +80,17 @@ contract NewInvestorActions is DestructibleModified {
     fundStorage = IFundStorage(_fundStorage);
   }
 
-  // Modifies the max investment limit allowed for an investor and overwrites the past limit
-  // Used for both whitelisting a new investor and modifying an existing investor's allocation
-  // function modifyAllocation(address _addr, uint _allocation)
-  //   onlyFund
-  //   constant
-  //   returns (uint _ethTotalAllocation)
-  // {
-  //   require(_allocation > 0);
-  //   return _allocation;
-  // }
-
-  // Get the remaining available amount in Ether that an investor can subscribe for
-  // function getAvailableAllocation(address _addr)
-  //   onlyFund
-  //   constant
-  //   returns (uint ethAvailableAllocation)
-  // {
-  //   var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
-
-  //   uint ethFilledAllocation = ethPendingSubscription.add(fund.sharesToEth(sharesOwned));
-
-  //   if (ethTotalAllocation > ethFilledAllocation) {
-  //     return ethTotalAllocation.sub(ethFilledAllocation);
-  //   } else {
-  //     return 0;
-  //   }
-  // }
-  
-  // Register an investor's subscription request, after checking that
-  // 1) the requested amount exceeds the minimum subscription amount and
-  // 2) the investor's total allocation is not exceeded
-  function requestEthSubscription(address _investor, uint _amount)
+  /** Register an ETH investor's subscription request, after checking that
+    * 1) request is from a whitelisted ETH investor
+    * 2) the requested amount > the applicable minimum subscription amount and
+    * @param  _investor                           Investor's ETH wallet address
+    * @return newEthPendingSubscription           [1] Investor's total ETH amount pending subscription
+    * @return newTotalEthPendingSubscription      [2] Fund's new total ETH pending subscription 
+    */
+  function calcRequestEthSubscription(address _investor, uint _amount)
     onlyFund
     constant
-    returns (uint, uint)
+    returns (uint newEthPendingSubscription, uint newTotalEthPendingSubscription)
   {
     var (investorType, ethPendingSubscription, sharesOwned, shareClass) = fundStorage.getSubscriptionShares(_investor);
 
@@ -131,11 +107,16 @@ contract NewInvestorActions is DestructibleModified {
            );
   }
 
-  // Handles an investor's subscription cancellation
+  /** Verify and calculate share count and ETH balance impact of an ETH investor's request to cancel a
+    * subscriptio request
+    * @param  _investor                           Investor's ETH wallet address
+    * @return cancelledEthAmount                  [1] Investor's total ETH amount pending subscription
+    * @return newTotalEthPendingSubscription      [2] Fund's new total ETH pending subscription 
+    */
   function cancelEthSubscription(address _investor)
     onlyFund
     constant
-    returns (uint, uint)
+    returns (uint cancelledEthAmount, uint newTotalEthPendingSubscription)
   {
     var (investorType, ethPendingSubscription, sharesOwned, shareClass) = fundStorage.getSubscriptionShares(_investor);
 
@@ -149,9 +130,10 @@ contract NewInvestorActions is DestructibleModified {
   /**
     * Check conditions of USD subscription
     * @param  _investor  USD Investor address / UID
+    * @param  _usdAmount USD amount of subscription in cents: 1 = $0.01
     * @return isValid
     */
-  function checkUsdInvestment(address _investor, uint _usdAmount)
+  function calcUsdSubscription(address _investor, uint _usdAmount)
     onlyFund
     constant
     returns (bool)
@@ -266,7 +248,7 @@ contract NewInvestorActions is DestructibleModified {
   // Register an investor's redemption request, after checking that
   // 1) the requested amount exceeds the minimum redemption amount and
   // 2) the investor can't redeem more than the shares they own
-  function requestEthRedemption(address _investor, uint _shares)
+  function calcRequestEthRedemption(address _investor, uint _shares)
     onlyFund
     constant
     returns (uint, uint)
@@ -334,30 +316,6 @@ contract NewInvestorActions is DestructibleModified {
             nav,                                                                       // redemption nav
             ethPayment                                                                 // amount to be paid to investor
            );
-  }
-
-
-  // Processes an investor's redemption request and annilates their shares at the current navPerShare
-  function redeem(address _addr)
-    onlyFund
-    constant
-    returns (uint, uint, uint, uint, uint, uint, uint)
-  {
-    // var (ethTotalAllocation, ethPendingSubscription, sharesOwned, sharesPendingRedemption, ethPendingWithdrawal) = fund.getInvestor(_addr);
-
-    // // Check that the fund balance has enough ether because after this function is processed, the ether
-    // // equivalent amount can be withdrawn by the investor
-    // uint amount = fund.sharesToEth(sharesPendingRedemption);
-    // require(amount <= fund.balance.sub(fund.totalEthPendingSubscription()).sub(fund.totalEthPendingWithdrawal()));
-
-    // return (sharesOwned.sub(sharesPendingRedemption),                           // new investor.sharesOwned
-    //         0,                                                                  // new investor.sharesPendingRedemption
-    //         ethPendingWithdrawal.add(amount),                                   // new investor.ethPendingWithdrawal
-    //         sharesPendingRedemption,                                            // shares annihilated
-    //         fund.totalSupply().sub(sharesPendingRedemption),                    // new totalSupply
-    //         fund.totalSharesPendingRedemption().sub(sharesPendingRedemption),   // new totalSharesPendingRedemption
-    //         fund.totalEthPendingWithdrawal().add(amount)                        // new totalEthPendingWithdrawal
-    //       );
   }
 
   // Converts all of an investor's shares to ether and makes it available for withdrawal.  Also makes the investor's allocation zero to prevent future investment.

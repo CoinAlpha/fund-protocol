@@ -31,8 +31,19 @@ contract IFundStorage {
   function updateMinRedemptionShares(uint _minRedemptionShares)
     returns (bool wasUpdated) {}
 
-  // Investor Functions
-  function whiteListInvestor(address _investor, uint _investorType, uint _shareClass)
+  // Basic investor Functions
+  function getInvestor(address _investor)
+    returns (
+      uint investorType,
+      uint ethPendingSubscription,
+      uint sharesOwned,
+      uint shareClass,
+      uint sharesPendingRedemption,
+      uint amountPendingWithdrawal
+    ) {}
+  function getInvestorType(address _investor)
+    returns (uint investorType) {}
+  function setWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
     returns(bool wasAdded) {}
   function removeInvestor(address _investor)
     returns (bool success) {}
@@ -46,17 +57,16 @@ contract IFundStorage {
     uint _amountPendingWithdrawal,
     string _description
   ) returns (bool wasModified) {}
-  function getInvestor(address _investor)
-    returns (
-      uint investorType,
-      uint ethPendingSubscription,
-      uint sharesOwned,
-      uint shareClass,
-      uint sharesPendingRedemption,
-      uint amountPendingWithdrawal
-    ) {}
-  function getInvestorType(address _investor)
-    returns (uint investorType) {}
+
+  // Subscription Functions
+  function getUsdSubscriptionData(address _investor)
+    returns (uint investorType, uint sharesOwned) {}
+
+  function getEthSubscriptionData(address _investor)
+    returns (uint investorType, uint ethPendingSubscription) {}
+  function setEthPendingSubscription(address _investor, uint _totalAmount)
+    returns(bool wasAdded) {}
+
   function getSubscriptionShares(address _investor)
     returns (
       uint investorType,
@@ -64,16 +74,7 @@ contract IFundStorage {
       uint sharesOwned,
       uint shareClass
     ) {}
-  function getEthSubscriptionData(address _investor)
-    returns (uint investorType, uint ethPendingSubscription) {}
-  function getUsdSubscriptionData(address _investor)
-    returns (uint investorType, uint sharesOwned) {}
-
-  // Subscribe / Redeem Functions
-  function updateEthPendingSubscription(address _investor, uint _totalAmount)
-    returns(bool wasAdded) {}
-
-  function subscribeInvestor(
+  function setSubscribeInvestor(
     address _investor,
     uint _shareClass,
     uint _newSharesOwned,
@@ -83,7 +84,18 @@ contract IFundStorage {
   )
     returns (bool wasModified) {}
 
-  function redeemInvestor(
+  // Redemption Functions
+  function getUsdRedemptionData(address _investor)
+    returns (uint investorType, uint shareClass, uint sharesOwned) {}
+
+  function getEthRequestRedemptionData(address _investor)
+    returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption) {}
+  function setEthPendingRedemption(address _investor, uint _sharesPendingRedemption)
+    returns (bool isSuccess) {}
+  function getEthRedemptionData(address _investor)
+    returns (uint investorType, uint shareClass, uint sharesOwned, uint sharesPendingRedemption) {}
+
+  function setRedeemInvestor(
     address _investor,
     uint _shareClass,
     uint _newSharesOwned,
@@ -92,18 +104,6 @@ contract IFundStorage {
   )
     returns (bool wasModified)
   {}
-
-  function getUsdRedemptionData(address _investor)
-    returns (uint investorType, uint shareClass, uint sharesOwned) {}
-
-  function getEthRequestRedemptionData(address _investor)
-    returns (uint investorType, uint sharesOwned, uint sharesPendingRedemption) {}
-
-  function setEthPendingRedemption(address _investor, uint _sharesPendingRedemption)
-    returns (bool isSuccess) {}
-
-  function getEthRedemptionData(address _investor)
-    returns (uint investorType, uint shareClass, uint sharesOwned, uint sharesPendingRedemption) {}
 
   // Share Class Functions
   function getShareClass(uint _shareClassIndex)
@@ -118,7 +118,7 @@ contract IFundStorage {
     ) {}
   function modifyShareCount(uint _shareClassIndex, uint _shareSupply, uint _totalShareSupply)
     returns (bool wasModified) {}
-  function updateNav(uint _shareClassIndex, uint _shareNav)
+  function setShareClassNav(uint _shareClassIndex, uint _shareNav)
     returns (bool wasUpdated) {}
   function getShareClassNavPerShare(uint _shareClass)
     returns (uint navPerShare) {}
@@ -434,7 +434,7 @@ contract FundStorage is DestructibleModified {
 
   // Whitelist an investor and specify investor type: [1] ETH investor | [2] USD investor
   // TODO: move logic to newInvestorActions
-  function whiteListInvestor(address _investor, uint _investorType, uint _shareClass)
+  function setWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
     onlyFundOrOwner
     returns(bool wasAdded)
   {
@@ -448,7 +448,7 @@ contract FundStorage is DestructibleModified {
   }
 
   // Add pendingEthSubscription to investor when subscription is requested
-  function updateEthPendingSubscription(address _investor, uint _totalAmount)
+  function setEthPendingSubscription(address _investor, uint _totalAmount)
     onlyFund
     returns(bool wasAdded)
   {
@@ -459,7 +459,7 @@ contract FundStorage is DestructibleModified {
 
   // ********* INVESTOR SHARE FUNCTIONS *********
 
-  function subscribeInvestor(
+  function setSubscribeInvestor(
     address _investor,
     uint _shareClass,
     uint _newSharesOwned,
@@ -479,7 +479,7 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  function redeemInvestor(
+  function setRedeemInvestor(
     address _investor,
     uint _shareClass,
     uint _newSharesOwned,
@@ -572,7 +572,7 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  function updateNav(uint _shareClassIndex, uint _shareNav)
+  function setShareClassNav(uint _shareClassIndex, uint _shareNav)
     onlyFund
     returns (bool wasUpdated)
   {

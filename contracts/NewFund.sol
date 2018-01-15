@@ -107,7 +107,7 @@ contract NewFund is DestructiblePausable {
     onlyManager
     returns (bool isSuccess)
   {
-    fundStorage.whiteListInvestor(_investor, _investorType, _shareClass);
+    fundStorage.setWhiteListInvestor(_investor, _investorType, _shareClass);
     LogWhiteListInvestor(_investor, _investorType, _shareClass);
     return true;
   }
@@ -115,14 +115,15 @@ contract NewFund is DestructiblePausable {
   /**
     * ETH investor function: issue a subscription request by transferring ether into
     * the fund
+    * @return isSuccess       Operation successful
     */
   function requestEthSubscription()
     whenNotPaused
     payable
-    returns (bool success)
+    returns (bool isSuccess)
   {
-    var (_ethPendingSubscription, _totalEthPendingSubscription) = investorActions.requestEthSubscription(msg.sender, msg.value);
-    fundStorage.updateEthPendingSubscription(msg.sender, _ethPendingSubscription);
+    var (_ethPendingSubscription, _totalEthPendingSubscription) = investorActions.calcRequestEthSubscription(msg.sender, msg.value);
+    fundStorage.setEthPendingSubscription(msg.sender, _ethPendingSubscription);
     totalEthPendingSubscription = _totalEthPendingSubscription;
 
     LogEthSubscriptionRequest(msg.sender, msg.value);
@@ -132,18 +133,19 @@ contract NewFund is DestructiblePausable {
   /** 
     * Cancel pendingEthSubscription and transfer back funds to investor
     * Delegates logic to the InvestorActions module
+    * @return isSuccess       Operation successful
     */
   function cancelEthSubscription()
     whenNotPaused
-    returns (bool success)
+    returns (bool isSuccess)
   {
-    var (_cancelledEthAmount, _totalEthPendingSubscription) = investorActions.cancelEthSubscription(msg.sender);
-    fundStorage.updateEthPendingSubscription(msg.sender, 0);
-    totalEthPendingSubscription = _totalEthPendingSubscription;
+    var (cancelledEthAmount, newTotalEthPendingSubscription) = investorActions.cancelEthSubscription(msg.sender);
+    fundStorage.setEthPendingSubscription(msg.sender, 0);
+    totalEthPendingSubscription = newTotalEthPendingSubscription;
 
-    msg.sender.transfer(_cancelledEthAmount);
+    msg.sender.transfer(cancelledEthAmount);
 
-    LogCancelEthSubscriptionRequest(msg.sender, _cancelledEthAmount);
+    LogCancelEthSubscriptionRequest(msg.sender, cancelledEthAmount);
     return true;
   }
 
@@ -151,19 +153,20 @@ contract NewFund is DestructiblePausable {
     * Subscribe USD investor
     * This is for data reporting and tracking only
     * Actual USD fund flows are handled off-chain
-    * @param  _investor    USD investor address UUID
-    * @param  _usdAmount   USD amount in cents, 1 = $0.01
+    * @param  _investor       USD investor address UUID
+    * @param  _usdAmount      USD amount in cents, 1 = $0.01
+    * @return wasSubscribed   Operation successful
     */
   function subscribeUsdInvestor(address _investor, uint _usdAmount)
     onlyManager
     returns (bool wasSubscribed)
   {
     // Check conditions for valid USD subscription
-    require(investorActions.checkUsdInvestment(_investor, _usdAmount));
+    require(investorActions.calcUsdSubscription(_investor, _usdAmount));
 
     var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcSubscriptionShares(_investor, _usdAmount);
     
-    fundStorage.subscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
+    fundStorage.setSubscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
     
     totalSupply = _newTotalShareSupply;
     
@@ -175,6 +178,7 @@ contract NewFund is DestructiblePausable {
     * Subscribe ETH investor
     * Transfer subscription funds into exchange account
     * @param  _investor    ETH wallet address
+    * @return wasSubscribed   Operation successful
     */
   function subscribeEthInvestor(address _investor)
     onlyManager
@@ -185,7 +189,7 @@ contract NewFund is DestructiblePausable {
     
     var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcSubscriptionShares(_investor, 0);
     
-    fundStorage.subscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
+    fundStorage.setSubscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
     
     totalSupply = _newTotalShareSupply;
     totalEthPendingSubscription = _totalEthPendingSubscription;
@@ -193,6 +197,7 @@ contract NewFund is DestructiblePausable {
 
     LogSubscription("ETH", _investor, _shareClass, _newShares, _nav, dataFeed.usdEth());
     LogTransferToExchange(ethPendingSubscription);
+    return true;
   }
 
   // ====================================== REDEMPTIONS ======================================
@@ -203,6 +208,7 @@ contract NewFund is DestructiblePausable {
     constant
     returns (uint)
   {
+    // TODO:
     // return investorActions.sharesToEth(totalSharesPendingRedemption);
   }
 
@@ -213,16 +219,16 @@ contract NewFund is DestructiblePausable {
     * Actual USD fund flows are handled off-chain
     * @param  _investor    USD investor address UUID
     * @param  _shares      Share amount in decimal 0.01 unties: 1 = 0.01 shares
+    * @return wasRedeemed  Operation successful
     */
-  
   function redeemUsdInvestor(address _investor, uint _shares)
     onlyManager
-    returns (bool)
+    returns (bool wasRedeemed)
   {
     // Check conditions for valid USD redemption and calculate change in shares
     var (_shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav) = investorActions.calcRedeemUsdInvestor(_investor, _shares);
     
-    fundStorage.redeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
+    fundStorage.setRedeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
     
     totalSupply = _newTotalShareSupply;
     
@@ -232,12 +238,14 @@ contract NewFund is DestructiblePausable {
 
   /**
     * ETH investor function: issue a redemption request
+    * @param  _shares      Share amount in decimal 0.01 unties: 1 = 0.01 shares
+    * @return isSuccess    Operation successful
     */
   function requestEthRedemption(uint _shares)
     whenNotPaused
-    returns (bool success)
+    returns (bool isSuccess)
   {
-    var (_newSharesPendingRedemption, _totalSharesPendingRedemption) = investorActions.requestEthRedemption(msg.sender, _shares);
+    var (_newSharesPendingRedemption, _totalSharesPendingRedemption) = investorActions.calcRequestEthRedemption(msg.sender, _shares);
     fundStorage.setEthPendingRedemption(msg.sender, _newSharesPendingRedemption);
     totalSharesPendingRedemption = _totalSharesPendingRedemption;
 
@@ -247,10 +255,11 @@ contract NewFund is DestructiblePausable {
 
   /** 
     * ETH investor function: cancel redemption request
+    * @return isSuccess    Operation successful
     */
   function cancelEthRedemption()
     whenNotPaused
-    returns (bool success)
+    returns (bool isSuccess)
   {
     var (_redemptionCancelledShares, _totalSharesPendingRedemption) = investorActions.cancelEthRedemption(msg.sender);
     fundStorage.setEthPendingRedemption(msg.sender, 0);
@@ -264,16 +273,16 @@ contract NewFund is DestructiblePausable {
     * Redeem ETH investor
     * Calculate shares, payment amount, and transfers Eth to investor
     * @param  _investor    USD investor address UUID
+    * @return isSuccess    Operation successful
     */
-  
   function redeemEthInvestor(address _investor)
     onlyManager
-    returns (bool)
+    returns (bool isSuccess)
   {
     // Check conditions for valid USD redemption and calculate change in shares
     var (_shareClass, _redeemedShares, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav, _redeemedEthAmount) = investorActions.calcRedeemEthInvestor(_investor);
     
-    fundStorage.redeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
+    fundStorage.setRedeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
     
     totalSupply = _newTotalShareSupply;
     _investor.transfer(_redeemedEthAmount);
