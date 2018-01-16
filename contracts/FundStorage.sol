@@ -204,16 +204,14 @@ contract FundStorage is DestructibleModified {
 
   // Fund Events
   event LogUpdatedDetails(string updatedField, uint oldValue, uint newValue);
-  event LogWhiteListedInvestor(address newInvestor, uint investorType, uint shareClass);
   event LogRemovedInvestor(address removedInvestor, uint investorType);
-  event LogModifiedInvestor(string description, uint investorType, uint ethPendingSubscription, uint sharesOwned, uint shareClass, uint sharesPendingRedemption, uint amountPendingWithdrawal);
+  event LogModifiedStorageInvestor(string description, uint investorType, uint ethPendingSubscription, uint sharesOwned, uint shareClass, uint sharesPendingRedemption, uint amountPendingWithdrawal);
 
   event LogAddedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint createdAt, uint numberOfShareClasses);
   event LogModifiedShareClass(uint shareClassIndex, uint adminFeeBps, uint mgmtFeeBps, uint performFeeBps, uint modifiedAt);
   event LogModifiedShareCount(uint shareClassIndex, uint previousShareSupply, uint newShareSupply, uint previousTotalShareSupply, uint newTotalShareSupply);
-  event LogNavUpdate(uint shareClassIndex, uint previousNav, uint newNav);
+  event LogUpdateStorageNav(uint shareClassIndex, uint previousNav, uint newNav);
 
-  // Investor Events
   event LogUpdatedEthPendingSubscription(address indexed investor, uint totalAmount);
 
   // Administrative Events
@@ -369,7 +367,7 @@ contract FundStorage is DestructibleModified {
   {
     require(investors[_investor].investorType > 0);
     investors[_investor] = InvestorStruct(_investorType, _ethPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
-    LogModifiedInvestor(_description, _investorType, _ethPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
+    LogModifiedStorageInvestor(_description, _investorType, _ethPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
   }
 
 
@@ -383,7 +381,7 @@ contract FundStorage is DestructibleModified {
     investorAddresses.push(_investor);
     investors[_investor].investorType = _investorType;
     investors[_investor].shareClass = _shareClass;
-    LogWhiteListedInvestor(_investor, _investorType, _shareClass);
+    LogModifiedStorageInvestor("Whitelist", _investorType, 0, 0, _shareClass, 0, 0);
     return true;
   }
 
@@ -447,7 +445,7 @@ contract FundStorage is DestructibleModified {
     investors[_investor].sharesOwned = _newSharesOwned;
 
     modifyShareCount(_shareClass, _newShareClassSupply, _newTotalShareSupply);
-    LogModifiedInvestor("Subscription", 999, 0, _newSharesOwned, 999, 999, 999);
+    LogModifiedStorageInvestor("Subscription", 999, 0, _newSharesOwned, 999, 999, 999);
     return true;
   }
 
@@ -510,7 +508,7 @@ contract FundStorage is DestructibleModified {
     investors[_investor].sharesOwned = _newSharesOwned;
 
     modifyShareCount(_shareClass, _newShareClassSupply, _newTotalShareSupply);
-    LogModifiedInvestor("Redemption", 999, 999, _newSharesOwned, 999, 999, 999);
+    LogModifiedStorageInvestor("Redemption", 999, 999, _newSharesOwned, 999, 999, 999);
     return true;
   }
 
@@ -587,7 +585,7 @@ contract FundStorage is DestructibleModified {
     uint previousNav = shareClasses[_shareClassIndex].shareNav;
     shareClasses[_shareClassIndex].shareNav = _shareNav;
     shareClasses[_shareClassIndex].lastCalc = now;
-    LogNavUpdate(_shareClassIndex, previousNav, _shareNav);
+    LogUpdateStorageNav(_shareClassIndex, previousNav, _shareNav);
     return true;
   }
 
