@@ -60,6 +60,8 @@ contract IFundStorage {
     uint _amountPendingWithdrawal,
     string _description
   ) returns (bool wasModified) {}
+  function transferInvestor(address _oldAddress, address _newAddress)
+    returns (bool isSuccess) {}
 
   // Subscription Functions
   function setWhiteListInvestor(address _investor, uint _investorType, uint _shareClass)
@@ -315,7 +317,6 @@ contract FundStorage is DestructibleModified {
   }
 
   // ======================================= INVESTOR ADMIN =======================================
-
   // Remove investor address from list
   function removeInvestor(address _investor)
     onlyFundOrOwner
@@ -344,7 +345,6 @@ contract FundStorage is DestructibleModified {
     if (!investorWasRemoved) {
       revert();
     }
-    investors[_investor].investorType = 0;
     investors[_investor] = InvestorStruct(0,0,0,0,0,0);
     LogRemovedInvestor(_investor, investor.investorType);
     return true;
@@ -370,6 +370,24 @@ contract FundStorage is DestructibleModified {
     LogModifiedStorageInvestor(_description, _investorType, _ethPendingSubscription, _sharesOwned, _shareClass, _sharesPendingRedemption, _amountPendingWithdrawal);
   }
 
+  /**
+    * This is an administrative function to manage an investor's
+    * request to update a wallet address
+    * @param  _oldAddress  Existing investor address    
+    * @param  _newAddress  New investor address
+    * @return isSuccess    Operation successful
+    */
+  function transferInvestor(address _oldAddress, address _newAddress)
+    onlyFundOrOwner
+    returns (bool isSuccess)
+  {
+    var (investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal) = getInvestor(_oldAddress);
+    investors[_oldAddress] = InvestorStruct(investorType,0,0,0,0,0);
+    removeInvestor(_oldAddress);
+    setWhiteListInvestor(_newAddress, investorType, shareClass);
+    modifyInvestor(_newAddress, investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal, "Transferred Investor");
+    return true;
+  }
 
   // =============================== INVESTOR SUBSCRIBE FUNCTIONS ===============================
 

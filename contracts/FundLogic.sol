@@ -55,6 +55,10 @@ contract IFundLogic {
   
   function sharesToEth(uint _shareClass, uint _shares)
     returns (uint ethAmount) {}
+
+  // Admin
+  function calcTransferInvestor(address _oldAddress, address _newAddress)
+    returns (bool isSuccess) {}
 }
 
 contract FundLogic is DestructibleModified {
@@ -463,6 +467,22 @@ contract FundLogic is DestructibleModified {
   }
 
   // ********* ADMIN *********
+
+  /**
+    * Check conditions fo transferring an investor
+    * @param  _oldAddress  Existing investor address    
+    * @param  _newAddress  New investor address
+    * @return isSuccess    Operation successful
+    */
+
+  function calcTransferInvestor(address _oldAddress, address _newAddress)
+    onlyFund
+    returns (bool isSuccess)
+  {
+    require(_newAddress != address(0));
+    require(fundStorage.getInvestorType(_oldAddress) != 0 && fundStorage.getInvestorType(_newAddress) == 0);
+    return true;
+  }
 
   // Update the address of the Fund contract
   function setFund(address _fund)

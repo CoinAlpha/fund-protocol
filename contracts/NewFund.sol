@@ -69,6 +69,7 @@ contract NewFund is DestructiblePausable {
   event LogTransferToExchange(uint ethAmount);
   event LogTransferFromExchange(uint ethAmount);
 
+  event LogTransferInvestor(address oldAddress, address newAddress);
   event LogModuleChanged(string module, address oldAddress, address newAddress);
 
 
@@ -313,6 +314,24 @@ contract NewFund is DestructiblePausable {
 
   // ========================================== ADMIN ==========================================
 
+  /**
+    * This is an administrative function to manage an investor's
+    * request to update a wallet address
+    * @param  _oldAddress  Existing investor address    
+    * @param  _newAddress  New investor address
+    * @return isSuccess    Operation successful
+    */
+
+  function transferInvestor(address _oldAddress, address _newAddress)
+    onlyManager
+    returns (bool isSuccess)
+  {
+    fundLogic.calcTransferInvestor(_oldAddress, _newAddress);
+    fundStorage.transferInvestor(_oldAddress, _newAddress);
+    LogTransferInvestor(_oldAddress, _newAddress);
+    return true;
+  }
+
   function getFundDetails()
     constant
     public
@@ -327,7 +346,7 @@ contract NewFund is DestructiblePausable {
     require(address(fundStorage) != address(0));
     return (fundStorage.name(), fundStorage.symbol(), fundStorage.minInitialSubscriptionUsd(), fundStorage.minSubscriptionUsd(), fundStorage.minRedemptionShares());
   }
-
+  
   // Update the address of a module, for upgrading
   function changeModule(string _module, address _newAddress) 
     onlyOwner
