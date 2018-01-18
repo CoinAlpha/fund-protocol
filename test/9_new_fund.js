@@ -50,6 +50,11 @@ contract('New Fund', (accounts) => {
   const USD_INVESTOR1 = usdInvestors[0];
   const USD_INVESTOR2 = usdInvestors[1];
 
+  // TEST TRANSFER INVESTOR
+  const newEthInvestors = investors.slice(17, 22);
+  const newUsdInvestors = investors.slice(23, 28);
+  const newUsdEthInvestors = newEthInvestors.concat(newUsdInvestors);
+
   const MIN_INITIAL_CENTS = MIN_INITIAL_SUBSCRIPTION_USD * 100;
   const MIN_INITIAL_SHARES = MIN_INITIAL_CENTS;
   const MIN_SUB_CENTS = MIN_SUBSCRIPTION_USD * 100;
@@ -247,17 +252,22 @@ contract('New Fund', (accounts) => {
   }); // describe cancelEthSubscription
 
   describe('subscribeUsdInvestor', () => {
-    it('not allow ETH investor to subscribe via subscribeUsdInvestor', () => newFund.subscribeUsdInvestor(ETH_INVESTOR1, MIN_INITIAL_CENTS, { from: MANAGER })
+    it('not allow ETH investor to subscribe via subscribeUsdInvestor', () => newFund.subscribeUsdInvestor(
+      ETH_INVESTOR1,
+      MIN_INITIAL_CENTS,
+      { from: MANAGER },
+    )
       .then(
         () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
+        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`),
       ));
 
-    it(`not allow initial USD subscription below MIN_INITIAL_SUBSCRIPTION_USD: ${MIN_INITIAL_CENTS}`, () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS - 1, { from: MANAGER })
-      .then(
-        () => assert.throw('should not have reached here'),
-        e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`)
-      ));
+    it(`not allow initial USD subscription below MIN_INITIAL_SUBSCRIPTION_USD: ${MIN_INITIAL_CENTS}`,
+      () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS - 1, { from: MANAGER })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0, `Incorrect error: ${e.toString()}`),
+        ));
 
     it('should allow investment at minimum amount', () => newFund.subscribeUsdInvestor(USD_INVESTOR1, MIN_INITIAL_CENTS, { from: MANAGER })
       .then(() => getInvestorData(fundStorage, USD_INVESTOR1))
@@ -366,7 +376,11 @@ contract('New Fund', (accounts) => {
     let EXCHANGE_BALANCE;
     let ETH_BALANCE1;
 
-    it('subscribe Eth Investor', () => Promise.all([getBalancePromise(newFund.address), getBalancePromise(ETH_INVESTOR1), getBalancePromise(EXCHANGE)])
+    it('subscribe Eth Investor', () => Promise.all([
+      getBalancePromise(newFund.address),
+      getBalancePromise(ETH_INVESTOR1),
+      getBalancePromise(EXCHANGE),
+    ])
       .then((_balances) => {
         [fundBalance, ETH_BALANCE1, EXCHANGE_BALANCE] = _balances.map(x => Number(x));
       })
@@ -386,7 +400,7 @@ contract('New Fund', (accounts) => {
         assert.strictEqual(NEW_EXCHANGE_BALANCE - EXCHANGE_BALANCE, Number(WEI_MIN_SUB), 'incorrect amount transferred to exchange');
       }));
   }); // describe requestEthSubscription - repeat
-  
+
   describe('redeemUsdInvestor', () => {
     let USD_INVESTOR1_SHARES;
     let USD_INVESTOR2_SHARES;
@@ -618,6 +632,55 @@ contract('New Fund', (accounts) => {
       })
       .catch(err => assert.throw(`Error retrieving balances: ${err.toString()}`)));
   });
+
+  describe('transferInvestor', () => {
+    const usdEthInvestors = usdInvestors.concat(ethInvestors);
+    let oldInvestorAddresses;
+    let newInvestorAddresses;
+
+    before('get original investor data', () => Promise.all(newUsdEthInvestors.map(_investor => getInvestorData(fundStorage, _investor)))
+      .then(() => fundStorage.getInvestorAddresses({ from: MANAGER }))
+      .then(_addresses => oldInvestorAddresses = _addresses)
+      .then(() => usdEthInvestors.forEach(_address => assert.include(oldInvestorAddresses, _address, 'investor not in addresses')))
+      .then(() => newUsdEthInvestors.forEach(_address => assert.notInclude(oldInvestorAddresses, _address, 'investor is in addresses')))
+      .then(() => Promise.all(newUsdEthInvestors.map(_investor => getInvestorData(fundStorage, _investor))))
+      .then(_investorsData =>
+        _investorsData.forEach(_investorData =>
+          assert.strictEqual(_investorData.investorType, 0, 'new investor address is not empty'))));
+
+    after('check all addresses changed', () => fundStorage.getInvestorAddresses({ from: MANAGER })
+      .then(_addresses => newInvestorAddresses = _addresses)
+      .then(() => usdEthInvestors.forEach(_address => assert.notInclude(newInvestorAddresses, _address, 'investor is in addresses')))
+      .then(() => newUsdEthInvestors.forEach(_address => assert.include(newInvestorAddresses, _address, 'investor not in addresses'))));
+
+    it('should not allow transfer to existing investor', () =>
+      newFund.transferInvestor(ETH_INVESTOR1, ETH_INVESTOR2, { from: MANAGER })
+        .then(
+          () => assert.throw('should not have reached here'),
+          e => assert.isAtLeast(e.message.indexOf('revert'), 0)
+        )
+        .catch(err => assert.throw(`Error: ${err.toString()}`)));
+
+    const testTransferInvestor = (_oldInvestor, _newInvestor) => {
+      let oldInvestorDataString;
+
+      return getInvestorData(fundStorage, _oldInvestor)
+        .then(_oldInvestorData => oldInvestorDataString = JSON.stringify(_oldInvestorData))
+        .then(() => newFund.transferInvestor(_oldInvestor, _newInvestor, { from: MANAGER }))
+        .then(() => Promise.all([getInvestorData(fundStorage, _oldInvestor), getInvestorData(fundStorage, _newInvestor)]))
+        .then((_investorsData) => {
+          const [oldInvestorData, newInvestorData] = _investorsData;
+          Object.keys(oldInvestorData).forEach(_key =>
+            assert.strictEqual(oldInvestorData[_key], 0, `old investor not reset: ${oldInvestorData}`));
+          assert.strictEqual(JSON.stringify(newInvestorData), oldInvestorDataString, 'investor data not transferred');
+        });
+    };
+
+    usdEthInvestors.forEach((_oldInvestor, index) => {
+      const newAddress = newUsdEthInvestors[index];
+      it(`should transfer ${_oldInvestor} to ${newUsdEthInvestors[index]}`, () => testTransferInvestor(_oldInvestor, newAddress));
+    });
+  }); // describe changeModule
 
   xdescribe('changeModule', () => {
     it('NavCalculator', () => {

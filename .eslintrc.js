@@ -13,6 +13,7 @@ module.exports = {
         }]
     },
     "globals": {
+        "after" : true,
         "artifacts" : true,
         "assert" : true,
         "before" : true,
