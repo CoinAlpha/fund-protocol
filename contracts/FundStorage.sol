@@ -121,8 +121,10 @@ contract IFundStorage {
       uint mgmtFeeBps,
       uint performFeeBps, 
       uint shareSupply,
+      uint lastCalc,
       uint shareNav,
-      uint lastCalc
+      uint accumulatedMgmtFees,
+      uint accumulatedAdminFees
     ) {}
   function modifyShareCount(uint _shareClassIndex, uint _shareSupply, uint _totalShareSupply)
     returns (bool wasModified) {}
@@ -194,8 +196,10 @@ contract FundStorage is DestructibleModified {
     uint mgmtFeeBps;
     uint performFeeBps; 
     uint shareSupply;                  // In units of 0.01 | 100001 means 1000.01 shares
-    uint shareNav;                     // In units of 0.01 = cents
     uint lastCalc;                     // timeStamp
+    uint shareNav;                     // In units of 0.01 = cents
+    uint accumulatedMgmtFees;          // Amount in USD cents
+    uint accumulatedAdminFees;         // Amount in USD cents
   }
 
   mapping (uint => ShareClassStruct)  public  shareClasses;
@@ -241,7 +245,7 @@ contract FundStorage is DestructibleModified {
     minRedemptionShares = _minRedemptionShares;
     // Create initial base share class
     numberOfShareClasses = 1;
-    shareClasses[0] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, 10000, now);
+    shareClasses[0] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, now, 10000, 0, 0);
   }
 
 
@@ -537,24 +541,26 @@ contract FundStorage is DestructibleModified {
     constant
     public
     returns (
-      uint shareClassIndex,
       uint adminFeeBps,
       uint mgmtFeeBps,
       uint performFeeBps, 
       uint shareSupply,
+      uint lastCalc,
       uint shareNav,
-      uint lastCalc
+      uint accumulatedMgmtFees,
+      uint accumulatedAdminFees
     )
   {
     ShareClassStruct storage shareClass = shareClasses[_shareClassIndex];
     return (
-      _shareClassIndex,
       shareClass.adminFeeBps,
       shareClass.mgmtFeeBps,
       shareClass.performFeeBps,
       shareClass.shareSupply,
+      shareClass.lastCalc,
       shareClass.shareNav,
-      shareClass.lastCalc
+      shareClass.accumulatedMgmtFees,
+      shareClass.accumulatedAdminFees
     );
   }
 
@@ -563,7 +569,7 @@ contract FundStorage is DestructibleModified {
     returns (bool wasAdded)
   {
     uint newIndex = numberOfShareClasses;
-    shareClasses[newIndex] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, 10000, now);
+    shareClasses[newIndex] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, now, 10000, 0, 0);
     numberOfShareClasses += 1;
     LogAddedShareClass(newIndex, _adminFeeBps, _mgmtFeeBps, _performFeeBps, now, numberOfShareClasses);
     return true;
