@@ -418,7 +418,7 @@ contract('New Fund', (accounts) => {
           [USD_INVESTOR1_SHARES, USD_INVESTOR2_SHARES, ETH_INVESTOR1_SHARES] = _investorsData.map(_investorData => Number(_investorData.sharesOwned));
         })
         .catch(err => assert.throw(`Error retrieving investor date: ${err.toString()}`))
-        .then(() => Promise.all([newFund.totalSupply(), fundStorage.totalShareSupply(), fundStorage.getShareClassSupply(0)]))
+        .then(() => Promise.all([newFund.totalShareSupply(), fundStorage.totalShareSupply(), fundStorage.getShareClassSupply(0)]))
         .then(_supply => [NEWFUND_TOTAL_SUPPLY, FUNDSTORAGE_TOTAL_SUPPLY, SHARECLASS_SUPPLY] = _supply.map(x => Number(x)))
         .catch(err => assert.throw(`Error retrieving share balances: ${err.toString()}`)));
 
@@ -464,7 +464,7 @@ contract('New Fund', (accounts) => {
         .catch(err => `Error retrieving investor data: ${err.toString()}`));
 
     it('should have reduced the share balance in contracts by the correct amount', () =>
-      Promise.all([newFund.totalSupply(), fundStorage.totalShareSupply(), fundStorage.getShareClassSupply(0)])
+      Promise.all([newFund.totalShareSupply(), fundStorage.totalShareSupply(), fundStorage.getShareClassSupply(0)])
         .then((_supply) => {
           const SHARES_REDEEMED = (MIN_REDEMPTION_SHARES_CENTS) + USD_INVESTOR2_SHARES;
           const [NEWFUND_TOTAL_SUPPLY_NET, FUNDSTORAGE_TOTAL_SUPPLY_NET, SHARECLASS_SUPPLY_NET] = _supply.map(x => Number(x));
@@ -572,7 +572,7 @@ contract('New Fund', (accounts) => {
     it('eth shareholder should own shares > min redemption', () =>
       Promise.all([
         getInvestorData(fundStorage, ETH_INVESTOR1),
-        newFund.totalSupply(),
+        newFund.totalShareSupply(),
         fundStorage.totalShareSupply(),
         fundStorage.getShareClassSupply(0),
       ])
@@ -611,7 +611,7 @@ contract('New Fund', (accounts) => {
       .catch(err => assert.throw(`Error sending from exchange: ${err.toString()}`))
       .then(() => Promise.all([
         getInvestorData(fundStorage, ETH_INVESTOR1),
-        newFund.totalSupply(),
+        newFund.totalShareSupply(),
         fundStorage.totalShareSupply(),
         fundStorage.getShareClassSupply(0),
       ]))

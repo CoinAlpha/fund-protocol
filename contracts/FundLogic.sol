@@ -163,10 +163,10 @@ contract FundLogic is DestructibleModified {
     constant
     returns (bool)
   {
-    var (_investorType, _sharesOwned) = fundStorage.getUsdSubscriptionData(_investor);
-    uint minUsdAmount = _sharesOwned == 0 ? fundStorage.minInitialSubscriptionUsd() : fundStorage.minSubscriptionUsd();
+    var (investorType, sharesOwned) = fundStorage.getUsdSubscriptionData(_investor);
+    uint minUsdAmount = sharesOwned == 0 ? fundStorage.minInitialSubscriptionUsd() : fundStorage.minSubscriptionUsd();
 
-    require(_investorType == 2 && _usdAmount >= minUsdAmount);
+    require(investorType == 2 && _usdAmount >= minUsdAmount);
     return true;
   }
 
@@ -217,16 +217,17 @@ contract FundLogic is DestructibleModified {
     constant
     returns (uint ethPendingSubscription, uint newTotalEthPendingSubscription)
   {
-    var (investorType, _ethPendingSubscription) = fundStorage.getEthSubscriptionData(_investor);
-    require(investorType == 1 && _ethPendingSubscription > 0);
+    uint investorType;
+    (investorType, ethPendingSubscription) = fundStorage.getEthSubscriptionData(_investor);
+    require(investorType == 1 && ethPendingSubscription > 0);
 
     // Check that the fund balance has enough ether because the Fund contract's subscribe
     // function that calls this one will immediately transfer the subscribed amount of ether
     // to the exchange account upon function return
-    uint otherPendingSubscriptions = newFund.totalEthPendingSubscription().sub(_ethPendingSubscription);
-    require(_ethPendingSubscription <= newFund.balance.sub(otherPendingSubscriptions).sub(newFund.totalEthPendingWithdrawal()));
+    uint otherPendingSubscriptions = newFund.totalEthPendingSubscription().sub(ethPendingSubscription);
+    require(ethPendingSubscription <= newFund.balance.sub(otherPendingSubscriptions).sub(newFund.totalEthPendingWithdrawal()));
 
-    return (_ethPendingSubscription, newFund.totalEthPendingSubscription().sub(_ethPendingSubscription));
+    return (ethPendingSubscription, newFund.totalEthPendingSubscription().sub(ethPendingSubscription));
   }
 
   // ====================================== REDEMPTIONS ======================================

@@ -14,6 +14,9 @@ contract INewFund {
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
   uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
   uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
+
+  function totalShareSupply()
+    returns (uint ethAmsharesount) {}
 }
 
 
@@ -23,23 +26,22 @@ contract NewFund is DestructiblePausable {
   using SafeMath for uint;
 
   // ** CONSTANTS ** set at contract inception
-  uint    public decimals;                     // number of decimals used to display navPerShare
-  address public manager;                      // address of the manager account allowed to withdraw base and performance management fees
-  address public exchange;                     // address of the exchange account where the manager conducts trading.
+  uint    public decimals;                       // number of decimals used to display navPerShare
+  address public manager;                        // address of the manager account allowed to withdraw base and performance management fees
+  address public exchange;                       // address of the exchange account where the manager conducts trading.
 
   // ** FUND BALANCES **
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
   uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
   uint    public totalEthPendingWithdrawal;      // total payments not yet withdrawn by investors, denominated in shares
-  uint    public totalSupply;                    // total number of shares outstanding
 
 
   // ========================================= MODULES ==========================================
   // Where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
-  INavCalculator      public navCalculator;         // calculating net asset value
-  IFundLogic          public fundLogic;             // performing investor actions such as subscriptions, redemptions, and withdrawals
-  IDataFeed           public dataFeed;              // fetching external data like total portfolio value and exchange rates
-  IFundStorage        public fundStorage;           // data storage module
+  INavCalculator      public navCalculator;      // calculating net asset value
+  IFundLogic          public fundLogic;          // performing investor actions such as subscriptions, redemptions, and withdrawals
+  IDataFeed           public dataFeed;           // fetching external data like total portfolio value and exchange rates
+  IFundStorage        public fundStorage;        // data storage module
 
 
   // ========================================= MODIFIERS =========================================
@@ -125,9 +127,9 @@ contract NewFund is DestructiblePausable {
     payable
     returns (bool isSuccess)
   {
-    var (_ethPendingSubscription, _totalEthPendingSubscription) = fundLogic.calcRequestEthSubscription(msg.sender, msg.value);
-    fundStorage.setEthPendingSubscription(msg.sender, _ethPendingSubscription);
-    totalEthPendingSubscription = _totalEthPendingSubscription;
+    var (ethPendingSubscription, newTotalEthPendingSubscription) = fundLogic.calcRequestEthSubscription(msg.sender, msg.value);
+    fundStorage.setEthPendingSubscription(msg.sender, ethPendingSubscription);
+    totalEthPendingSubscription = newTotalEthPendingSubscription;
 
     LogEthSubscriptionRequest(msg.sender, msg.value);
     return true;
@@ -171,8 +173,6 @@ contract NewFund is DestructiblePausable {
     
     fundStorage.setSubscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
     
-    totalSupply = _newTotalShareSupply;
-    
     LogSubscription("USD", _investor, _shareClass, _newShares, _nav, dataFeed.usdEth());
     return true;
   }
@@ -188,17 +188,16 @@ contract NewFund is DestructiblePausable {
     returns (bool wasSubscribed)
   {
     // Calculate new totalEthPendingSubscription as well as check ETH Investor conditions
-    var (ethPendingSubscription, _totalEthPendingSubscription) = fundLogic.calcEthSubscription(_investor);
+    var (ethPendingSubscription, newTotalEthPendingSubscription) = fundLogic.calcEthSubscription(_investor);
     
-    var (_shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply, _nav) = fundLogic.calcSubscriptionShares(_investor, 0);
+    var (shareClass, newSharesOwned, newShares, newShareClassSupply, newTotalShareSupply, nav) = fundLogic.calcSubscriptionShares(_investor, 0);
     
-    fundStorage.setSubscribeInvestor(_investor, _shareClass, _newSharesOwned, _newShares, _newShareClassSupply, _newTotalShareSupply);
+    fundStorage.setSubscribeInvestor(_investor, shareClass, newSharesOwned, newShares, newShareClassSupply, newTotalShareSupply);
     
-    totalSupply = _newTotalShareSupply;
-    totalEthPendingSubscription = _totalEthPendingSubscription;
+    totalEthPendingSubscription = newTotalEthPendingSubscription;
     exchange.transfer(ethPendingSubscription);
 
-    LogSubscription("ETH", _investor, _shareClass, _newShares, _nav, dataFeed.usdEth());
+    LogSubscription("ETH", _investor, shareClass, newShares, nav, dataFeed.usdEth());
     LogTransferToExchange(ethPendingSubscription);
     return true;
   }
@@ -229,13 +228,11 @@ contract NewFund is DestructiblePausable {
     returns (bool wasRedeemed)
   {
     // Check conditions for valid USD redemption and calculate change in shares
-    var (_shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav) = fundLogic.calcRedeemUsdInvestor(_investor, _shares);
+    var (shareClass, newSharesOwned, newShareClassSupply, newTotalShareSupply, nav) = fundLogic.calcRedeemUsdInvestor(_investor, _shares);
     
-    fundStorage.setRedeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
+    fundStorage.setRedeemInvestor(_investor, shareClass, newSharesOwned, newShareClassSupply, newTotalShareSupply);
     
-    totalSupply = _newTotalShareSupply;
-    
-    LogRedemption("USD", _investor, _shareClass, _shares, _nav, dataFeed.usdEth());
+    LogRedemption("USD", _investor, shareClass, _shares, nav, dataFeed.usdEth());
     return true;
   }
 
@@ -248,9 +245,9 @@ contract NewFund is DestructiblePausable {
     whenNotPaused
     returns (bool isSuccess)
   {
-    var (_newSharesPendingRedemption, _totalSharesPendingRedemption) = fundLogic.calcRequestEthRedemption(msg.sender, _shares);
-    fundStorage.setEthPendingRedemption(msg.sender, _newSharesPendingRedemption);
-    totalSharesPendingRedemption = _totalSharesPendingRedemption;
+    var (newSharesPendingRedemption, newTotalSharesPendingRedemption) = fundLogic.calcRequestEthRedemption(msg.sender, _shares);
+    fundStorage.setEthPendingRedemption(msg.sender, newSharesPendingRedemption);
+    totalSharesPendingRedemption = newTotalSharesPendingRedemption;
 
     LogEthRedemptionRequest(msg.sender, _shares);
     return true;
@@ -264,11 +261,11 @@ contract NewFund is DestructiblePausable {
     whenNotPaused
     returns (bool isSuccess)
   {
-    var (_redemptionCancelledShares, _totalSharesPendingRedemption) = fundLogic.cancelEthRedemption(msg.sender);
+    var (redemptionCancelledShares, newTotalSharesPendingRedemption) = fundLogic.cancelEthRedemption(msg.sender);
     fundStorage.setEthPendingRedemption(msg.sender, 0);
-    totalSharesPendingRedemption = _totalSharesPendingRedemption;
+    totalSharesPendingRedemption = newTotalSharesPendingRedemption;
 
-    LogEthRedemptionCancellation(msg.sender, _redemptionCancelledShares);
+    LogEthRedemptionCancellation(msg.sender, redemptionCancelledShares);
     return true;
   }
 
@@ -283,15 +280,14 @@ contract NewFund is DestructiblePausable {
     returns (bool isSuccess)
   {
     // Check conditions for valid USD redemption and calculate change in shares
-    var (_shareClass, _redeemedShares, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply, _nav, _redeemedEthAmount) = fundLogic.calcRedeemEthInvestor(_investor);
+    var (shareClass, redeemedShares, newSharesOwned, newShareClassSupply, newTotalShareSupply, nav, redeemedEthAmount) = fundLogic.calcRedeemEthInvestor(_investor);
     
-    fundStorage.setRedeemInvestor(_investor, _shareClass, _newSharesOwned, _newShareClassSupply, _newTotalShareSupply);
+    fundStorage.setRedeemInvestor(_investor, shareClass, newSharesOwned, newShareClassSupply, newTotalShareSupply);
     
-    totalSupply = _newTotalShareSupply;
-    _investor.transfer(_redeemedEthAmount);
+    _investor.transfer(redeemedEthAmount);
     
-    LogRedemption("ETH", _investor, _shareClass, _redeemedShares, _nav, dataFeed.usdEth());
-    LogRedemptionPayment(_redeemedEthAmount);
+    LogRedemption("ETH", _investor, shareClass, redeemedShares, nav, dataFeed.usdEth());
+    LogRedemptionPayment(redeemedEthAmount);
     return true;
   }
 
@@ -310,6 +306,25 @@ contract NewFund is DestructiblePausable {
   {
     LogTransferFromExchange(msg.value);
     return true;
+  }
+
+  // ========================================= BALANCES ========================================
+
+  // Returns the fund's balance less pending subscriptions and withdrawals
+  function getBalance()
+    constant
+    returns (uint ethAmount)
+  {
+    return this.balance.sub(totalEthPendingSubscription).sub(totalEthPendingWithdrawal);
+  }
+
+  // Returns the fund's total amount of shares outstanding
+  function totalShareSupply()
+    constant
+    public
+    returns (uint ethAmsharesount)
+  {
+    return fundStorage.totalShareSupply();
   }
 
   // ========================================== ADMIN ==========================================
@@ -377,16 +392,4 @@ contract NewFund is DestructiblePausable {
     LogModuleChanged(_module, oldAddress, _newAddress);
     return true;
   }
-
-
-  // ********* HELPERS *********
-
-  // Returns the fund's balance less pending subscriptions and withdrawals
-  function getBalance()
-    constant
-    returns (uint ethAmount)
-  {
-    return this.balance.sub(totalEthPendingSubscription).sub(totalEthPendingWithdrawal);
-  }
-
 } // END OF NewFund

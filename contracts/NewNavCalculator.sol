@@ -1,6 +1,6 @@
 pragma solidity ^0.4.13;
 
-import "./Fund.sol";
+import "./NewFund.sol";
 import "./FundLogic.sol";
 import "./FundStorage.sol";
 import "./DataFeed.sol";
@@ -39,7 +39,7 @@ contract NewNavCalculator is DestructibleModified {
 
   // Modules
   IDataFeed public dataFeed;
-  IFund fund;
+  INewFund newFund;
   IFundLogic fundLogic;
   IFundStorage fundStorage;
 
@@ -60,6 +60,7 @@ contract NewNavCalculator is DestructibleModified {
   }
 
   event LogNavCalculation(
+    uint shareClass,
     uint indexed timestamp,
     uint elapsedTime,
     uint grossAssetValueLessFees,
@@ -90,21 +91,21 @@ contract NewNavCalculator is DestructibleModified {
     lastCalcDate = now;
 
     // Set the initial value of the variables below from the last NAV calculation
-    uint netAssetValue = sharesToUsd(fund.totalSupply());
-    uint elapsedTime = lastCalcDate - fund.lastCalcDate();
-    lossCarryforward = fund.lossCarryforward();
-    accumulatedMgmtFees = fund.accumulatedMgmtFees();
-    accumulatedAdminFees = fund.accumulatedAdminFees();
+    uint netAssetValue = fundLogic.sharesToUsd(_shareClass, newFund.totalShareSupply());
+    uint elapsedTime = lastCalcDate - newFund.lastCalcDate();
+    lossCarryforward = newFund.lossCarryforward();
+    accumulatedMgmtFees = newFund.accumulatedMgmtFees();
+    accumulatedAdminFees = newFund.accumulatedAdminFees();
 
     // The new grossAssetValue equals the updated value, denominated in ether, of the exchange account,
     // plus any amounts that sit in the fund contract, excluding unprocessed subscriptions
     // and unwithdrawn investor payments.
     // Removes the accumulated management and administrative fees from grossAssetValue
-    uint grossAssetValueLessFees = dataFeed.value().add(fund.ethToUsd(fund.getBalance())).sub(accumulatedMgmtFees).sub(accumulatedAdminFees);
+    uint grossAssetValueLessFees = dataFeed.value().add(newFund.ethToUsd(newFund.getBalance())).sub(accumulatedMgmtFees).sub(accumulatedAdminFees);
 
     // Calculates the base management fee accrued since the last NAV calculation
-    uint mgmtFee = getAnnualFee(elapsedTime, fund.mgmtFeeBps());
-    uint adminFee = getAnnualFee(elapsedTime, fund.adminFeeBps());
+    uint mgmtFee = getAnnualFee(elapsedTime, newFund.mgmtFeeBps());
+    uint adminFee = getAnnualFee(elapsedTime, newFund.adminFeeBps());
 
     // Calculate the gain/loss based on the new grossAssetValue and the old netAssetValue
     int gainLoss = int(grossAssetValueLessFees) - int(netAssetValue) - int(mgmtFee) - int(adminFee);
@@ -134,7 +135,7 @@ contract NewNavCalculator is DestructibleModified {
     accumulatedMgmtFees = accumulatedMgmtFees.add(performFee).sub(performFeeOffset);
     navPerShare = toNavPerShare(netAssetValue);
 
-    LogNavCalculation(lastCalcDate, elapsedTime, grossAssetValueLessFees, netAssetValue, fund.totalSupply(), adminFee, mgmtFee, performFee, performFeeOffset, lossPayback);
+    LogNavCalculation(lastCalcDate, elapsedTime, grossAssetValueLessFees, netAssetValue, newFund.totalShareSupply(), adminFee, mgmtFee, performFee, performFeeOffset, lossPayback);
 
     return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
   }
@@ -145,7 +146,7 @@ contract NewNavCalculator is DestructibleModified {
   function setFund(address _address)
     onlyOwner
   {
-    fund = IFund(_address);
+    newFund = INewFund(_address);
     fundAddress = _address;
   }
 
@@ -161,12 +162,12 @@ contract NewNavCalculator is DestructibleModified {
   // Returns the fee amount associated with an annual fee accumulated given time elapsed and the annual fee rate
   // Equivalent to: annual fee percentage * fund totalSupply * (seconds elapsed / seconds in a year)
   // Has the same denomination as the fund totalSupply
-  function getAnnualFee(uint elapsedTime, uint annualFeeBps) 
+  function getAnnualFee(uint _elapsedTime, uint _annualFeeBps, uint _shareClass) 
     internal 
     constant 
     returns (uint feePayment) 
   {
-    return annualFeeBps.mul(sharesToUsd(fund.totalSupply())).div(10000).mul(elapsedTime).div(31536000);
+    return _annualFeeBps.mul(fundLogic.sharesToUsd(_shareClass, newFund.totalShareSupply())).div(10000).mul(_elapsedTime).div(31536000);
   }
 
   // Returns the performance fee for a given gain in portfolio value
@@ -175,7 +176,7 @@ contract NewNavCalculator is DestructibleModified {
     constant 
     returns (uint performFee)  
   {
-    return fund.performFeeBps().mul(_usdGain).div(10 ** fund.decimals());
+    return newFund.performFeeBps().mul(_usdGain).div(10 ** newFund.decimals());
   }
 
   // Returns the gain in portfolio value for a given performance fee
@@ -184,7 +185,7 @@ contract NewNavCalculator is DestructibleModified {
     constant 
     returns (uint usdGain)  
   {
-    return _performFee.mul(10 ** fund.decimals()).div(fund.performFeeBps());
+    return _performFee.mul(10 ** newFund.decimals()).div(newFund.performFeeBps());
   }
 
   // Converts shares to a corresponding amount of USD based on the current nav per share
@@ -193,7 +194,7 @@ contract NewNavCalculator is DestructibleModified {
     constant 
     returns (uint usd) 
   {
-    return _shares.mul(fund.navPerShare()).div(10 ** fund.decimals());
+    return _shares.mul(newFund.navPerShare()).div(10 ** newFund.decimals());
   }
 
   // Converts total fund NAV to NAV per share
@@ -202,6 +203,6 @@ contract NewNavCalculator is DestructibleModified {
     constant 
     returns (uint) 
   {
-    return _balance.mul(10 ** fund.decimals()).div(fund.totalSupply());
+    return _balance.mul(10 ** newFund.decimals()).div(newFund.totalShareSupply());
   }
 }
