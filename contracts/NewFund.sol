@@ -17,6 +17,8 @@ contract INewFund {
 
   function totalShareSupply()
     returns (uint ethAmsharesount) {}
+  function getBalance()
+    returns (uint ethAmount) {}
 }
 
 

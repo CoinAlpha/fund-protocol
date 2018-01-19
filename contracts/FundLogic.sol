@@ -53,9 +53,14 @@ contract IFundLogic {
   function withdraw(address _addr)
     returns (uint, uint, uint) {}
   
+  // Conversions
   function sharesToEth(uint _shareClass, uint _shares)
     returns (uint ethAmount) {}
-
+  function sharesToUsd(uint _shareClass, uint _shares)
+    returns (uint usdAmount) {}
+  function usdToEth(uint _usd) {}
+  function ethToUsd(uint _eth) 
+    returns (uint usd) {}
   // Admin
   function calcTransferInvestor(address _oldAddress, address _newAddress)
     returns (bool isSuccess) {}

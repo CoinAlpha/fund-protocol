@@ -116,13 +116,13 @@ contract IFundStorage {
   // Share Class Functions
   function getShareClass(uint _shareClassIndex)
     returns (
-      uint shareClassIndex,
       uint adminFeeBps,
       uint mgmtFeeBps,
       uint performFeeBps, 
       uint shareSupply,
       uint lastCalc,
       uint shareNav,
+      uint lossCarryforward,
       uint accumulatedMgmtFees,
       uint accumulatedAdminFees
     ) {}
@@ -198,6 +198,7 @@ contract FundStorage is DestructibleModified {
     uint shareSupply;                  // In units of 0.01 | 100001 means 1000.01 shares
     uint lastCalc;                     // timeStamp
     uint shareNav;                     // In units of 0.01 = cents
+    uint lossCarryforward;             // Amount in USD cents
     uint accumulatedMgmtFees;          // Amount in USD cents
     uint accumulatedAdminFees;         // Amount in USD cents
   }
@@ -245,7 +246,7 @@ contract FundStorage is DestructibleModified {
     minRedemptionShares = _minRedemptionShares;
     // Create initial base share class
     numberOfShareClasses = 1;
-    shareClasses[0] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, now, 10000, 0, 0);
+    shareClasses[0] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, now, 10000, 0, 0, 0);
   }
 
 
@@ -547,6 +548,7 @@ contract FundStorage is DestructibleModified {
       uint shareSupply,
       uint lastCalc,
       uint shareNav,
+      uint lossCarryforward,
       uint accumulatedMgmtFees,
       uint accumulatedAdminFees
     )
@@ -559,6 +561,7 @@ contract FundStorage is DestructibleModified {
       shareClass.shareSupply,
       shareClass.lastCalc,
       shareClass.shareNav,
+      shareClass.lossCarryforward,
       shareClass.accumulatedMgmtFees,
       shareClass.accumulatedAdminFees
     );
@@ -569,7 +572,7 @@ contract FundStorage is DestructibleModified {
     returns (bool wasAdded)
   {
     uint newIndex = numberOfShareClasses;
-    shareClasses[newIndex] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, now, 10000, 0, 0);
+    shareClasses[newIndex] = ShareClassStruct(_adminFeeBps, _mgmtFeeBps, _performFeeBps, 0, now, 10000, 0, 0, 0);
     numberOfShareClasses += 1;
     LogAddedShareClass(newIndex, _adminFeeBps, _mgmtFeeBps, _performFeeBps, now, numberOfShareClasses);
     return true;
