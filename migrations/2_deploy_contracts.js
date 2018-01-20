@@ -116,6 +116,8 @@ module.exports = (deployer, network, accounts) => {
       ))
       .then(() => deployer.deploy(
         NewNavCalculator,
+        MANAGER,                        // _manager
+        EXCHANGE,                       // _exchange
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
         FundLogic.address,              // _fundLogic
@@ -123,8 +125,6 @@ module.exports = (deployer, network, accounts) => {
       ))
       .then(() => deployer.deploy(
         NewFund,
-        MANAGER,                        // _manager
-        EXCHANGE,                       // _exchange
         NewNavCalculator.address,       // _navCalculator
         FundLogic.address,              // _fundLogic
         DataFeed.address,               // _dataFeed
@@ -203,6 +203,8 @@ module.exports = (deployer, network, accounts) => {
       ))
       .then(() => deployer.deploy(
         NewNavCalculator,
+        MANAGER,                        // _manager
+        EXCHANGE,                       // _exchange
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
         FundLogic.address,              // _fundLogic
@@ -210,8 +212,6 @@ module.exports = (deployer, network, accounts) => {
       ))
       .then(() => deployer.deploy(
         NewFund,
-        MANAGER,                        // _manager
-        EXCHANGE,                       // _exchange
         NewNavCalculator.address,       // _navCalculator
         InvestorActions.address,        // _investorActions
         DATA_FEED_ADDRESS,              // _dataFeed

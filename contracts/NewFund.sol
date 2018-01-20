@@ -1,6 +1,6 @@
 pragma solidity ^0.4.13;
 
-import "./NavCalculator.sol";
+import "./NewNavCalculator.sol";
 import "./FundLogic.sol";
 import "./DataFeed.sol";
 import "./FundStorage.sol";
@@ -27,11 +27,6 @@ contract INewFund {
 contract NewFund is DestructiblePausable {
   using SafeMath for uint;
 
-  // ** CONSTANTS ** set at contract inception
-  uint    public decimals;                       // number of decimals used to display navPerShare
-  address public manager;                        // address of the manager account allowed to withdraw base and performance management fees
-  address public exchange;                       // address of the exchange account where the manager conducts trading.
-
   // ** FUND BALANCES **
   uint    public totalEthPendingSubscription;    // total subscription requests not yet processed by the manager, denominated in ether
   uint    public totalSharesPendingRedemption;   // total redemption requests not yet processed by the manager, denominated in shares
@@ -40,7 +35,7 @@ contract NewFund is DestructiblePausable {
 
   // ========================================= MODULES ==========================================
   // Where possible, fund logic is delegated to the module contracts below, so that they can be patched and upgraded after contract deployment
-  INavCalculator      public navCalculator;      // calculating net asset value
+  INewNavCalculator   public navCalculator;      // calculating net asset value
   IFundLogic          public fundLogic;          // performing investor actions such as subscriptions, redemptions, and withdrawals
   IDataFeed           public dataFeed;           // fetching external data like total portfolio value and exchange rates
   IFundStorage        public fundStorage;        // data storage module
@@ -48,12 +43,12 @@ contract NewFund is DestructiblePausable {
 
   // ========================================= MODIFIERS =========================================
   modifier onlyExchange {
-    require(msg.sender == exchange);
+    require(msg.sender == exchange());
     _;
   }
 
   modifier onlyManager {
-    require(msg.sender == manager);
+    require(msg.sender == manager());
     _;
   }
 
@@ -79,19 +74,14 @@ contract NewFund is DestructiblePausable {
 
   // ======================================== CONSTRUCTOR ========================================
   function NewFund(
-    address _manager,
-    address _exchange,
     address _navCalculator,
     address _fundLogic,
     address _dataFeed,
     address _fundStorage
   )
   {
-
     // Set the addresses of other wallets/contracts with which this contract interacts
-    manager = _manager;
-    exchange = _exchange;
-    navCalculator = INavCalculator(_navCalculator);
+    navCalculator = INewNavCalculator(_navCalculator);
     fundLogic = IFundLogic(_fundLogic);
     dataFeed = IDataFeed(_dataFeed);
     fundStorage = IFundStorage(_fundStorage);
@@ -197,7 +187,8 @@ contract NewFund is DestructiblePausable {
     fundStorage.setSubscribeInvestor(_investor, shareClass, newSharesOwned, newShares, newShareClassSupply, newTotalShareSupply);
     
     totalEthPendingSubscription = newTotalEthPendingSubscription;
-    exchange.transfer(ethPendingSubscription);
+    address exchangeAddress = exchange();
+    exchangeAddress.transfer(ethPendingSubscription);
 
     LogSubscription("ETH", _investor, shareClass, newShares, nav, dataFeed.usdEth());
     LogTransferToExchange(ethPendingSubscription);
@@ -320,6 +311,9 @@ contract NewFund is DestructiblePausable {
     return this.balance.sub(totalEthPendingSubscription).sub(totalEthPendingWithdrawal);
   }
 
+
+  // ==================================== BASIC FUND DETAIL=====================================
+
   // Returns the fund's total amount of shares outstanding
   function totalShareSupply()
     constant
@@ -327,6 +321,35 @@ contract NewFund is DestructiblePausable {
     returns (uint ethAmsharesount)
   {
     return fundStorage.totalShareSupply();
+  }
+
+  // Returns the fund decimals for calculation
+  // number of decimals used to display navPerShare
+  function decimals()
+    constant
+    public
+    returns (uint)
+  {
+    return fundStorage.decimals();
+  }
+
+  // Returns the fund manager's address
+  // Address of the manager account allowed to withdraw base and performance management fees
+  function manager()
+    constant
+    public
+    returns (address)
+  {
+    return fundStorage.manager();
+  }
+
+  // Returns the exchange wallet address
+  function exchange()
+    constant
+    public
+    returns (address)
+  {
+    return fundStorage.exchange();
   }
 
   // ========================================== ADMIN ==========================================
@@ -375,7 +398,7 @@ contract NewFund is DestructiblePausable {
     if (module == keccak256("NavCalculator")) {
       oldAddress = navCalculator;
       require(oldAddress != _newAddress);
-      navCalculator = INavCalculator(_newAddress);
+      navCalculator = INewNavCalculator(_newAddress);
     } else if (module == keccak256("FundLogic")) {
       oldAddress = fundLogic;
       require(oldAddress != _newAddress);

@@ -20,6 +20,8 @@ contract IFundStorage {
   uint     public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
 
   address  public fundAddress;
+  address  public manager;
+  address  public exchange;
 
   uint     public totalShareSupply;
   uint     public numberOfShareClasses;
@@ -52,13 +54,13 @@ contract IFundStorage {
     returns (bool success) {}
   function modifyInvestor(
     address _investor,
-    uint _investorType,
-    uint _ethPendingSubscription,
-    uint _sharesOwned,
-    uint _shareClass,
-    uint _sharesPendingRedemption,
-    uint _amountPendingWithdrawal,
-    string _description
+    uint    _investorType,
+    uint    _ethPendingSubscription,
+    uint    _sharesOwned,
+    uint    _shareClass,
+    uint    _sharesPendingRedemption,
+    uint    _amountPendingWithdrawal,
+    string  _description
   ) returns (bool wasModified) {}
   function transferInvestor(address _oldAddress, address _newAddress)
     returns (bool isSuccess) {}
@@ -152,6 +154,8 @@ contract FundStorage is DestructibleModified {
   uint     public minRedemptionShares;          // minimum amount of shares that an investor can request be redeemed
   
   address  public fundAddress;
+  address  public manager;
+  address  public exchange;
 
   // This modifier is applied to all external methods in this contract since only
   // the primary Fund contract can use this module
@@ -213,7 +217,7 @@ contract FundStorage is DestructibleModified {
   // ==================================== EVENTS ====================================
 
   // Fund Events
-  event LogUpdatedDetails(string updatedField, uint oldValue, uint newValue);
+  event LogUpdatedStorage(string updatedField, uint oldValue, uint newValue);
   event LogRemovedInvestor(address removedInvestor, uint investorType);
   event LogModifiedStorageInvestor(string description, uint investorType, uint ethPendingSubscription, uint sharesOwned, uint shareClass, uint sharesPendingRedemption, uint amountPendingWithdrawal);
 
@@ -225,10 +229,12 @@ contract FundStorage is DestructibleModified {
   event LogUpdatedEthPendingSubscription(address indexed investor, uint totalAmount);
 
   // Administrative Events
-  event LogSetFundAddress(address oldFundAddress, address newFundAddress);
+  event LogUpdatedAddress(string updatedAddress, address oldFundAddress, address newFundAddress);
 
   // ==================================== CONSTRUCTOR ====================================
   function FundStorage(
+    address  _manager,
+    address  _exchange,
     bytes32  _name,
     bytes32  _symbol,
     uint     _decimals,
@@ -241,6 +247,8 @@ contract FundStorage is DestructibleModified {
     uint     _performFeeBps
   ) // "Falcon", "FALC", 1000000, 500000, 100000, 100, 100, 20000
   {
+    manager = _manager;
+    exchange = _exchange;
     name = _name;
     symbol = _symbol;
     decimals = _decimals;
@@ -261,7 +269,7 @@ contract FundStorage is DestructibleModified {
     uint old = minInitialSubscriptionUsd;
     require(old != _minInitialSubscriptionUsd);
     minInitialSubscriptionUsd = _minInitialSubscriptionUsd;
-    LogUpdatedDetails("minInitialSubscriptionUsd", old, _minInitialSubscriptionUsd);
+    LogUpdatedStorage("minInitialSubscriptionUsd", old, _minInitialSubscriptionUsd);
     return true;
   }
   
@@ -271,7 +279,7 @@ contract FundStorage is DestructibleModified {
   {
     uint old = minSubscriptionUsd;
     require(old != _minSubscriptionUsd);
-    LogUpdatedDetails("minSubscriptionUsd", old, _minSubscriptionUsd);
+    LogUpdatedStorage("minSubscriptionUsd", old, _minSubscriptionUsd);
     minSubscriptionUsd = _minSubscriptionUsd;
     return true;
   }
@@ -283,7 +291,7 @@ contract FundStorage is DestructibleModified {
     uint old = minRedemptionShares;
     require(old != _minRedemptionShares);
     minRedemptionShares = _minRedemptionShares;
-    LogUpdatedDetails("minRedemeptionShares", old, _minRedemptionShares);
+    LogUpdatedStorage("minRedemeptionShares", old, _minRedemptionShares);
     return true;
   }
 
@@ -654,11 +662,34 @@ contract FundStorage is DestructibleModified {
   // Update the address of the Fund contract
   function setFund(address _fundAddress)
     onlyOwner
+    returns (bool isSuccess)
   {
     require(_fundAddress != fundAddress && _fundAddress != address(0));
     address oldFundAddress = fundAddress;
     fundAddress = _fundAddress;
-    LogSetFundAddress(oldFundAddress, _fundAddress);
+    LogUpdatedAddress("fund", oldFundAddress, _fundAddress);
+  }
+
+  // Update the address of the Fund contract
+  function setManager(address _manager)
+    onlyOwner
+    returns (bool isSuccess)
+  {
+    require(_manager != manager && _manager != address(0));
+    address oldManager = manager;
+    manager = _manager;
+    LogUpdatedAddress("manager", oldManager, _manager);
+  }
+
+  // Update the address of the exchange account
+  function setExchange(address _exchange)
+    onlyOwner
+    returns (bool isSuccess)
+  {
+    require(_exchange != exchange && _exchange != address(0));
+    address oldExchange = exchange;
+    exchange = _exchange;
+    LogUpdatedAddress("fund", oldExchange, _exchange);
   }
 
 }
