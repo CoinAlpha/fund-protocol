@@ -79,11 +79,11 @@ contract NewNavCalculator is DestructibleModified {
     onlyFund
     constant
     returns (
-      uint, // lastCalcDate
-      uint, // navPerShare
-      uint, // lossCarryforward
-      uint, // accumulatedMgmtFees,
-      uint  // accumulatedAdminFees
+      uint lastCalcDate,
+      uint navPerShare,
+      uint lossCarryforward,
+      uint accumulatedMgmtFees,
+      uint accumulatedAdminFees
     )
   {
     // Memory array for temp variables
@@ -92,87 +92,78 @@ contract NewNavCalculator is DestructibleModified {
      *  [0] = adminFeeBps
      *  [1] = mgmtFeeBps
      *  [2] = performFeeBps
-     *  [3] = shareSupply
-     *  [4] = netAssetValue             temp[4]
-     *  [5] = elapsedTime               temp[5]
-     *  [6] = grossAssetValueLessFees   temp[6]
-     *  [7] = mgmtFee                   temp[7]
-     *  [8] = adminFee                  temp[8]
-     *  [9] = performFee                temp[9]
-     *  [10] = performFeeOffset         temp[10]
-     *  [11] = lossPayback              temp[11]
-
-     *  [12] = lastCalcDate             temp[12]
-     *  [13] = navPerShare              temp[13]
-     *  [14] = navPerShare              temp[14]
-     *  [15] = accumulatedMgmtFees      temp[15]
-     *  [16] = accumulatedAdminFees     temp[16]
+     *  [3] = elapsedTime
+     *  [4] = mgmtFee
+     *  [5] = adminFee
+     *  [6] = performFee
+     *  [7] = performFeeOffset
+     *  [8] = lossPayback
      */
 
-  // temp[2]2
     // Get Fund and shareClass parameters
-    // uint adminFeeBps;
-    // uint mgmtFeeBps;
-    // uint performFeeBps; 
-    // uint shareSupply;
-    (temp[0],
-     temp[1],
-     temp[2],
-     temp[3],
-     temp[12],
-     temp[13],
-     temp[14],
-     temp[15],
-     temp[16]
-    ) = fundStorage.getShareClass(_shareClass);
+    uint shareSupply;
+    (temp[0],               // adminFeeBps
+     temp[1],               // mgmtFeeBps
+     temp[2],               // performFeeBps
+     shareSupply  
+    ) = fundStorage.getShareClassDetails(_shareClass);
+
+    (lastCalcDate,          // lastCalcDate
+     navPerShare,           // navPerShare
+     lossCarryforward,      // lossCarryforward
+     accumulatedMgmtFees,   // accumulatedMgmtFees
+     accumulatedAdminFees   // accumulatedAdminFees
+    ) = fundStorage.getShareClassNavDetails(_shareClass);
 
     // Set the initial value of the variables below from the last NAV calculation
-    temp[4] = fundLogic.sharesToUsd(_shareClass, temp[3]);
-    temp[5] = now - temp[12];
-    temp[12] = now;
+    uint netAssetValue = fundLogic.sharesToUsd(_shareClass, shareSupply);
+    temp[3] = now - lastCalcDate;     // elapsedTime
+    lastCalcDate = now;
 
     // The new grossAssetValue equals the updated value, denominated in ether, of the exchange account,
     // plus any amounts that sit in the fund contract, excluding unprocessed subscriptions
     // and unwithdrawn investor payments.
     // Removes the accumulated management and administrative fees from grossAssetValue
     // Prorates total asset value by Share Class share amount / total shares
-    temp[6] = dataFeed.value().add(fundLogic.ethToUsd(newFund.getBalance())).sub(temp[15]).sub(temp[16]).mul(temp[3]).div(fundStorage.totalShareSupply());
+
+    // grossAssetValuesLessFees
+    uint grossAssetValuesLessFees = dataFeed.value().add(fundLogic.ethToUsd(newFund.getBalance())).sub(accumulatedMgmtFees).sub(accumulatedAdminFees).mul(shareSupply).div(fundStorage.totalShareSupply());
 
     // Calculates the base management fee accrued since the last NAV calculation
-    temp[7] = getAnnualFee(_shareClass, temp[3], temp[5], temp[1]);
-    temp[8] = getAnnualFee(_shareClass, temp[3], temp[5], temp[0]);
+    temp[4] = getAnnualFee(_shareClass, shareSupply, temp[3], temp[1]);   // mgmtFee
+    temp[5] = getAnnualFee(_shareClass, shareSupply, temp[3], temp[0]);   // adminFee
 
     // Calculate the gain/loss based on the new grossAssetValue and the old netAssetValue
-    int gainLoss = int(temp[6]) - int(temp[4]) - int(temp[7]) - int(temp[8]);
+    int gainLoss = int(grossAssetValuesLessFees) - int(netAssetValue) - int(temp[4]) - int(temp[5]);
 
     // uint performFee = 0;
     // uint performFeeOffset = 0;
 
     // if current period gain
     if (gainLoss >= 0) {
-      temp[11] = Math.min256(uint(gainLoss), temp[14]);
+      temp[8] = Math.min256(uint(gainLoss), lossCarryforward);                 // lossPayback
 
       // Update the lossCarryforward and netAssetValue variables
-      temp[14] = temp[14].sub(temp[11]);
-      temp[9] = getPerformFee(temp[2], uint(gainLoss).sub(temp[11]));
-      temp[4] = temp[4].add(uint(gainLoss)).sub(temp[9]);
+      lossCarryforward = lossCarryforward.sub(temp[8]);
+      temp[6] = getPerformFee(temp[2], uint(gainLoss).sub(temp[8]));           // performFee
+      netAssetValue = netAssetValue.add(uint(gainLoss)).sub(temp[6]);
     
     // if current period loss
     } else {
-      temp[10] = Math.min256(getPerformFee(temp[2], uint(-1 * gainLoss)), temp[15]);
+      temp[7] = Math.min256(getPerformFee(temp[2], uint(-1 * gainLoss)), accumulatedMgmtFees);
       // Update the lossCarryforward and netAssetValue variables
-      temp[14] = temp[14].add(uint(-1 * gainLoss)).sub(getGainGivenPerformFee(temp[10], temp[2]));
-      temp[4] = temp[4].sub(uint(-1 * gainLoss)).add(temp[10]);
+      lossCarryforward = lossCarryforward.add(uint(-1 * gainLoss)).sub(getGainGivenPerformFee(temp[7], temp[2]));
+      netAssetValue = netAssetValue.sub(uint(-1 * gainLoss)).add(temp[7]);
     }
 
     // Update the remaining state variables and return them to the fund contract
-    temp[16] = temp[16].add(temp[8]);
-    temp[15] = temp[15].add(temp[9]).sub(temp[10]);
-    temp[13] = toNavPerShare(temp[4], temp[3]);
+    accumulatedAdminFees = accumulatedAdminFees.add(temp[5]);
+    accumulatedMgmtFees = accumulatedMgmtFees.add(temp[6]).sub(temp[7]);
+    navPerShare = toNavPerShare(netAssetValue, shareSupply);
 
-    LogNavCalculation(_shareClass, temp[12], temp[5], temp[6], temp[4], temp[3], temp[8], temp[7], temp[9], temp[10], temp[11]);
+    LogNavCalculation(_shareClass, lastCalcDate, temp[3], grossAssetValuesLessFees, netAssetValue, shareSupply, temp[5], temp[4], temp[6], temp[7], temp[8]);
 
-    return (temp[12], temp[13], temp[14], temp[15], temp[16]);
+    return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
   }
 
   // ********* ADMIN *********

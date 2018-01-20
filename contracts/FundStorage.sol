@@ -114,12 +114,15 @@ contract IFundStorage {
   {}
 
   // Share Class Functions
-  function getShareClass(uint _shareClassIndex)
+  function getShareClassDetails(uint _shareClassIndex)
     returns (
       uint adminFeeBps,
       uint mgmtFeeBps,
       uint performFeeBps, 
-      uint shareSupply,
+      uint shareSupply
+    ) {}
+  function getShareClassNavDetails(uint _shareClassIndex)
+    returns (
       uint lastCalc,
       uint shareNav,
       uint lossCarryforward,
@@ -537,15 +540,31 @@ contract FundStorage is DestructibleModified {
 
   // ===================================== SHARECLASS FUNCTIONS =====================================
   
-  // Get share class details
-  function getShareClass(uint _shareClassIndex)
+  // Get share class basic details
+  function getShareClassDetails(uint _shareClassIndex)
     constant
     public
     returns (
       uint adminFeeBps,
       uint mgmtFeeBps,
       uint performFeeBps, 
-      uint shareSupply,
+      uint shareSupply
+    )
+  {
+    ShareClassStruct storage shareClass = shareClasses[_shareClassIndex];
+    return (
+      shareClass.adminFeeBps,
+      shareClass.mgmtFeeBps,
+      shareClass.performFeeBps,
+      shareClass.shareSupply
+    );
+  }
+
+  // Get share class NAV details
+  function getShareClassNavDetails(uint _shareClassIndex)
+    constant
+    public
+    returns (
       uint lastCalc,
       uint shareNav,
       uint lossCarryforward,
@@ -555,10 +574,6 @@ contract FundStorage is DestructibleModified {
   {
     ShareClassStruct storage shareClass = shareClasses[_shareClassIndex];
     return (
-      shareClass.adminFeeBps,
-      shareClass.mgmtFeeBps,
-      shareClass.performFeeBps,
-      shareClass.shareSupply,
       shareClass.lastCalc,
       shareClass.shareNav,
       shareClass.lossCarryforward,
