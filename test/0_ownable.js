@@ -45,7 +45,8 @@ contract('OwnableModified', (accounts) => {
         } else if (name === 'DataFeed') {
           return constructors[name](owner0, notOwnerAddress0)
             .then((instance) => {
-              owned = dataFeed = instance;
+              owned = instance;
+              dataFeed = instance;
             });
         } else if (name === 'Fund' || name === 'NewFund') {
           return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed, fundStorage)
@@ -53,28 +54,31 @@ contract('OwnableModified', (accounts) => {
         } else if (name === 'FundLogic') {
           return constructors[name](owner0, dataFeed.address, fundStorage.address)
             .then((instance) => {
-              owned = fundLogic = instance;
-            });
-        } else {
-          return constructors[name](owner0, dataFeed.address)
-            .then((instance) => {
               owned = instance;
-              switch (name) {
-                case 'NavCalculator':
-                  navCalculator = instance;
-                  break;
-                case 'InvestorActions':
-                  investorActions = instance;
-                  break;
-                case 'FundStorage':
-                  fundStorage = instance;
-                  break;
-                default:
-                  break;
-              }
+              fundLogic = instance;
             });
         }
-      })
+        return constructors[name](owner0, dataFeed.address)
+          .then((instance) => {
+            owned = instance;
+            switch (name) {
+              case 'NavCalculator':
+                navCalculator = instance;
+                break;
+              case 'NewNavCalculator':
+                navCalculator = instance;
+                break;
+              case 'InvestorActions':
+                investorActions = instance;
+                break;
+              case 'FundStorage':
+                fundStorage = instance;
+                break;
+              default:
+                break;
+            }
+          });
+      });
 
       describe('getOwners', () => {
         it('should have correct initial value', () => owned.getOwners()

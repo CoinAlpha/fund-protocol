@@ -9,6 +9,7 @@ const Fund = artifacts.require('./Fund.sol');
 const FundLogic = artifacts.require('./FundLogic.sol');
 const NewFund = artifacts.require('./NewFund.sol');
 const FundStorage = artifacts.require('./FundStorage.sol');
+const NewNavCalculator = artifacts.require('./NewNavCalculator.sol');
 
 const dataFeedInfo = require('../config/datafeed.js');
 
@@ -58,18 +59,22 @@ module.exports = function (deployer, network, accounts) {
       USD_BTC_EXCHANGE_RATE * 100,            // _initialUsdBtcRate
       USD_LTC_EXCHANGE_RATE * 100,            // _initialUsdLtcRate
       EXCHANGE,                               // _exchange
-      { from: ADMINISTRATOR, value: dataFeedReserve }
+      { from: ADMINISTRATOR, value: dataFeedReserve },
     )
+    
+      // TODO: DELETE  
       .then(() => deployer.deploy(
         NavCalculator,
         DataFeed.address,
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
+      // TODO: DELETE  
       .then(() => deployer.deploy(
         InvestorActions,
         DataFeed.address,
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
+
       .then(() => deployer.deploy(
         FundStorage,
         FUND_NAME,                          // _name
@@ -81,8 +86,10 @@ module.exports = function (deployer, network, accounts) {
         ADMIN_FEE * 100,                    // _adminFeeBps
         MGMT_FEE * 100,                     // _mgmtFeeBps
         PERFORM_FEE * 100,                  // _performFeeBps
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
+
+      // TODO: DELETE 
       .then(() => deployer.deploy(
         Fund,
         MANAGER,                        // _manager
@@ -100,35 +107,46 @@ module.exports = function (deployer, network, accounts) {
         MGMT_FEE * 100,                 // _mgmtFeeBps
         PERFORM_FEE * 100,              // _performFeeBps
         MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
+
       .then(() => deployer.deploy(
         FundLogic,
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
+      ))
+      .then(() => deployer.deploy(
+        NewNavCalculator,
+        DataFeed.address,               // _dataFeed
+        FundStorage.address,            // _fundStorage
+        FundLogic.address,              // _fundLogic
+        { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
         NewFund,
         MANAGER,                        // _manager
         EXCHANGE,                       // _exchange
-        NavCalculator.address,          // _navCalculator
+        NewNavCalculator.address,       // _navCalculator
         FundLogic.address,              // _fundLogic
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
-        { from: ADMINISTRATOR }
+        { from: ADMINISTRATOR },
       ))
       .then(() => FundStorage.deployed())
       .then(_fundStorage => _fundStorage.setFund(Fund.address))
       .then(() => FundLogic.deployed())
       .then(_fundLogic => _fundLogic.setFund(Fund.address))
+      .then(() => NewNavCalculator.deployed())
+      .then(_newNavCalculator => _newNavCalculator.setFund(NewFund.address))
       .then(() => console.log('  Contract addresses:'))
-      .then(() => console.log(`  - DataFeed           | ${DataFeed.address}`))
-      .then(() => console.log(`  - NAV                | ${NavCalculator.address}`))
-      .then(() => console.log(`  - InvestorActions    | ${InvestorActions.address}`))
-      .then(() => console.log(`  - FundStorage        | ${FundStorage.address}`))
       .then(() => console.log(`  - Fund               | ${Fund.address}`))
+      .then(() => console.log(`  - InvestorActions    | ${InvestorActions.address}`))
+      .then(() => console.log(`  - NAV                | ${NavCalculator.address}`))
+      .then(() => console.log(`  - DataFeed           | ${DataFeed.address}`))
+      .then(() => console.log(`  - FundStorage        | ${FundStorage.address}`))
       .then(() => console.log(`  - FundLogic          | ${FundLogic.address}`))
+      .then(() => console.log(`  - NewNAV             | ${NewNavCalculator.address}`))
       .then(() => console.log(`  - NewFund            | ${NewFund.address}`));
   } else {
 
@@ -186,10 +204,17 @@ module.exports = function (deployer, network, accounts) {
         { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
+        NewNavCalculator,
+        DataFeed.address,               // _dataFeed
+        FundStorage.address,            // _fundStorage
+        FundLogic.address,              // _fundLogic
+        { from: ADMINISTRATOR },
+      ))
+      .then(() => deployer.deploy(
         NewFund,
         MANAGER,                        // _manager
         EXCHANGE,                       // _exchange
-        NavCalculator.address,          // _navCalculator
+        NewNavCalculator.address,       // _navCalculator
         InvestorActions.address,        // _investorActions
         DATA_FEED_ADDRESS,              // _dataFeed
         FundStorage.address,            // _fundStorage
@@ -198,6 +223,17 @@ module.exports = function (deployer, network, accounts) {
       .then(() => FundStorage.deployed())
       .then(_fundStorage => _fundStorage.setFund(Fund.address))
       .then(() => FundLogic.deployed())
-      .then(_fundLogic => _fundLogic.setFund(Fund.address));
+      .then(_fundLogic => _fundLogic.setFund(Fund.address))
+      .then(() => NewNavCalculator.deployed())
+      .then(_newNavCalculator => _newNavCalculator.setFund(NewFund.address))
+      .then(() => console.log('  Contract addresses:'))
+      .then(() => console.log(`  - Fund               | ${Fund.address}`))
+      .then(() => console.log(`  - InvestorActions    | ${InvestorActions.address}`))
+      .then(() => console.log(`  - NAV                | ${NavCalculator.address}`))
+      .then(() => console.log(`  - DataFeed           | ${DataFeed.address}`))
+      .then(() => console.log(`  - FundStorage        | ${FundStorage.address}`))
+      .then(() => console.log(`  - FundLogic          | ${FundLogic.address}`))
+      .then(() => console.log(`  - NewNAV             | ${NewNavCalculator.address}`))
+      .then(() => console.log(`  - NewFund            | ${NewFund.address}`));
   }
 };

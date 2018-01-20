@@ -26,10 +26,11 @@ const allArtifacts = {
   OwnableModified: artifacts.require('./OwnableModified.sol'),
   NavCalculator: artifacts.require('./NavCalculator.sol'),
   InvestorActions: artifacts.require('./InvestorActions.sol'),
+  Fund: artifacts.require('./Fund.sol'),
   DataFeed: artifacts.require('./DataFeed.sol'),
   FundStorage: artifacts.require('./FundStorage.sol'),
-  Fund: artifacts.require('./Fund.sol'),
   FundLogic: artifacts.require('./FundLogic.sol'),
+  NewNavCalculator: artifacts.require('./NewNavCalculator.sol'),
   NewFund: artifacts.require('./NewFund.sol'),
 };
 
@@ -46,19 +47,10 @@ const constructors = {
     exchange,                     // _exchange
     { from: owner, value: 0 },
   ),
+
+  // ====================== TODO: DELETE  
   NavCalculator: (owner, dataFeed) => allArtifacts.NavCalculator.new(dataFeed, { from: owner }),
   InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner }),
-  FundStorage: (owner, dataFeed) => allArtifacts.FundStorage.new(
-    'TestFund',                  // _name
-    'TEST',                      // _symbol
-    MIN_INITIAL_SUBSCRIPTION_USD * 100,  // _minInitialSubscriptionUsd
-    MIN_SUBSCRIPTION_USD * 100,          // _minSubscriptionUsd
-    MIN_REDEMPTION_SHARES * 100,         // _minRedemptionShares,
-    ADMIN_FEE * 100,                     // _adminFeeBps
-    MGMT_FEE * 100,                      // _mgmtFeeBps
-    PERFORM_FEE * 100,                   // _performFeeBps
-    { from: owner },
-  ),
   Fund: (owner, exchange, navCalculator, investorActions, dataFeed, fundStorage) =>
     allArtifacts.Fund.new(
       owner,                     // _manager
@@ -78,7 +70,21 @@ const constructors = {
       MANAGER_USD_ETH_BASIS * 100,            // _managerUsdEthBasis
       { from: owner },
     ),
+  // ======================
+
+  FundStorage: (owner, dataFeed) => allArtifacts.FundStorage.new(
+    'TestFund',                  // _name
+    'TEST',                      // _symbol
+    MIN_INITIAL_SUBSCRIPTION_USD * 100,  // _minInitialSubscriptionUsd
+    MIN_SUBSCRIPTION_USD * 100,          // _minSubscriptionUsd
+    MIN_REDEMPTION_SHARES * 100,         // _minRedemptionShares,
+    ADMIN_FEE * 100,                     // _adminFeeBps
+    MGMT_FEE * 100,                      // _mgmtFeeBps
+    PERFORM_FEE * 100,                   // _performFeeBps
+    { from: owner },
+  ),
   FundLogic: (owner, dataFeed, fundStorage) => allArtifacts.FundLogic.new(dataFeed, fundStorage, { from: owner }),
+  NewNavCalculator: (owner, dataFeed) => allArtifacts.NewNavCalculator.new(dataFeed, { from: owner }),
   NewFund: (owner, exchange, navCalculator, fundLogic, dataFeed, fundStorage) =>
     allArtifacts.NewFund.new(
       owner,                     // _manager
