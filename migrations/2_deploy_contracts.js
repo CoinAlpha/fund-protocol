@@ -37,14 +37,12 @@ const {
   PERFORM_FEE,
 } = require('../config');
 
-module.exports = function (deployer, network, accounts) {
-
+module.exports = (deployer, network, accounts) => {
   // Accounts
   const ADMINISTRATOR = accounts[0];
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
 
-  // 
   const useOraclize = true;
   const dataFeedReserve = ethToWei(DATA_FEED_GAS_RESERVE);
 
@@ -61,14 +59,14 @@ module.exports = function (deployer, network, accounts) {
       EXCHANGE,                               // _exchange
       { from: ADMINISTRATOR, value: dataFeedReserve },
     )
-    
-      // TODO: DELETE  
+
+      // TODO: DELETE
       .then(() => deployer.deploy(
         NavCalculator,
         DataFeed.address,
         { from: ADMINISTRATOR },
       ))
-      // TODO: DELETE  
+      // TODO: DELETE
       .then(() => deployer.deploy(
         InvestorActions,
         DataFeed.address,
@@ -89,7 +87,7 @@ module.exports = function (deployer, network, accounts) {
         { from: ADMINISTRATOR },
       ))
 
-      // TODO: DELETE 
+      // TODO: DELETE
       .then(() => deployer.deploy(
         Fund,
         MANAGER,                        // _manager
@@ -143,13 +141,13 @@ module.exports = function (deployer, network, accounts) {
       .then(() => console.log(`  - Fund               | ${Fund.address}`))
       .then(() => console.log(`  - InvestorActions    | ${InvestorActions.address}`))
       .then(() => console.log(`  - NAV                | ${NavCalculator.address}`))
+      .then(() => console.log('    ================================================================'))
       .then(() => console.log(`  - DataFeed           | ${DataFeed.address}`))
       .then(() => console.log(`  - FundStorage        | ${FundStorage.address}`))
       .then(() => console.log(`  - FundLogic          | ${FundLogic.address}`))
       .then(() => console.log(`  - NewNAV             | ${NewNavCalculator.address}`))
       .then(() => console.log(`  - NewFund            | ${NewFund.address}`));
   } else {
-
     // Network-specific variables
     const NAV_SERVICE_URL = dataFeedInfo[network].navServiceUrl;
     const DATA_FEED_ADDRESS = dataFeedInfo[network].dataFeedAddress;
