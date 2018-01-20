@@ -196,14 +196,17 @@ contract('FundStorage', (accounts) => {
         )
           .then(txObj => web3.eth.getTransactionReceiptMined(txObj.tx))
           .catch(err => assert.throw(`Error adding share class ${_shareClass.shareClassIndex}: ${err.toString()}`))
-          .then(() => fundStorage.getShareClass(_shareClass.shareClassIndex))
-          .then((_resShareClass) => {
-            assert.strictEqual(Number(_resShareClass[0]), _shareClass.adminFeeBps, 'incorrect admin fee');
-            assert.strictEqual(Number(_resShareClass[1]), _shareClass.mgmtFeeBps, 'incorrect mgmt fee');
-            assert.strictEqual(Number(_resShareClass[2]), _shareClass.performFeeBps, 'incorrect perform fee');
-            assert.strictEqual(Number(_resShareClass[3]), 0, 'incorrect share supply');
-            assert.isAbove(Number(_resShareClass[4]), 0, 'incorrect lastCalc');
-            assert.strictEqual(Number(_resShareClass[5]), 10000, 'incorrect share Nav');
+          .then(() => fundStorage.getShareClassDetails(_shareClass.shareClassIndex))
+          .then((_shareClassDetails) => {
+            assert.strictEqual(Number(_shareClassDetails[0]), _shareClass.adminFeeBps, 'incorrect admin fee');
+            assert.strictEqual(Number(_shareClassDetails[1]), _shareClass.mgmtFeeBps, 'incorrect mgmt fee');
+            assert.strictEqual(Number(_shareClassDetails[2]), _shareClass.performFeeBps, 'incorrect perform fee');
+            assert.strictEqual(Number(_shareClassDetails[3]), 0, 'incorrect share supply');
+          })
+          .then(() => fundStorage.getShareClassNavDetails(_shareClass.shareClassIndex))
+          .then((_shareClassNav) => {
+            assert.isAbove(Number(_shareClassNav[0]), 0, 'incorrect lastCalc');
+            assert.strictEqual(Number(_shareClassNav[1]), 10000, 'incorrect share Nav');
           }));
       });
 
@@ -232,11 +235,11 @@ contract('FundStorage', (accounts) => {
             { from: MANAGER },
           )
             .catch(err => assert.throw(`Error adding share class ${_modifiedShareClass.shareClassIndex}: ${err.toString()}`))
-            .then(() => fundStorage.getShareClass(_modifiedShareClass.shareClassIndex))
-            .then((_resShareClass) => {
-              assert.strictEqual(Number(_resShareClass[0]), shareClasses[index].adminFeeBps * 2, 'incorrect admin fee');
-              assert.strictEqual(Number(_resShareClass[1]), shareClasses[index].mgmtFeeBps * 2, 'incorrect mgmt fee');
-              assert.strictEqual(Number(_resShareClass[2]), shareClasses[index].performFeeBps * 2, 'incorrect perform fee');
+            .then(() => fundStorage.getShareClassDetails(_modifiedShareClass.shareClassIndex))
+            .then((_shareClassDetail) => {
+              assert.strictEqual(Number(_shareClassDetail[0]), shareClasses[index].adminFeeBps * 2, 'incorrect admin fee');
+              assert.strictEqual(Number(_shareClassDetail[1]), shareClasses[index].mgmtFeeBps * 2, 'incorrect mgmt fee');
+              assert.strictEqual(Number(_shareClassDetail[2]), shareClasses[index].performFeeBps * 2, 'incorrect perform fee');
             }));
       });
     });   // describe modify share classes
@@ -340,7 +343,7 @@ contract('FundStorage', (accounts) => {
         }));  // it
 
       it(`should modify share count ${index}`, () =>
-        Promise.all([fundStorage.totalShareSupply.call(), fundStorage.getShareClass.call(_investor.shareClass)])
+        Promise.all([fundStorage.totalShareSupply.call(), fundStorage.getShareClassDetails.call(_investor.shareClass)])
           .then((_vals) => {
             totalSupply = Number(_vals[0]);
             selectedShareClass = _vals[1].map(x => Number(x));
@@ -352,7 +355,7 @@ contract('FundStorage', (accounts) => {
             { from: FUND },
           ))
           .catch(err => assert.throw(`Error modifying share count: ${err.toString()}`))
-          .then(() => Promise.all([fundStorage.totalShareSupply.call(), fundStorage.getShareClass.call(_investor.shareClass)]))
+          .then(() => Promise.all([fundStorage.totalShareSupply.call(), fundStorage.getShareClassDetails.call(_investor.shareClass)]))
           .then((_vals) => {
             assert.strictEqual(Number(_vals[0]), totalSupply + _investor.shares, 'incorrect number of total shares');
             assert.strictEqual(Number(_vals[1][3]), shareClassCount + _investor.shares, 'incorrect number of share class shares');

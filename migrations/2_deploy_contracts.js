@@ -75,6 +75,8 @@ module.exports = (deployer, network, accounts) => {
 
       .then(() => deployer.deploy(
         FundStorage,
+        MANAGER,                            // _manager
+        EXCHANGE,                           // _exchange
         FUND_NAME,                          // _name
         FUND_SYMBOL,                        // _symbol
         FUND_DECIMALS,                      // _decimals
@@ -116,8 +118,6 @@ module.exports = (deployer, network, accounts) => {
       ))
       .then(() => deployer.deploy(
         NewNavCalculator,
-        MANAGER,                        // _manager
-        EXCHANGE,                       // _exchange
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
         FundLogic.address,              // _fundLogic
@@ -165,6 +165,8 @@ module.exports = (deployer, network, accounts) => {
       ))
       .then(() => deployer.deploy(
         FundStorage,
+        MANAGER,                        // _manager
+        EXCHANGE,                       // _exchange
         FUND_NAME,                      // _name
         FUND_SYMBOL,                    // _symbol
         FUND_DECIMALS,                  // _decimals
@@ -203,8 +205,6 @@ module.exports = (deployer, network, accounts) => {
       ))
       .then(() => deployer.deploy(
         NewNavCalculator,
-        MANAGER,                        // _manager
-        EXCHANGE,                       // _exchange
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
         FundLogic.address,              // _fundLogic
