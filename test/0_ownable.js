@@ -52,7 +52,13 @@ contract('OwnableModified', (accounts) => {
           return constructors[name](owner0, notOwnerAddress0, navCalculator, investorActions, dataFeed, fundStorage)
             .then(instance => owned = instance);
         } else if (name === 'FundLogic') {
-          return constructors[name](owner0, dataFeed.address, fundStorage.address)
+          return constructors[name](owner0, dataFeed, fundStorage)
+            .then((instance) => {
+              owned = instance;
+              fundLogic = instance;
+            });
+        } else if (name === 'NewNavCalculator') {
+          return constructors[name](owner0, dataFeed, fundStorage, fundLogic)
             .then((instance) => {
               owned = instance;
               fundLogic = instance;
@@ -63,9 +69,6 @@ contract('OwnableModified', (accounts) => {
             owned = instance;
             switch (name) {
               case 'NavCalculator':
-                navCalculator = instance;
-                break;
-              case 'NewNavCalculator':
                 navCalculator = instance;
                 break;
               case 'InvestorActions':

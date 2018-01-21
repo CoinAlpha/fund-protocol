@@ -1,9 +1,11 @@
 const path = require('path');
 const Promise = require('bluebird');
 
-const Fund = artifacts.require('./Fund.sol');
-const NavCalculator = artifacts.require('./NavCalculator.sol');
 const DataFeed = artifacts.require('./DataFeed.sol');
+const NewNavCalculator = artifacts.require('./NewNavCalculator.sol');
+const FundLogic = artifacts.require('./FundLogic.sol');
+
+const { constructors } = require('../migrations/artifacts');
 
 const { increaseTime, sendTransaction, arrayToObject } = require('../js/helpers');
 
@@ -15,7 +17,7 @@ if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
-contract('NavCalculator', (accounts) => {
+contract('New NavCalculator', (accounts) => {
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
   const GAS_AMT = 500000;
@@ -25,9 +27,15 @@ contract('NavCalculator', (accounts) => {
   const PERFORM_FEE_BPS = 2000;
   const TIMEDIFF = 60 * 60 * 24 * 30;
 
-  let fund;
-  let calculator;
+  // Deployed contract instances
   let dataFeed;
+  let navCalculator;
+  let fundLogic;
+
+  // New contract instances
+  let fundStorage;
+  let fund;
+
   let totalSupply;
   let totalEthPendingSubscription;
   let totalEthPendingWithdrawal;
@@ -37,7 +45,6 @@ contract('NavCalculator', (accounts) => {
   let accumulatedPerfFees;
   let lossCarryforward;
   let usdEth;
-  let navCalculator;
 
   // Helpers
   const getBalancePromise = address => web3.eth.getBalancePromise(address);
@@ -119,20 +126,14 @@ contract('NavCalculator', (accounts) => {
 
   before(() => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
-    return Promise.all([Fund.deployed(), NavCalculator.deployed(), DataFeed.deployed()])
-      .then((_values) => {
-        [fund, navCalculator, dataFeed] = _values;
-        return navCalculator.setFund(fund.address);
-      })
-      .then(() => Promise.all([
-        fund.totalSupply(),
-        fund.totalEthPendingSubscription(),
-        fund.totalEthPendingWithdrawal(),
-        fund.accumulatedMgmtFees(),
-        fund.accumulatedAdminFees(),
-        fund.lossCarryforward(),
-        dataFeed.usdEth(),
-      ]))
+    return Promise.all([DataFeed.deployed(), NewNavCalculator.deployed(), FundLogic.deployed()])
+      .then(_instances => [dataFeed, navCalculator, fundLogic] = _instances)
+      .then(() => constructors.FundStorage(MANAGER, EXCHANGE))
+      .then(_instance => fundStorage = _instance)
+      .then(() => constructors.NewFund(MANAGER, navCalculator, fundLogic, dataFeed, fundStorage))
+      .then(_instance => fundStorage = _instance)
+      .then(() => constructors.NewFund(MANAGER, navCalculator, fundLogic, dataFeed, fundStorage))
+      .then(_instance => fund = _instance)
       .then((_vals) => {
         [totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal,
           accumulatedMgmtFees, accumulatedAdminFees, lossCarryforward, usdEth] = _vals.map(parseInt);
@@ -160,116 +161,5 @@ contract('NavCalculator', (accounts) => {
         assert.equal(_address, dataFeed.address, 'data feed addresses don\'t match');
         done();
       });
-  });
-
-  it('should calculate the navPerShare correctly (base case)', (done) => {
-    let date1;
-    let date2;
-    let navPerShare;
-    let lossCarryforward;
-    let accumulatedMgmtFees;
-    let accumulatedAdminFees;
-
-    Promise.resolve(changeExchangeValue(100))
-      .then(() => fund.lastCalcDate.call())
-      .then(_date => date1 = _date)
-      .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
-      .then(() => fund.calcNav())
-      .then(() => retrieveFundParams())
-      .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
-        assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
-        return calc(date2 - date1);
-      })
-      .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
-        done();
-      })
-      .catch(console.error);
-  });
-
-  it('should calculate the navPerShare correctly (portfolio goes down)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
-
-    Promise.resolve(changeExchangeValue(75))
-      .then(() => fund.lastCalcDate.call())
-      .then(_date => date1 = _date)
-      .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
-      .then(() => fund.calcNav())
-      .then(() => retrieveFundParams())
-      .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
-        assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
-        return calc(date2 - date1);
-      })
-      .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
-        done();
-      })
-      .catch(console.error);
-  });
-
-
-  it('should calculate the navPerShare correctly (portfolio recovers from loss)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
-
-    Promise.resolve(changeExchangeValue(150))
-      .then(() => fund.lastCalcDate.call())
-      .then(_date => date1 = _date)
-      .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
-      .then(() => fund.calcNav())
-      .then(() => retrieveFundParams())
-      .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
-        assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
-        return calc(date2 - date1);
-      })
-      .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
-        done();
-      })
-      .catch(console.error);
-  });
-
-  it('should calculate the navPerShare correctly (portfolio loses its gains, goes down 10x)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
-
-    Promise.resolve(changeExchangeValue(15))
-      .then(() => fund.lastCalcDate.call())
-      .then(_date => date1 = _date)
-      .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
-      .then(() => fund.calcNav())
-      .then(() => retrieveFundParams())
-      .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
-        assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
-        return calc(date2 - date1);
-      })
-      .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
-        done();
-      })
-      .catch(console.error);
-  });
-
-  it('should calculate the navPerShare correctly (portfolio goes up 50x)', (done) => {
-    let date1, date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees;
-
-    Promise.resolve(changeExchangeValue(5000))
-      .then(() => fund.lastCalcDate.call())
-      .then(_date => date1 = _date)
-      .then(() => Promise.resolve(increaseTime(TIMEDIFF)))
-      .then(() => fund.calcNav())
-      .then(() => retrieveFundParams())
-      .then((_values) => {
-        [date2, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees] = _values;
-        assert(date2 - date1 >= TIMEDIFF, 'timelapse error');
-        return calc(date2 - date1);
-      })
-      .then((_vals) => {
-        checkRoughEqual(_vals, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
-        done();
-      })
-      .catch(console.error);
   });
 });

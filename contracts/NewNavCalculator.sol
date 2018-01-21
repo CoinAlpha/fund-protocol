@@ -19,7 +19,7 @@ import "./zeppelin/DestructibleModified.sol";
  */
 
 contract INewNavCalculator {
-  function calculate()
+  function calcShareClassNav(uint _shareClass)
     returns (
       uint lastCalcDate,
       uint navPerShare,
@@ -86,8 +86,10 @@ contract NewNavCalculator is DestructibleModified {
       uint accumulatedAdminFees
     )
   {
+    require(_shareClass < fundStorage.numberOfShareClasses());
+
     // Memory array for temp variables
-    uint[17] memory temp;
+    uint[9] memory temp;
     /**
      *  [0] = adminFeeBps
      *  [1] = mgmtFeeBps

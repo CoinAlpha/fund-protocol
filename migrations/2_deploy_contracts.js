@@ -66,30 +66,11 @@ module.exports = (deployer, network, accounts) => {
         DataFeed.address,
         { from: ADMINISTRATOR },
       ))
-      // TODO: DELETE
       .then(() => deployer.deploy(
         InvestorActions,
         DataFeed.address,
         { from: ADMINISTRATOR },
       ))
-
-      .then(() => deployer.deploy(
-        FundStorage,
-        MANAGER,                            // _manager
-        EXCHANGE,                           // _exchange
-        FUND_NAME,                          // _name
-        FUND_SYMBOL,                        // _symbol
-        FUND_DECIMALS,                      // _decimals
-        MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionUsd
-        MIN_SUBSCRIPTION_USD * 100,         // _minSubscriptionUsd
-        MIN_REDEMPTION_SHARES * 100,        // _minRedemptionShares,
-        ADMIN_FEE * 100,                    // _adminFeeBps
-        MGMT_FEE * 100,                     // _mgmtFeeBps
-        PERFORM_FEE * 100,                  // _performFeeBps
-        { from: ADMINISTRATOR },
-      ))
-
-      // TODO: DELETE
       .then(() => deployer.deploy(
         Fund,
         MANAGER,                        // _manager
@@ -111,6 +92,21 @@ module.exports = (deployer, network, accounts) => {
       ))
 
       .then(() => deployer.deploy(
+        FundStorage,
+        MANAGER,                            // _manager
+        EXCHANGE,                           // _exchange
+        FUND_NAME,                          // _name
+        FUND_SYMBOL,                        // _symbol
+        FUND_DECIMALS,                      // _decimals
+        MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionUsd
+        MIN_SUBSCRIPTION_USD * 100,         // _minSubscriptionUsd
+        MIN_REDEMPTION_SHARES * 100,        // _minRedemptionShares,
+        ADMIN_FEE * 100,                    // _adminFeeBps
+        MGMT_FEE * 100,                     // _mgmtFeeBps
+        PERFORM_FEE * 100,                  // _performFeeBps
+        { from: ADMINISTRATOR },
+      ))
+      .then(() => deployer.deploy(
         FundLogic,
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
@@ -125,10 +121,10 @@ module.exports = (deployer, network, accounts) => {
       ))
       .then(() => deployer.deploy(
         NewFund,
-        NewNavCalculator.address,       // _navCalculator
-        FundLogic.address,              // _fundLogic
         DataFeed.address,               // _dataFeed
         FundStorage.address,            // _fundStorage
+        FundLogic.address,              // _fundLogic
+        NewNavCalculator.address,       // _navCalculator
         { from: ADMINISTRATOR },
       ))
       .then(() => FundStorage.deployed())
@@ -158,24 +154,11 @@ module.exports = (deployer, network, accounts) => {
       DATA_FEED_ADDRESS,
       { from: ADMINISTRATOR },
     )
+    
+      // TODO: DELETE  
       .then(() => deployer.deploy(
         InvestorActions,
         DATA_FEED_ADDRESS,
-        { from: ADMINISTRATOR },
-      ))
-      .then(() => deployer.deploy(
-        FundStorage,
-        MANAGER,                        // _manager
-        EXCHANGE,                       // _exchange
-        FUND_NAME,                      // _name
-        FUND_SYMBOL,                    // _symbol
-        FUND_DECIMALS,                  // _decimals
-        MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionEth
-        MIN_SUBSCRIPTION_USD * 100,     // _minSubscriptionEth
-        MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
-        ADMIN_FEE * 100,                // _adminFeeBps
-        MGMT_FEE * 100,                 // _mgmtFeeBps
-        PERFORM_FEE * 100,              // _performFeeBps
         { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
@@ -197,25 +180,41 @@ module.exports = (deployer, network, accounts) => {
         MANAGER_USD_ETH_BASIS * 100,    // _managerUsdEthBasis
         { from: ADMINISTRATOR },
       ))
+
+      .then(() => deployer.deploy(
+        FundStorage,
+        MANAGER,                        // _manager
+        EXCHANGE,                       // _exchange
+        FUND_NAME,                      // _name
+        FUND_SYMBOL,                    // _symbol
+        FUND_DECIMALS,                  // _decimals
+        MIN_INITIAL_SUBSCRIPTION_USD * 100, // _minInitialSubscriptionEth
+        MIN_SUBSCRIPTION_USD * 100,     // _minSubscriptionEth
+        MIN_REDEMPTION_SHARES,          // _minRedemptionShares,
+        ADMIN_FEE * 100,                // _adminFeeBps
+        MGMT_FEE * 100,                 // _mgmtFeeBps
+        PERFORM_FEE * 100,              // _performFeeBps
+        { from: ADMINISTRATOR },
+      ))
       .then(() => deployer.deploy(
         FundLogic,
-        DATA_FEED_ADDRESS,               // _dataFeed
+        DATA_FEED_ADDRESS,              // _dataFeed
         FundStorage.address,            // _fundStorage
         { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
         NewNavCalculator,
-        DataFeed.address,               // _dataFeed
+        DATA_FEED_ADDRESS,              // _dataFeed
         FundStorage.address,            // _fundStorage
         FundLogic.address,              // _fundLogic
         { from: ADMINISTRATOR },
       ))
       .then(() => deployer.deploy(
         NewFund,
-        NewNavCalculator.address,       // _navCalculator
-        InvestorActions.address,        // _investorActions
         DATA_FEED_ADDRESS,              // _dataFeed
         FundStorage.address,            // _fundStorage
+        FundLogic.address,              // _fundLogic
+        NewNavCalculator.address,       // _navCalculator
         { from: ADMINISTRATOR },
       ))
       .then(() => FundStorage.deployed())

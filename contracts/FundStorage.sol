@@ -133,7 +133,7 @@ contract IFundStorage {
     ) {}
   function modifyShareCount(uint _shareClassIndex, uint _shareSupply, uint _totalShareSupply)
     returns (bool wasModified) {}
-  function setShareClassNav(uint _shareClassIndex, uint _shareNav)
+  function setShareClassNav(uint _shareClassIndex, uint _lastCalcDate, uint _navPerShare, uint _lossCarryforward, uint _accumulatedMgmtFees, uint _accumulatedAdminFees)
     returns (bool wasUpdated) {}
   function getShareClassNavPerShare(uint _shareClass)
     returns (uint navPerShare) {}
@@ -627,15 +627,18 @@ contract FundStorage is DestructibleModified {
     return true;
   }
 
-  function setShareClassNav(uint _shareClassIndex, uint _shareNav)
+  function setShareClassNav(uint _shareClassIndex, uint _lastCalcDate, uint _navPerShare, uint _lossCarryforward, uint _accumulatedMgmtFees, uint _accumulatedAdminFees)
     onlyFund
     returns (bool wasUpdated)
   {
     require(_shareClassIndex < numberOfShareClasses);
     uint previousNav = shareClasses[_shareClassIndex].shareNav;
-    shareClasses[_shareClassIndex].shareNav = _shareNav;
-    shareClasses[_shareClassIndex].lastCalc = now;
-    LogUpdateStorageNav(_shareClassIndex, previousNav, _shareNav);
+    shareClasses[_shareClassIndex].lastCalc = _lastCalcDate;
+    shareClasses[_shareClassIndex].shareNav = _navPerShare;
+    shareClasses[_shareClassIndex].lossCarryforward = _lossCarryforward;
+    shareClasses[_shareClassIndex].accumulatedMgmtFees = _accumulatedMgmtFees;
+    shareClasses[_shareClassIndex].accumulatedAdminFees = _accumulatedAdminFees;
+    LogUpdateStorageNav(_shareClassIndex, previousNav, _navPerShare);
     return true;
   }
 

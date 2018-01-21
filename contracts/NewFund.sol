@@ -65,6 +65,8 @@ contract NewFund is DestructiblePausable {
   event LogRedemption(string currency, address indexed investor, uint shareClass, uint shares, uint nav, uint USDETH);
   event LogRedemptionPayment(uint ethAmount);
 
+  event LogNavSnapshot(uint shareClass, uint indexed timestamp, uint navPerShare, uint lossCarryforward, uint accumulatedMgmtFees, uint accumulatedAdminFees);
+
   event LogTransferToExchange(uint ethAmount);
   event LogTransferFromExchange(uint ethAmount);
 
@@ -74,17 +76,17 @@ contract NewFund is DestructiblePausable {
 
   // ======================================== CONSTRUCTOR ========================================
   function NewFund(
-    address _navCalculator,
-    address _fundLogic,
     address _dataFeed,
-    address _fundStorage
+    address _fundStorage,
+    address _fundLogic,
+    address _navCalculator
   )
   {
     // Set the addresses of other wallets/contracts with which this contract interacts
-    navCalculator = INewNavCalculator(_navCalculator);
-    fundLogic = IFundLogic(_fundLogic);
     dataFeed = IDataFeed(_dataFeed);
     fundStorage = IFundStorage(_fundStorage);
+    fundLogic = IFundLogic(_fundLogic);
+    navCalculator = INewNavCalculator(_navCalculator);
   }  // End of constructor
 
   // ====================================== SUBSCRIPTIONS ======================================
@@ -300,6 +302,42 @@ contract NewFund is DestructiblePausable {
     LogTransferFromExchange(msg.value);
     return true;
   }
+
+  // ====================================== NAV CALCULATION ====================================
+
+  // Calculate NAVs for all Share Classes
+  function calcNav()
+    onlyOwner
+    returns (bool success)
+  {
+    for (uint8 i = 0; i < fundStorage.numberOfShareClasses(); i++) {
+      calcShareClassNav(i);
+    }
+    return true;    
+  }
+
+  // Calculate and update NAV per share, lossCarryforward (the amount of losses that the fund to make up in order to start earning performance fees),
+  // and accumulated management fee balaces.
+  // Delegates logic to the NavCalculator module
+  function calcShareClassNav(uint _shareClass)
+    onlyOwner
+    returns (bool success)
+  {
+    var (
+      _lastCalcDate,
+      _navPerShare,
+      _lossCarryforward,
+      _accumulatedMgmtFees,
+      _accumulatedAdminFees
+    ) = navCalculator.calcShareClassNav(_shareClass);
+
+    fundStorage.setShareClassNav(_shareClass, _lastCalcDate, _navPerShare, _lossCarryforward, _accumulatedMgmtFees, _accumulatedAdminFees);
+
+    LogNavSnapshot(_shareClass, _lastCalcDate, _navPerShare, _lossCarryforward, _accumulatedMgmtFees, _accumulatedAdminFees);
+    return true;
+  }
+
+
 
   // ========================================= BALANCES ========================================
 

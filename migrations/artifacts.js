@@ -72,9 +72,12 @@ const constructors = {
     ),
   // ======================
 
-  FundStorage: (owner, dataFeed) => allArtifacts.FundStorage.new(
-    'TestFund',                  // _name
-    'TEST',                      // _symbol
+  FundStorage: (owner, exchange) => allArtifacts.FundStorage.new(
+    owner,                               // _manager
+    exchange,                            // _exchange
+    'TestFund',                          // _name
+    'TEST',                              // _symbol
+    FUND_DECIMALS,                       // _decimals
     MIN_INITIAL_SUBSCRIPTION_USD * 100,  // _minInitialSubscriptionUsd
     MIN_SUBSCRIPTION_USD * 100,          // _minSubscriptionUsd
     MIN_REDEMPTION_SHARES * 100,         // _minRedemptionShares,
@@ -83,19 +86,23 @@ const constructors = {
     PERFORM_FEE * 100,                   // _performFeeBps
     { from: owner },
   ),
-  FundLogic: (owner, dataFeed, fundStorage) => allArtifacts.FundLogic.new(dataFeed, fundStorage, { from: owner }),
-  NewNavCalculator: (owner, dataFeed) => allArtifacts.NewNavCalculator.new(dataFeed, { from: owner }),
-  NewFund: (owner, exchange, navCalculator, fundLogic, dataFeed, fundStorage) =>
+  FundLogic: (owner, dataFeed, fundStorage) => allArtifacts.FundLogic.new(
+    dataFeed.address,
+    fundStorage.address,
+    { from: owner },
+  ),
+  NewNavCalculator: (owner, dataFeed, fundStorage, fundLogic) => allArtifacts.NewNavCalculator.new(
+    dataFeed.address,
+    fundStorage.address,
+    fundLogic.address,
+    { from: owner },
+  ),
+  NewFund: (owner, dataFeed, fundStorage, fundLogic, navCalculator) =>
     allArtifacts.NewFund.new(
-      owner,                     // _manager
-      exchange,                  // _exchange
-      navCalculator.address,     // _navCalculator
-      fundLogic.address,         // _fundLogic
       dataFeed.address,          // _dataFeed
       fundStorage.address,       // _fundStorage
-      'TestFund',                // _name
-      'TEST',                    // _symbol
-      4,                         // _decimals
+      fundLogic.address,         // _fundLogic
+      navCalculator.address,     // _navCalculator
       { from: owner },
     ),
 };
