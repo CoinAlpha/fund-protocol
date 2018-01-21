@@ -17,14 +17,29 @@ if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
+// DEPLOY PARAMETERS
+const {
+  USD_ETH_EXCHANGE_RATE,
+  USD_BTC_EXCHANGE_RATE,
+  USD_LTC_EXCHANGE_RATE,
+  MIN_INITIAL_SUBSCRIPTION_ETH,
+  MIN_SUBSCRIPTION_ETH,
+  MIN_INITIAL_SUBSCRIPTION_USD,
+  MIN_SUBSCRIPTION_USD,
+  ADMIN_FEE,
+  MGMT_FEE,
+  PERFORM_FEE,
+} = require('../config');
+
 contract('New NavCalculator', (accounts) => {
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
-  const GAS_AMT = 500000;
-  const MGMT_FEE_BPS = 0;
-  const ADMIN_FEE_BPS = 100;
+  const investors = accounts.slice(2);
+
+  const ADMIN_FEE_BPS = ADMIN_FEE * 100;
+  const MGMT_FEE_BPS = MGMT_FEE * 100;
   const SECONDS_IN_YEAR = 31536000;
-  const PERFORM_FEE_BPS = 2000;
+  const PERFORM_FEE_BPS = PERFORM_FEE * 100;
   const TIMEDIFF = 60 * 60 * 24 * 30;
 
   // Deployed contract instances
@@ -130,29 +145,63 @@ contract('New NavCalculator', (accounts) => {
       .then(_instances => [dataFeed, navCalculator, fundLogic] = _instances)
       .then(() => constructors.FundStorage(MANAGER, EXCHANGE))
       .then(_instance => fundStorage = _instance)
-      .then(() => constructors.NewFund(MANAGER, navCalculator, fundLogic, dataFeed, fundStorage))
-      .then(_instance => fundStorage = _instance)
-      .then(() => constructors.NewFund(MANAGER, navCalculator, fundLogic, dataFeed, fundStorage))
+      .then(() => constructors.FundLogic(MANAGER, dataFeed, fundStorage))
+      .then(_instance => fundLogic = _instance)
+      .then(() => constructors.NewFund(MANAGER, dataFeed, fundStorage, fundLogic, navCalculator))
       .then(_instance => fund = _instance)
-      .then((_vals) => {
-        [totalSupply, totalEthPendingSubscription, totalEthPendingWithdrawal,
-          accumulatedMgmtFees, accumulatedAdminFees, lossCarryforward, usdEth] = _vals.map(parseInt);
-        totalEthPendingSubscription = totalEthPendingSubscription || 0;
-        accumulatedPerfFees = 0;
-        return fund.navPerShare();
-      })
-      .then(_navPerShare => navPerShare = _navPerShare)
-      .catch(console.error);
+      .then(() => Promise.all([
+        fundStorage.setFund(fund.address),
+        fundLogic.setFund(fund.address),
+        navCalculator.setFund(fund.address),
+        navCalculator.setFundStorage(fundStorage.address),
+      ]))
+      .then(() => Promise.all([
+        fundStorage.fundAddress(),
+        fundLogic.fundAddress(),
+        navCalculator.fundAddress(),
+      ]))
+      .then(_addresses => _addresses.map(_address => assert.strictEqual(_address, fund.address, 'fund address not set')))
+
+      .then(() => console.log('======================='))
+      .then(() => console.log(Object.keys(fundStorage)))
+      .then(() => console.log('======================='))
+      .then(() => console.log(Object.keys(fund)))
+
+      .then(() => fundStorage.numberOfShareClasses())
+      .then(_data => console.log(`share classes: ${Number(_data)}`))
+
+      // set Share Class 0 to zero fees
+      .then(() => fundStorage.modifyShareClassTerms(0, 0, 0, 0))
+      .then(() => fundStorage.getShareClassDetails(0))
+      .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
+      // .then(_shareClassDetails => _shareClassDetails.map(x => assert.strictEqual(Number(x), 0, 'fees not set to zero')))
+      .then(() => fundStorage.getShareClassNavDetails(0))
+      .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
+
+      .then(() => fundStorage.getInvestorAddresses())
+      .then(_addresses => console.log(`Addresses: ${_addresses}`))
+
+      // subscribe an investor
+      .catch(err => assert.throw(`Before subscribe investor ${err.toString()}`))
+      .then(() => fund.whiteListInvestor(investors[0], 2, 0), { from: MANAGER })
+      .then(() => fund.subscribeUsdInvestor(investors[0], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+      .then(() => fundStorage.getInvestor(investors[0]))
+      .then(_data => console.log(`Investor: ${_data.map(x => Number(x))}`))
+      .catch(err => assert.throw(`Failed to whiteList investor ${err.toString()}`))
+      .then(() => fundStorage.getInvestorAddresses())
+      .catch(err => assert.throw(`Failed to subscribe investor ${err.toString()}`))
+      .then(_addresses => console.log(`Addresses: ${_addresses}`))
+      .catch(err => assert.throw(err.toString()));
   });
 
-  it('should set fund to the correct fund address', (done) => {
-    navCalculator.setFund(fund.address)
-      .then(() => navCalculator.fundAddress.call())
-      .then((_fundAddress) => {
-        assert.equal(_fundAddress, fund.address, 'fund addresses don\'t match');
-        done();
-      });
-  });
+  it('should run calcShareClassNav', () => navCalculator.calcShareClassNav(0, { from: fund.address })
+    .then(() => fundStorage.getShareClassDetails(0))
+    .catch(err => assert.throw(`calcShareClassNav ${err.toString()}`))
+    .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x))))
+    .then(() => fund.calcNav({ from: MANAGER }))
+    .then(() => fundStorage.getShareClassNavDetails(0))
+    .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
+  );
 
   it('should set value feed to the correct data feed address', (done) => {
     navCalculator.setDataFeed(dataFeed.address)

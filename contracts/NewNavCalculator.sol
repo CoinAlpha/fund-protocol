@@ -185,6 +185,14 @@ contract NewNavCalculator is DestructibleModified {
     dataFeed = IDataFeed(_address);
   }
 
+  // Update the address of the data feed contract
+  function setFundStorage(address _fundStorageAddress)
+    onlyOwner
+  {
+    fundStorage = IFundStorage(_fundStorageAddress);
+    fundStorageAddress = _fundStorageAddress;
+  }
+
   // ********* HELPERS *********
 
   // Returns the fee amount associated with an annual fee accumulated given time elapsed and the annual fee rate

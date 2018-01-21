@@ -24,9 +24,6 @@ const {
   MIN_INITIAL_SUBSCRIPTION_USD,
   MIN_SUBSCRIPTION_USD,
   MIN_REDEMPTION_SHARES,
-  ADMIN_FEE,
-  MGMT_FEE,
-  PERFORM_FEE,
 } = require('../config');
 
 contract('New Fund', (accounts) => {
@@ -36,13 +33,15 @@ contract('New Fund', (accounts) => {
   const FUND = accounts[2];
   const FUND2 = accounts[3];
   const NOTAUTHORIZED = accounts[4];
-  const investors = accounts.slice(5);
+
+  const investorStart = 5;
+  const investors = accounts.slice(investorStart);
   const INVESTOR1 = investors[0];
   const INVESTOR2 = investors[1];
   const INVESTOR3 = investors[2];
   const INVESTOR4 = investors[3];
 
-  const ethInvestors = investors.slice(5, 10);
+  const ethInvestors = investors.slice(investorStart, 10);
   const usdInvestors = investors.slice(11, 16);
 
   const ETH_INVESTOR1 = ethInvestors[0];
