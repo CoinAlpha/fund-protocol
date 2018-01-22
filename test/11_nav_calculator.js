@@ -203,6 +203,15 @@ contract('New NavCalculator', (accounts) => {
     .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
   );
 
+  it('should run calcNav', () => fund.calcNav({ from: MANAGER })
+    .then(() => fundStorage.getShareClassDetails(0))
+    .catch(err => assert.throw(`calcShareClassNav ${err.toString()}`))
+    .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x))))
+    .then(() => fund.calcNav({ from: MANAGER }))
+    .then(() => fundStorage.getShareClassNavDetails(0))
+    .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
+  );
+
   it('should set value feed to the correct data feed address', (done) => {
     navCalculator.setDataFeed(dataFeed.address)
       .then(() => navCalculator.dataFeed.call())

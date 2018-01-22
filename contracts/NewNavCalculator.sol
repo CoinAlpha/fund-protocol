@@ -138,24 +138,24 @@ contract NewNavCalculator is DestructibleModified {
     // Calculate the gain/loss based on the new grossAssetValue and the old netAssetValue
     int gainLoss = int(grossAssetValuesLessFees) - int(netAssetValue) - int(temp[4]) - int(temp[5]);
 
-    // uint performFee = 0;
-    // uint performFeeOffset = 0;
+    // If there are performance fees, calculate any fee clawbacks
+    if (temp[2] > 0) {
+      // if current period gain
+      if (gainLoss >= 0) {
+        temp[8] = Math.min256(uint(gainLoss), lossCarryforward);                 // lossPayback
 
-    // if current period gain
-    if (gainLoss >= 0) {
-      temp[8] = Math.min256(uint(gainLoss), lossCarryforward);                 // lossPayback
-
-      // Update the lossCarryforward and netAssetValue variables
-      lossCarryforward = lossCarryforward.sub(temp[8]);
-      temp[6] = getPerformFee(temp[2], uint(gainLoss).sub(temp[8]));           // performFee
-      netAssetValue = netAssetValue.add(uint(gainLoss)).sub(temp[6]);
-    
-    // if current period loss
-    } else {
-      temp[7] = Math.min256(getPerformFee(temp[2], uint(-1 * gainLoss)), accumulatedMgmtFees);
-      // Update the lossCarryforward and netAssetValue variables
-      lossCarryforward = lossCarryforward.add(uint(-1 * gainLoss)).sub(getGainGivenPerformFee(temp[7], temp[2]));
-      netAssetValue = netAssetValue.sub(uint(-1 * gainLoss)).add(temp[7]);
+        // Update the lossCarryforward and netAssetValue variables
+        lossCarryforward = lossCarryforward.sub(temp[8]);
+        temp[6] = getPerformFee(temp[2], uint(gainLoss).sub(temp[8]));           // performFee
+        netAssetValue = netAssetValue.add(uint(gainLoss)).sub(temp[6]);
+      
+      // if current period loss
+      } else {
+        temp[7] = Math.min256(getPerformFee(temp[2], uint(-1 * gainLoss)), accumulatedMgmtFees);
+        // Update the lossCarryforward and netAssetValue variables
+        lossCarryforward = lossCarryforward.add(uint(-1 * gainLoss)).sub(getGainGivenPerformFee(temp[7], temp[2]));
+        netAssetValue = netAssetValue.sub(uint(-1 * gainLoss)).add(temp[7]);
+      }
     }
 
     // Update the remaining state variables and return them to the fund contract
