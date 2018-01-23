@@ -13,15 +13,57 @@ const transferExactAmountPromise = (from, to, _eth) => {
   return web3.eth.sendTransactionPromise(newTx);
 };
 
-const getInvestorData = (fundStorageInstance, investor) => fundStorageInstance.getInvestor.call(investor)
+const getInvestorData = (_fundStorageInstance, _investor) => _fundStorageInstance.getInvestor.call(_investor)
   .then((_investorData) => {
-    const [investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal] = _investorData.map(x => Number(x));
+    const [
+      investorType,
+      ethPendingSubscription,
+      sharesOwned,
+      shareClass,
+      sharesPendingRedemption,
+      amountPendingWithdrawal,
+    ] = _investorData.map(x => Number(x));
     const investorData = {
       investorType, ethPendingSubscription, sharesOwned, shareClass, sharesPendingRedemption, amountPendingWithdrawal,
     };
     return investorData;
   })
   .catch(err => assert.throw(`Error getInvestorData: ${err.toString()}`));
+
+const getShareClassData = (_fundStorageInstance, _shareClass) => Promise.all([
+  _fundStorageInstance.getShareClassDetails.call(_shareClass),
+  _fundStorageInstance.getShareClassNavDetails.call(_shareClass),
+])
+  .then((_shareClassData) => {
+    const [
+      adminFeeBps,
+      mgmtFeeBps,
+      performFeeBps,
+      shareSupply,
+    ] = _shareClassData[0].map(x => Number(x));
+
+    const [
+      lastCalc,
+      shareNav,
+      lossCarryforward,
+      accumulatedMgmtFees,
+      accumulatedAdminFees,
+    ] = _shareClassData[1].map(x => Number(x));
+
+    const shareClassData = {
+      adminFeeBps,
+      mgmtFeeBps,
+      performFeeBps,
+      shareSupply,
+      lastCalc,
+      shareNav,
+      lossCarryforward,
+      accumulatedMgmtFees,
+      accumulatedAdminFees,
+    };
+    return shareClassData;
+  })
+  .catch(err => assert.throw(`Error getShareClassData: ${err.toString()}`));
 
 const hexToString = (hex) => {
   let string = '';
@@ -31,7 +73,7 @@ const hexToString = (hex) => {
   return string;
 };
 
-const getContractNumericalData = (label, contractInstance, fields) => Promise.all(fields.map(_field => contractInstance[_field].call()))
+const getContractNumericalData = (label, contractInstance, fields) => Promise.all(fields.map(field => contractInstance[field].call()))
   .then((vals) => {
     const result = {};
     vals.forEach((_val, index) => {
@@ -46,6 +88,7 @@ module.exports = {
   transferExactAmountPromise,
   getInvestorData,
   getContractNumericalData,
+  getShareClassData,
   ethToWei,
   getBalancePromise,
 };

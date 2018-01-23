@@ -1,28 +1,23 @@
 module.exports = {
   networks: {
     development: {
-      host: "localhost",
+      host: 'localhost',
       port: 7545,
-      network_id: "*", // Match any network id
+      network_id: '*', // Match any network id
       gas: 7000000,
-    },
-    test: {
-      host: "localhost",
-      port: 7545,
-      network_id: "*", // Match any network id
-      gas: 7000000,
+      gasPrice: 20000000000, // 20 GWei
     },
     ropsten: {
-      host: "localhost",
+      host: 'localhost',
       port: 8545,
-      network_id: "3",
+      network_id: '3',
       gas: 7000000,
       gasPrice: 20000000000, // 20 GWei
     },
     mainnet: {
-      host: "localhost",
+      host: 'localhost',
       port: 8545,
-      network_id: "1",
+      network_id: '1',
       gasPrice: 20000000000, // 20 GWei
     }
   }

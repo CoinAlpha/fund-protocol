@@ -5,6 +5,8 @@ const DataFeed = artifacts.require('./DataFeed.sol');
 const NewNavCalculator = artifacts.require('./NewNavCalculator.sol');
 const FundLogic = artifacts.require('./FundLogic.sol');
 
+const Fund = artifacts.require('./Fund.sol');
+
 const { constructors } = require('../migrations/artifacts');
 
 const { increaseTime, sendTransaction, arrayToObject } = require('../js/helpers');
@@ -16,6 +18,10 @@ const keys = ['date2', 'navPerShare', 'lossCarryforward', 'accumulatedMgmtFees',
 if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
+
+const {
+  ethToWei, getInvestorData, getShareClassData, getContractNumericalData, getBalancePromise,
+} = require('../utils');
 
 // DEPLOY PARAMETERS
 const {
@@ -47,6 +53,8 @@ contract('New NavCalculator', (accounts) => {
   let navCalculator;
   let fundLogic;
 
+  let oldFund;
+
   // New contract instances
   let fundStorage;
   let fund;
@@ -62,7 +70,6 @@ contract('New NavCalculator', (accounts) => {
   let usdEth;
 
   // Helpers
-  const getBalancePromise = address => web3.eth.getBalancePromise(address);
   const weiToNum = wei => web3.fromWei(wei, 'ether').toNumber();
   const ethToUsd = eth => (eth * usdEth) / 1e20;
   const usdToEth = usd => (usd * 1e20) / usdEth;
@@ -141,8 +148,8 @@ contract('New NavCalculator', (accounts) => {
 
   before(() => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
-    return Promise.all([DataFeed.deployed(), NewNavCalculator.deployed(), FundLogic.deployed()])
-      .then(_instances => [dataFeed, navCalculator, fundLogic] = _instances)
+    return Promise.all([DataFeed.deployed(), NewNavCalculator.deployed(), FundLogic.deployed(), Fund.deployed()])
+      .then(_instances => [dataFeed, navCalculator, fundLogic, oldFund] = _instances)
       .then(() => constructors.FundStorage(MANAGER, EXCHANGE))
       .then(_instance => fundStorage = _instance)
       .then(() => constructors.FundLogic(MANAGER, dataFeed, fundStorage))
@@ -162,21 +169,44 @@ contract('New NavCalculator', (accounts) => {
       ]))
       .then(_addresses => _addresses.map(_address => assert.strictEqual(_address, fund.address, 'fund address not set')))
 
-      .then(() => console.log('======================='))
-      .then(() => console.log(Object.keys(fundStorage)))
-      .then(() => console.log('======================='))
-      .then(() => console.log(Object.keys(fund)))
+      .then(() => Promise.all(investors.slice(5).map(_investor => web3.eth.getBalancePromise(_investor))))
+      .then((_balances) => {
+        const sendBalancePromises = [];
+        _balances.forEach((_bal, index) => {
+          if (web3.fromWei(_bal, 'ether') > 1) sendBalancePromises.push(web3.eth.sendTransactionPromise({ from: investors[index], to: MANAGER, value: _bal - web3.toWei(1, 'ether') }));
+        });
+        return Promise.all(sendBalancePromises);
+      })
 
-      .then(() => fundStorage.numberOfShareClasses())
-      .then(_data => console.log(`share classes: ${Number(_data)}`))
+      .then(() => getBalancePromise(MANAGER))
+      .then(_bal => console.log(`Manager balance: ${web3.fromWei(_bal)}`))
+
+      .then(() => dataFeed.value())
+      .then(_value => console.log(`Data feed value: ${Number(_value)}`))
+
+      .then(() => fund.getBalance())
+      .then(_value => console.log(`Fund balance: ${Number(_value)}`))
+
+      .then(() => web3.eth.getBalancePromise(fund.address))
+      .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
+
+      .then(() => web3.eth.getBalancePromise(oldFund.address))
+      .then(_value => console.log(`Old Fund balance web3: ${Number(_value)}`))
+      
+      .then(() => navCalculator.fundAddress())
+      .then(_fundAddress => web3.eth.getBalancePromise(_fundAddress))
+      .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
+
+      .then(() => navCalculator.getFundBalance())
+      .then(_bal => console.log(`NavCalc getFundBalance ${Number(_bal)}`))
+
+      .then(() => navCalculator.fundGetBalance())
+      .then(_bal => console.log(`NavCalc fundGetBalance ${_bal[0]} ${Number(_bal[1])}`))
 
       // set Share Class 0 to zero fees
       .then(() => fundStorage.modifyShareClassTerms(0, 0, 0, 0))
-      .then(() => fundStorage.getShareClassDetails(0))
-      .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
-      // .then(_shareClassDetails => _shareClassDetails.map(x => assert.strictEqual(Number(x), 0, 'fees not set to zero')))
-      .then(() => fundStorage.getShareClassNavDetails(0))
-      .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
+      .then(() => getShareClassData(fundStorage, 0))
+      .then(_shareClassDetails => console.log(_shareClassDetails))
 
       .then(() => fundStorage.getInvestorAddresses())
       .then(_addresses => console.log(`Addresses: ${_addresses}`))
@@ -185,31 +215,46 @@ contract('New NavCalculator', (accounts) => {
       .catch(err => assert.throw(`Before subscribe investor ${err.toString()}`))
       .then(() => fund.whiteListInvestor(investors[0], 2, 0), { from: MANAGER })
       .then(() => fund.subscribeUsdInvestor(investors[0], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
-      .then(() => fundStorage.getInvestor(investors[0]))
-      .then(_data => console.log(`Investor: ${_data.map(x => Number(x))}`))
-      .catch(err => assert.throw(`Failed to whiteList investor ${err.toString()}`))
-      .then(() => fundStorage.getInvestorAddresses())
-      .catch(err => assert.throw(`Failed to subscribe investor ${err.toString()}`))
-      .then(_addresses => console.log(`Addresses: ${_addresses}`))
+
+
+      .then(() => dataFeed.value())
+      .then(_value => console.log(`Data feed value: ${Number(_value)}`))
+
+      .then(() => fund.getBalance())
+      .then(_value => console.log(`Fund balance: ${Number(_value)}`))
+
+      .then(() => web3.eth.getBalancePromise(fund.address))
+      .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
+
+      .then(() => navCalculator.fundAddress())
+      .then(_fundAddress => web3.eth.getBalancePromise(_fundAddress))
+      .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
+
       .catch(err => assert.throw(err.toString()));
   });
 
   it('should run calcShareClassNav', () => navCalculator.calcShareClassNav(0, { from: fund.address })
-    .then(() => fundStorage.getShareClassDetails(0))
+    .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj)}`))
+
+    .then(() => fund.getBalance())
+    .then(_value => console.log(`===> Fund balance: ${Number(_value)}`))
+
+    .then(() => getShareClassData(fundStorage, 0))
     .catch(err => assert.throw(`calcShareClassNav ${err.toString()}`))
-    .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x))))
-    .then(() => fund.calcNav({ from: MANAGER }))
-    .then(() => fundStorage.getShareClassNavDetails(0))
-    .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
+    .then(_shareClassDetails => console.log(_shareClassDetails))
+    .catch(err => `Error running calcShareClassNav ${err.toString()}`)
   );
 
   it('should run calcNav', () => fund.calcNav({ from: MANAGER })
-    .then(() => fundStorage.getShareClassDetails(0))
-    .catch(err => assert.throw(`calcShareClassNav ${err.toString()}`))
-    .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x))))
-    .then(() => fund.calcNav({ from: MANAGER }))
-    .then(() => fundStorage.getShareClassNavDetails(0))
-    .then(_shareClassDetails => _shareClassDetails.map(x => console.log(Number(x), 0, 'fees not set to zero')))
+    .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj)}`))
+
+    .then(() => fund.getBalance())
+    .then(_value => console.log(`===> Fund balance: ${Number(_value)}`))
+
+    .then(() => getShareClassData(fundStorage, 0))
+    .catch(err => assert.throw(`calcNav ${err.toString()}`))
+    .then(_shareClassDetails => console.log(_shareClassDetails))
+    .catch(err => `Error running calcNav ${err.toString()}`)
   );
 
   it('should set value feed to the correct data feed address', (done) => {

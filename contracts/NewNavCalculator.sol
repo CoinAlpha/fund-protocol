@@ -148,7 +148,7 @@ contract NewNavCalculator is DestructibleModified {
         lossCarryforward = lossCarryforward.sub(temp[8]);
         temp[6] = getPerformFee(temp[2], uint(gainLoss).sub(temp[8]));           // performFee
         netAssetValue = netAssetValue.add(uint(gainLoss)).sub(temp[6]);
-      
+
       // if current period loss
       } else {
         temp[7] = Math.min256(getPerformFee(temp[2], uint(-1 * gainLoss)), accumulatedMgmtFees);
@@ -165,8 +165,27 @@ contract NewNavCalculator is DestructibleModified {
 
     LogNavCalculation(_shareClass, lastCalcDate, temp[3], grossAssetValuesLessFees, netAssetValue, shareSupply, temp[5], temp[4], temp[6], temp[7], temp[8]);
 
-    return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
+    // return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
+    return (grossAssetValuesLessFees, dataFeed.value(), fundLogic.ethToUsd(newFund.getBalance()), newFund.getBalance(), accumulatedMgmtFees);
   }
+
+  // TODO: TEMP - DEBUGGING
+  function getFundBalance()
+    constant
+    returns (uint)
+  {
+    return newFund.balance;
+  }
+
+  function fundGetBalance()
+    constant
+    returns (address, uint)
+  {
+    return (fundAddress, newFund.getBalance());
+  }
+  // =====================
+
+
 
   // ********* ADMIN *********
 
@@ -234,11 +253,11 @@ contract NewNavCalculator is DestructibleModified {
   // }
 
   // Converts total fund NAV to NAV per share
-  function toNavPerShare(uint _balance, uint _shareClassSupply)
+  function toNavPerShare(uint _nav, uint _shareClassSupply)
     internal 
     constant 
     returns (uint) 
   {
-    return _balance.mul(10 ** fundStorage.decimals()).div(_shareClassSupply);
+    return _nav.mul(10 ** fundStorage.decimals()).div(_shareClassSupply);
   }
 }

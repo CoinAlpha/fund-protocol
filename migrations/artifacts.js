@@ -39,12 +39,12 @@ const ethToWei = eth => web3.toWei(eth, 'ether');
 const constructors = {
   OwnableModified: owner => allArtifacts.OwnableModified.new({ from: owner }),
   DataFeed: (owner, exchange) => allArtifacts.DataFeed.new(
-    '[NOT USED]',                 // _queryUrl
-    SECONDS_BETWEEN_QUERIES,      // _secondsBetweenQueries
-    USD_ETH_EXCHANGE_RATE * 100,  // _initialUsdEthRate
-    USD_BTC_EXCHANGE_RATE * 100,  // _initialUsdBtcRate
-    USD_LTC_EXCHANGE_RATE * 100,  // _initialUsdLtcRate
-    exchange,                     // _exchange
+    '[NOT USED]',                             // _queryUrl
+    SECONDS_BETWEEN_QUERIES,                  // _secondsBetweenQueries
+    USD_ETH_EXCHANGE_RATE * 100,              // _initialUsdEthRate
+    USD_BTC_EXCHANGE_RATE * 100,              // _initialUsdBtcRate
+    USD_LTC_EXCHANGE_RATE * 100,              // _initialUsdLtcRate
+    exchange,                                 // _exchange
     { from: owner, value: 0 },
   ),
 
@@ -53,14 +53,14 @@ const constructors = {
   InvestorActions: (owner, dataFeed) => allArtifacts.InvestorActions.new(dataFeed, { from: owner }),
   Fund: (owner, exchange, navCalculator, investorActions, dataFeed, fundStorage) =>
     allArtifacts.Fund.new(
-      owner,                     // _manager
-      exchange,                  // _exchange
-      navCalculator.address,     // _navCalculator
-      investorActions.address,   // _investorActions
-      dataFeed.address,          // _dataFeed
-      'TestFund',                // _name
-      'TEST',                    // _symbol
-      4,                         // _decimals
+      owner,                                  // _manager
+      exchange,                               // _exchange
+      navCalculator.address,                  // _navCalculator
+      investorActions.address,                // _investorActions
+      dataFeed.address,                       // _dataFeed
+      'TestFund',                             // _name
+      'TEST',                                 // _symbol
+      4,                                      // _decimals
       ethToWei(MIN_INITIAL_SUBSCRIPTION_ETH), // _minInitialSubscriptionEth
       ethToWei(MIN_SUBSCRIPTION_ETH),         // _minSubscriptionEth
       MIN_REDEMPTION_SHARES * 100,            // _minRedemptionShares,
@@ -73,17 +73,17 @@ const constructors = {
   // ======================
 
   FundStorage: (owner, exchange) => allArtifacts.FundStorage.new(
-    owner,                               // _manager
-    exchange,                            // _exchange
-    'TestFund',                          // _name
-    'TEST',                              // _symbol
-    FUND_DECIMALS,                       // _decimals
-    MIN_INITIAL_SUBSCRIPTION_USD * 100,  // _minInitialSubscriptionUsd
-    MIN_SUBSCRIPTION_USD * 100,          // _minSubscriptionUsd
-    MIN_REDEMPTION_SHARES * 100,         // _minRedemptionShares,
-    ADMIN_FEE * 100,                     // _adminFeeBps
-    MGMT_FEE * 100,                      // _mgmtFeeBps
-    PERFORM_FEE * 100,                   // _performFeeBps
+    owner,                                    // _manager
+    exchange,                                 // _exchange
+    'TestFund',                               // _name
+    'TEST',                                   // _symbol
+    FUND_DECIMALS,                            // _decimals
+    MIN_INITIAL_SUBSCRIPTION_USD * 100,       // _minInitialSubscriptionUsd
+    MIN_SUBSCRIPTION_USD * 100,               // _minSubscriptionUsd
+    MIN_REDEMPTION_SHARES * 100,              // _minRedemptionShares,
+    ADMIN_FEE * 100,                          // _adminFeeBps
+    MGMT_FEE * 100,                           // _mgmtFeeBps
+    PERFORM_FEE * 100,                        // _performFeeBps
     { from: owner },
   ),
   FundLogic: (owner, dataFeed, fundStorage) => allArtifacts.FundLogic.new(
@@ -99,10 +99,10 @@ const constructors = {
   ),
   NewFund: (owner, dataFeed, fundStorage, fundLogic, navCalculator) =>
     allArtifacts.NewFund.new(
-      dataFeed.address,          // _dataFeed
-      fundStorage.address,       // _fundStorage
-      fundLogic.address,         // _fundLogic
-      navCalculator.address,     // _navCalculator
+      dataFeed.address,                     // _dataFeed
+      fundStorage.address,                  // _fundStorage
+      fundLogic.address,                    // _fundLogic
+      navCalculator.address,                // _navCalculator
       { from: owner },
     ),
 };
