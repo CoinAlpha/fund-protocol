@@ -1,12 +1,13 @@
 const path = require('path');
 const Promise = require('bluebird');
 
-const FundStorage = artifacts.require('./FundStorage.sol');
-const Fund = artifacts.require('./Fund.sol');
-const NewFund = artifacts.require('./NewFund.sol');
+const { constructors } = require('../migrations/artifacts');
+
 const DataFeed = artifacts.require('./DataFeed.sol');
+const NewNavCalculator = artifacts.require('./NewNavCalculator.sol');
+const FundStorage = artifacts.require('./FundStorage.sol');
 const FundLogic = artifacts.require('./FundLogic.sol');
-const InvestorActions = artifacts.require('./InvestorActions.sol');
+const NewFund = artifacts.require('./NewFund.sol');
 
 const scriptName = path.basename(__filename);
 
@@ -14,44 +15,63 @@ if (typeof web3.eth.getAccountsPromise === 'undefined') {
   Promise.promisifyAll(web3.eth, { suffix: 'Promise' });
 }
 
-web3.eth.getTransactionReceiptMined = require('../utils/getTransactionReceiptMined.js');
+let managerBalanceStart;
+let managerBalance;
 
-// Contract instances
-let instances;
-let newFund;
-let fund;
-let fundStorage;
+// Contract Instances
 let dataFeed;
+let navCalculator;
+let fundStorage;
 let fundLogic;
-let investorActions;
-let txReceipts;
+let fund;
 
 contract('Deployment costs', (accounts) => {
-  before('before: should prepare', () => {
-    console.log(`  ****** START TEST [ ${scriptName} ] *******`);
-    return Promise.all([
-      Fund.deployed(),
-      NewFund.deployed(),
-      FundStorage.deployed(),
-      DataFeed.deployed(),
-      InvestorActions.deployed(),
-      FundLogic.deployed(),
-    ])
-      .then((_instances) => {
-        instances = _instances;
-        [fund, newFund, fundStorage, dataFeed, investorActions, fundLogic] = _instances;
-      })
-      .catch(err => assert.throw(`failed to get instances: ${err.toString()}`))
-      .then(() => Promise.all(instances.map(x => web3.eth.getTransactionPromise(x.address))))
-      .then(_txReceipts => txReceipts = _txReceipts);
-  });
+  const MANAGER = accounts[0];
+  const EXCHANGE = accounts[1];
 
-  describe('Old contracts', () => {
-    it('Gas for old contracts', () => {
-      console.log(Object.keys(instances[0]));
-      console.log(instances.map(instance => instance.address));
-      console.log(instances.map(instance => instance.transactionHash));
-      console.log(txReceipts);
-    });
+  before('before: should get starting manager balance', () => web3.eth.getBalancePromise(MANAGER)
+    .then(_bal => managerBalanceStart = web3.fromWei(_bal, 'ether')));
+
+  beforeEach('before: should get manager balance', () => web3.eth.getBalancePromise(MANAGER)
+    .then(_bal => managerBalance = web3.fromWei(_bal, 'ether'))
+    .then(() => console.log(`\n      Manager balance before: ${managerBalance}`)));
+
+  afterEach('after: should get manager balance', () => web3.eth.getBalancePromise(MANAGER)
+    .then((_bal) => {
+      const newBalance = web3.fromWei(_bal, 'ether');
+      console.log(`      New balance:        ${newBalance}`);
+      console.log(`      Difference:         ${managerBalance - newBalance}`);
+      managerBalance = newBalance;
+    }));
+
+  after('after: get closing manager balance', () => web3.eth.getBalancePromise(MANAGER)
+    .then((_bal) => {
+      const newBalance = web3.fromWei(_bal, 'ether');
+      console.log(`      Ending balance:     ${newBalance}`);
+      console.log('\n      =========================================');
+      console.log(`      TOTAL COST OF DEPLOYMENT: ${managerBalanceStart - newBalance}`);
+    }));
+
+  describe('Calculate cost', () => {
+    it('DataFeed cost', () => constructors.DataFeed(MANAGER, EXCHANGE)
+      .then(_instance => dataFeed = _instance));
+
+    it('FundStorage cost', () => constructors.FundStorage(MANAGER, EXCHANGE)
+      .then(_instance => fundStorage = _instance));
+
+    it('FundLogic cost', () => constructors.FundLogic(MANAGER, dataFeed, fundStorage)
+      .then(_instance => fundLogic = _instance));
+
+    it('NavCalculator cost', () => constructors.FundLogic(MANAGER, dataFeed, fundStorage, fundLogic)
+      .then(_instance => navCalculator = _instance));
+
+    it('Fund cost', () => constructors.NewFund(MANAGER, dataFeed, fundStorage, fundLogic, navCalculator)
+      .then(_instance => fund = _instance));
+
+    it('fundStorage.setFund', () => fundStorage.setFund(fund.address));
+
+    it('fundLogic.setFund', () => fundLogic.setFund(fund.address));
+
+    it('navCalculator.setFund', () => navCalculator.setFund(fund.address));
   });
 });
