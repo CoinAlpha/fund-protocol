@@ -166,7 +166,7 @@ contract NewNavCalculator is DestructibleModified {
     LogNavCalculation(_shareClass, lastCalcDate, temp[3], grossAssetValuesLessFees, netAssetValue, shareSupply, temp[5], temp[4], temp[6], temp[7], temp[8]);
 
     // return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
-    return (grossAssetValuesLessFees, dataFeed.value(), fundLogic.ethToUsd(newFund.getBalance()), newFund.getBalance(), accumulatedMgmtFees);
+    return (grossAssetValuesLessFees, dataFeed.value(), fundLogic.ethToUsd(newFund.getBalance()), newFund.getBalance(), fundAddress.balance);
   }
 
   // TODO: TEMP - DEBUGGING

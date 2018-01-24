@@ -154,6 +154,10 @@ contract('New NavCalculator', (accounts) => {
       .then(_instance => fundStorage = _instance)
       .then(() => constructors.FundLogic(MANAGER, dataFeed, fundStorage))
       .then(_instance => fundLogic = _instance)
+
+      .then(() => constructors.NewNavCalculator(MANAGER, dataFeed, fundStorage, fundLogic))
+      .then(_instance => navCalculator = _instance)
+
       .then(() => constructors.NewFund(MANAGER, dataFeed, fundStorage, fundLogic, navCalculator))
       .then(_instance => fund = _instance)
       .then(() => Promise.all([
@@ -169,11 +173,23 @@ contract('New NavCalculator', (accounts) => {
       ]))
       .then(_addresses => _addresses.map(_address => assert.strictEqual(_address, fund.address, 'fund address not set')))
 
+      .then(() => console.log(`  - DataFeed           | ${DataFeed.address}`))
+      .then(() => console.log(`  - => FundStorage     | ${fundStorage.address}`))
+      .then(() => console.log(`  - => FundLogic       | ${fundLogic.address}`))
+      .then(() => console.log(`  - => NewNAV          | ${navCalculator.address}`))
+      .then(() => console.log(`  - => NewFund         | ${fund.address}\n`))
+
       .then(() => Promise.all(investors.slice(5).map(_investor => web3.eth.getBalancePromise(_investor))))
       .then((_balances) => {
         const sendBalancePromises = [];
         _balances.forEach((_bal, index) => {
-          if (web3.fromWei(_bal, 'ether') > 1) sendBalancePromises.push(web3.eth.sendTransactionPromise({ from: investors[index], to: MANAGER, value: _bal - web3.toWei(1, 'ether') }));
+          if (web3.fromWei(_bal, 'ether') > 1) {
+            sendBalancePromises.push(web3.eth.sendTransactionPromise({
+              from: investors.slice(5)[index],
+              to: MANAGER,
+              value: _bal - web3.toWei(1, 'ether'),
+            }));
+          }
         });
         return Promise.all(sendBalancePromises);
       })
@@ -184,8 +200,14 @@ contract('New NavCalculator', (accounts) => {
       .then(() => dataFeed.value())
       .then(_value => console.log(`Data feed value: ${Number(_value)}`))
 
-      .then(() => fund.getBalance())
-      .then(_value => console.log(`Fund balance: ${Number(_value)}`))
+      .then(() => fund.thisBalance())
+      .then(_value => console.log(`Fund thisBalance: ${_value} ${Number(_value)}`))
+
+      .then(() => fund.checkBalance())
+      .then(_bool => console.log(`thisBalance > 0: ${_bool}`))
+
+      .then(() => navCalculator.getFundBalance())
+      .then(_value => console.log(`getFund balance ==>: ${_value}`))
 
       .then(() => web3.eth.getBalancePromise(fund.address))
       .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
@@ -214,10 +236,12 @@ contract('New NavCalculator', (accounts) => {
       // subscribe an investor
       .catch(err => assert.throw(`Before subscribe investor ${err.toString()}`))
       .then(() => fund.whiteListInvestor(investors[0], 2, 0), { from: MANAGER })
-      .then(() => fund.subscribeUsdInvestor(investors[0], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
-
-
+      .then(() => fund.subscribeUsdInvestor(investors[0], MIN_INITIAL_SUBSCRIPTION_USD * 200, { from: MANAGER }))
+      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`))
+      
+      
       .then(() => dataFeed.value())
+      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`))
       .then(_value => console.log(`Data feed value: ${Number(_value)}`))
 
       .then(() => fund.getBalance())
@@ -230,6 +254,9 @@ contract('New NavCalculator', (accounts) => {
       .then(_fundAddress => web3.eth.getBalancePromise(_fundAddress))
       .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
 
+      .then(() => navCalculator.fundGetBalance())
+      .then(_bal => console.log(`NavCalc fundGetBalance ${_bal[0]} ${Number(_bal[1])}`))
+
       .catch(err => assert.throw(err.toString()));
   });
 
@@ -239,10 +266,19 @@ contract('New NavCalculator', (accounts) => {
     .then(() => fund.getBalance())
     .then(_value => console.log(`===> Fund balance: ${Number(_value)}`))
 
+    .then(() => navCalculator.fundGetBalance())
+    .then(_bal => console.log(`NavCalc fundGetBalance ${_bal[0]} ${Number(_bal[1])}`))
+
     .then(() => getShareClassData(fundStorage, 0))
     .catch(err => assert.throw(`calcShareClassNav ${err.toString()}`))
     .then(_shareClassDetails => console.log(_shareClassDetails))
     .catch(err => `Error running calcShareClassNav ${err.toString()}`)
+
+    .then(() => fund.thisBalance())
+    .then(_value => console.log(`Fund thisBalance: ${_value} ${Number(_value)}`))
+
+    .then(() => fund.checkBalance())
+    .then(_bool => console.log(`thisBalance > 0: ${_bool}`))
   );
 
   it('should run calcNav', () => fund.calcNav({ from: MANAGER })
@@ -257,12 +293,10 @@ contract('New NavCalculator', (accounts) => {
     .catch(err => `Error running calcNav ${err.toString()}`)
   );
 
-  it('should set value feed to the correct data feed address', (done) => {
-    navCalculator.setDataFeed(dataFeed.address)
-      .then(() => navCalculator.dataFeed.call())
-      .then((_address) => {
-        assert.equal(_address, dataFeed.address, 'data feed addresses don\'t match');
-        done();
-      });
-  });
+  it('should set value feed to the correct data feed address', () => navCalculator.setDataFeed(dataFeed.address)
+    .then(() => navCalculator.dataFeed.call())
+    .then(_address => assert.equal(_address, dataFeed.address, 'data feed addresses don\'t match'))
+    .then(() => web3.eth.getBalancePromise(fund.address))
+    .then(_bal => console.log(`fund balance: ${_bal}`))
+  );
 });
