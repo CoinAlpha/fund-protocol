@@ -148,8 +148,8 @@ contract('New NavCalculator', (accounts) => {
 
   before(() => {
     console.log(`  ****** START TEST [ ${scriptName} ] *******`);
-    return Promise.all([DataFeed.deployed(), NewNavCalculator.deployed(), FundLogic.deployed(), Fund.deployed()])
-      .then(_instances => [dataFeed, navCalculator, fundLogic, oldFund] = _instances)
+    return DataFeed.deployed()
+      .then(_instance => dataFeed = _instance)
       .then(() => constructors.FundStorage(MANAGER, EXCHANGE))
       .then(_instance => fundStorage = _instance)
       .then(() => constructors.FundLogic(MANAGER, dataFeed, fundStorage))
@@ -173,11 +173,9 @@ contract('New NavCalculator', (accounts) => {
       ]))
       .then(_addresses => _addresses.map(_address => assert.strictEqual(_address, fund.address, 'fund address not set')))
 
-      .then(() => console.log(`  - DataFeed           | ${DataFeed.address}`))
-      .then(() => console.log(`  - => FundStorage     | ${fundStorage.address}`))
-      .then(() => console.log(`  - => FundLogic       | ${fundLogic.address}`))
-      .then(() => console.log(`  - => NewNAV          | ${navCalculator.address}`))
-      .then(() => console.log(`  - => NewFund         | ${fund.address}\n`))
+      .then(() => console.log(`  => FundStorage       | ${fundStorage.address}`))
+      .then(() => console.log(`  => FundLogic         | ${fundLogic.address}`))
+      .then(() => console.log(`  => NewFund           | ${fund.address}\n`))
 
       .then(() => Promise.all(investors.slice(5).map(_investor => web3.eth.getBalancePromise(_investor))))
       .then((_balances) => {
@@ -194,109 +192,88 @@ contract('New NavCalculator', (accounts) => {
         return Promise.all(sendBalancePromises);
       })
 
-      .then(() => getBalancePromise(MANAGER))
-      .then(_bal => console.log(`Manager balance: ${web3.fromWei(_bal)}`))
-
       .then(() => dataFeed.value())
       .then(_value => console.log(`Data feed value: ${Number(_value)}`))
-
-      .then(() => fund.thisBalance())
-      .then(_value => console.log(`Fund thisBalance: ${_value} ${Number(_value)}`))
-
-      .then(() => fund.checkBalance())
-      .then(_bool => console.log(`thisBalance > 0: ${_bool}`))
-
-      .then(() => navCalculator.getFundBalance())
-      .then(_value => console.log(`getFund balance ==>: ${_value}`))
-
-      .then(() => web3.eth.getBalancePromise(fund.address))
-      .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
-
-      .then(() => web3.eth.getBalancePromise(oldFund.address))
-      .then(_value => console.log(`Old Fund balance web3: ${Number(_value)}`))
-      
-      .then(() => navCalculator.fundAddress())
-      .then(_fundAddress => web3.eth.getBalancePromise(_fundAddress))
-      .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
-
-      .then(() => navCalculator.getFundBalance())
-      .then(_bal => console.log(`NavCalc getFundBalance ${Number(_bal)}`))
-
-      .then(() => navCalculator.fundGetBalance())
-      .then(_bal => console.log(`NavCalc fundGetBalance ${_bal[0]} ${Number(_bal[1])}`))
+      // Set dataFeed value to NAV = 100.00
+      .then(() => dataFeed.updateByManager(MIN_INITIAL_SUBSCRIPTION_USD * 100, USD_ETH_EXCHANGE_RATE, USD_BTC_EXCHANGE_RATE, USD_LTC_EXCHANGE_RATE))
+      .then(() => dataFeed.value())
+      .then(_value => console.log(`Data feed value: ${Number(_value)}`))
 
       // set Share Class 0 to zero fees
       .then(() => fundStorage.modifyShareClassTerms(0, 0, 0, 0))
       .then(() => getShareClassData(fundStorage, 0))
       .then(_shareClassDetails => console.log(_shareClassDetails))
 
-      .then(() => fundStorage.getInvestorAddresses())
-      .then(_addresses => console.log(`Addresses: ${_addresses}`))
-
       // subscribe an investor
       .catch(err => assert.throw(`Before subscribe investor ${err.toString()}`))
       .then(() => fund.whiteListInvestor(investors[0], 2, 0), { from: MANAGER })
-      .then(() => fund.subscribeUsdInvestor(investors[0], MIN_INITIAL_SUBSCRIPTION_USD * 200, { from: MANAGER }))
-      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`))
-      
-      
-      .then(() => dataFeed.value())
-      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`))
-      .then(_value => console.log(`Data feed value: ${Number(_value)}`))
-
-      .then(() => fund.getBalance())
-      .then(_value => console.log(`Fund balance: ${Number(_value)}`))
-
-      .then(() => web3.eth.getBalancePromise(fund.address))
-      .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
-
-      .then(() => navCalculator.fundAddress())
-      .then(_fundAddress => web3.eth.getBalancePromise(_fundAddress))
-      .then(_value => console.log(`Fund balance web3: ${Number(_value)}`))
-
-      .then(() => navCalculator.fundGetBalance())
-      .then(_bal => console.log(`NavCalc fundGetBalance ${_bal[0]} ${Number(_bal[1])}`))
-
-      .catch(err => assert.throw(err.toString()));
+      .then(() => fund.subscribeUsdInvestor(investors[0], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`));
   });
 
-  it('should run calcShareClassNav', () => navCalculator.calcShareClassNav(0, { from: fund.address })
-    .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj)}`))
+  describe('Initialize NAV values and details', () => {
+    it('should run calcShareClassNav', () => navCalculator.calcShareClassNav(0, { from: fund.address })
+      .then((_values) => {
+        assert.isAbove(_values[0], 0, 'lastCalc is 0');
+        assert.strictEqual(_values[1], 10000, 'nav is not 100.00%');
+        _values.slice(2).map((val, index) => assert.strictEqual(val, 0, `Fee ${index}: is not zero`));
+      })
+      .then(() => getShareClassData(fundStorage, 0))
+      .then(_shareClassDetails => console.log(_shareClassDetails))
+      .catch(err => `Error running calcShareClassNav ${err.toString()}`));
 
-    .then(() => fund.getBalance())
-    .then(_value => console.log(`===> Fund balance: ${Number(_value)}`))
+    it('should run calcNav', () => fund.calcNav({ from: MANAGER })
+      .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj.logs)}`))
+      .then(() => getShareClassData(fundStorage, 0))
+      .catch(err => assert.throw(`calcNav ${err.toString()}`))
+      .then(_shareClassDetails => console.log(_shareClassDetails))
+      .catch(err => `Error running calcNav ${err.toString()}`));
+  });
 
-    .then(() => navCalculator.fundGetBalance())
-    .then(_bal => console.log(`NavCalc fundGetBalance ${_bal[0]} ${Number(_bal[1])}`))
+  describe('NAV should adjust for different dataFeed values', () => {
+    const baseValue = MIN_INITIAL_SUBSCRIPTION_USD * 100;
+    const testNav = multiple => it(`DataFeed value: [${multiple}x]`, () =>
+      dataFeed.updateByManager(multiple * baseValue, USD_ETH_EXCHANGE_RATE, USD_BTC_EXCHANGE_RATE, USD_LTC_EXCHANGE_RATE)
+        .then(() => dataFeed.value())
+        .then(_val => assert.equal(Number(_val), Math.trunc(multiple * baseValue), `value @ ${multiple} does not match`))
+        .then(() => fund.calcNav())
+        .then(() => getShareClassData(fundStorage, 0))
+        .then(_shareClassData => assert.strictEqual(_shareClassData.shareNav, Math.trunc(10000 * multiple), 'incorrect Nav'))
+        .catch(err => assert.throw(`Error [${multiple}]: ${err.toString()}`)));
 
-    .then(() => getShareClassData(fundStorage, 0))
-    .catch(err => assert.throw(`calcShareClassNav ${err.toString()}`))
-    .then(_shareClassDetails => console.log(_shareClassDetails))
-    .catch(err => `Error running calcShareClassNav ${err.toString()}`)
+    for (let i = 0; i < 5; i += 1) {
+      testNav(0.5 + Math.random());
+    }
+  });
 
-    .then(() => fund.thisBalance())
-    .then(_value => console.log(`Fund thisBalance: ${_value} ${Number(_value)}`))
+  describe('Calculate NAVs for 2 share classes | 1 with a performance fee', () => {
+    const baseValue = 2 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
 
-    .then(() => fund.checkBalance())
-    .then(_bool => console.log(`thisBalance > 0: ${_bool}`))
-  );
+    before('Subscribe second investor with 20% performance fee', () => fundStorage.addShareClass(0, 0, 2000, { from: MANAGER })
+      .then(_txObj => console.log(`\nAdded share class: \n ${JSON.stringify(_txObj.logs)}\n`))
 
-  it('should run calcNav', () => fund.calcNav({ from: MANAGER })
-    .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj)}`))
+      // subscribe an investor in shareClass[1]
+      .then(() => fund.whiteListInvestor(investors[1], 2, 1), { from: MANAGER })
+      .then(() => fund.subscribeUsdInvestor(investors[1], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`))
+    );
 
-    .then(() => fund.getBalance())
-    .then(_value => console.log(`===> Fund balance: ${Number(_value)}`))
 
-    .then(() => getShareClassData(fundStorage, 0))
-    .catch(err => assert.throw(`calcNav ${err.toString()}`))
-    .then(_shareClassDetails => console.log(_shareClassDetails))
-    .catch(err => `Error running calcNav ${err.toString()}`)
-  );
+    const testNav = multiple => it(`DataFeed value: [${multiple}x]`, () =>
+      dataFeed.updateByManager(multiple * baseValue, USD_ETH_EXCHANGE_RATE, USD_BTC_EXCHANGE_RATE, USD_LTC_EXCHANGE_RATE)
+        .then(() => dataFeed.value())
+        .then(_val => assert.equal(Number(_val), Math.trunc(multiple * baseValue), `value @ ${multiple} does not match`))
+        .then(() => fund.calcNav())
+        .then(() => getShareClassData(fundStorage, 0))
+        .then(_shareClassData => assert.strictEqual(_shareClassData.shareNav, Math.trunc(10000 * multiple), 'incorrect Nav'))
 
-  it('should set value feed to the correct data feed address', () => navCalculator.setDataFeed(dataFeed.address)
-    .then(() => navCalculator.dataFeed.call())
-    .then(_address => assert.equal(_address, dataFeed.address, 'data feed addresses don\'t match'))
-    .then(() => web3.eth.getBalancePromise(fund.address))
-    .then(_bal => console.log(`fund balance: ${_bal}`))
-  );
+        // shareClass 1: 20% performance fee
+        .then(() => Promise.all([getShareClassData(fundStorage, 0), getShareClassData(fundStorage, 1)]))
+        .then(_shareClassData => console.log(`[${multiple}] \n${JSON.stringify(_shareClassData[0])} \n${JSON.stringify(_shareClassData[1])}`))
+        // .then(_shareClassData => assert.strictEqual(_shareClassData.shareNav, Math.trunc(10000 * multiple), 'incorrect Nav'))
+        .catch(err => assert.throw(`Error [${multiple}]: ${err.toString()}`)));
+
+    [1, 1.5, 2, 1, 0.5, 0.75, 1].map(x => testNav(x));
+  });
+
 });
