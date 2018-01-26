@@ -280,4 +280,68 @@ contract('New NavCalculator', (accounts) => {
 
     [1, 1.25, 1.5, 1.25, 1, 0.5, 0.75, 1].map(x => testNav(x));
   });
+
+  describe('Calculate NAVs for 2 share classes after subscription at NAV > 100', () => {
+    const initialBaseValue = 2 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
+    const baseValue = 4 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
+    const newNAV = 120;
+
+    const printNav = (_shareClassData) => {
+      const details = [`\nPerformanceFees ${_shareClassData.performFeeBps}`];
+      ['shareSupply', 'shareNav', 'accumulatedMgmtFees', 'lossCarryforward'].forEach(field => details.push(`${field} : ${_shareClassData[field]}`));
+      return details.join('\n');
+    };
+
+    before('Subscribe third investor with 20% performance fee', () =>
+      dataFeed.updateByManager((newNAV / 100) * initialBaseValue, USD_ETH_EXCHANGE_RATE, USD_BTC_EXCHANGE_RATE, USD_LTC_EXCHANGE_RATE)
+
+        .then(() => dataFeed.value())
+        .then(_val => console.log(`Datafeed value: ${Number(_val)}`))
+        
+        .then(() => fund.calcNav())
+        .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj.logs)}`))
+
+        .then(() => Promise.all([getShareClassData(fundStorage, 0), getShareClassData(fundStorage, 1)]))
+        .then(_shareClassData => console.log(`\n == BEFORE \n [${newNAV}] \n${printNav(_shareClassData[0])} \n${printNav(_shareClassData[1])}`))
+
+        // subscribe an investor in shareClass[0]
+        .then(() => fund.whiteListInvestor(investors[2], 2, 1), { from: MANAGER })
+        .then(() => fund.subscribeUsdInvestor(investors[2], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+
+        // update dataFeed value for new subscription
+        .then(() => dataFeed.updateByManager(
+          ((newNAV / 100) * initialBaseValue) + (MIN_INITIAL_SUBSCRIPTION_USD * 100),
+          USD_ETH_EXCHANGE_RATE,
+          USD_BTC_EXCHANGE_RATE,
+          USD_LTC_EXCHANGE_RATE,
+        ))
+
+        .then(() => dataFeed.value())
+        .then(_val => console.log(`Datafeed value: ${Number(_val)}`))
+
+        .then(() => fund.calcNav())
+        .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj.logs)}`))
+
+        .then(() => Promise.all([getShareClassData(fundStorage, 0), getShareClassData(fundStorage, 1)]))
+        .then(_shareClassData => console.log(`\n == AFTER SUBSCRIBE \n [${newNAV}] \n${printNav(_shareClassData[0])} \n${printNav(_shareClassData[1])}`))
+
+        .catch(err => assert.throw(`Before ${err.toString()}`)));
+
+    const testNav = multiple => it(`[3] DataFeed value: [${multiple}x]`, () =>
+      dataFeed.updateByManager(multiple * baseValue, USD_ETH_EXCHANGE_RATE, USD_BTC_EXCHANGE_RATE, USD_LTC_EXCHANGE_RATE)
+        .then(() => dataFeed.value())
+        .then(_val => assert.equal(Number(_val), Math.trunc(multiple * baseValue), `value @ ${multiple} does not match`))
+        .then(() => fund.calcNav())
+        .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj.logs)}`))
+        .then(() => getShareClassData(fundStorage, 0))
+        .then(_shareClassData => assert.strictEqual(_shareClassData.shareNav, Math.trunc(10000 * multiple), 'incorrect Nav'))
+
+        // shareClass 1: 20% performance fee
+        .then(() => Promise.all([getShareClassData(fundStorage, 0), getShareClassData(fundStorage, 1)]))
+        .then(_shareClassData => console.log(`\n[${multiple}] \n${printNav(_shareClassData[0])} \n${printNav(_shareClassData[1])}`))
+        // .then(_shareClassData => assert.strictEqual(_shareClassData.shareNav, Math.trunc(10000 * multiple), 'incorrect Nav'))
+        .catch(err => assert.throw(`Error [${multiple}]: ${err.toString()}`)));
+
+    [1].map(x => testNav(x));
+  });
 });
