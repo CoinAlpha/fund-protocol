@@ -255,25 +255,29 @@ contract('New NavCalculator', (accounts) => {
       // subscribe an investor in shareClass[1]
       .then(() => fund.whiteListInvestor(investors[1], 2, 1), { from: MANAGER })
       .then(() => fund.subscribeUsdInvestor(investors[1], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
-      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`))
-    );
+      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`)));
 
+    const printNav = (_shareClassData) => {
+      const details = [`\nPerformanceFees ${_shareClassData.performFeeBps}`];
+      ['shareNav', 'accumulatedMgmtFees', 'lossCarryforward'].forEach(field => details.push(`${field} : ${_shareClassData[field]}`));
+      return details.join('\n');
+    };
 
-    const testNav = multiple => it(`DataFeed value: [${multiple}x]`, () =>
+    const testNav = multiple => it(`[2] DataFeed value: [${multiple}x]`, () =>
       dataFeed.updateByManager(multiple * baseValue, USD_ETH_EXCHANGE_RATE, USD_BTC_EXCHANGE_RATE, USD_LTC_EXCHANGE_RATE)
         .then(() => dataFeed.value())
         .then(_val => assert.equal(Number(_val), Math.trunc(multiple * baseValue), `value @ ${multiple} does not match`))
         .then(() => fund.calcNav())
+        .then(_txObj => console.log(`Tx obj: ${JSON.stringify(_txObj.logs)}`))
         .then(() => getShareClassData(fundStorage, 0))
         .then(_shareClassData => assert.strictEqual(_shareClassData.shareNav, Math.trunc(10000 * multiple), 'incorrect Nav'))
 
         // shareClass 1: 20% performance fee
         .then(() => Promise.all([getShareClassData(fundStorage, 0), getShareClassData(fundStorage, 1)]))
-        .then(_shareClassData => console.log(`[${multiple}] \n${JSON.stringify(_shareClassData[0])} \n${JSON.stringify(_shareClassData[1])}`))
+        .then(_shareClassData => console.log(`\n[${multiple}] \n${printNav(_shareClassData[0])} \n${printNav(_shareClassData[1])}`))
         // .then(_shareClassData => assert.strictEqual(_shareClassData.shareNav, Math.trunc(10000 * multiple), 'incorrect Nav'))
         .catch(err => assert.throw(`Error [${multiple}]: ${err.toString()}`)));
 
-    [1, 1.5, 2, 1, 0.5, 0.75, 1].map(x => testNav(x));
+    [1, 1.25, 1.5, 1.25, 1, 0.5, 0.75, 1].map(x => testNav(x));
   });
-
 });

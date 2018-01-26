@@ -129,7 +129,7 @@ contract NewNavCalculator is DestructibleModified {
     // Prorates total asset value by Share Class share amount / total shares
 
     // grossAssetValuesLessFees
-    uint grossAssetValuesLessFees = dataFeed.value().add(fundLogic.ethToUsd(newFund.getBalance())).sub(accumulatedMgmtFees).sub(accumulatedAdminFees).mul(shareSupply).div(fundStorage.totalShareSupply());
+    uint grossAssetValuesLessFees = dataFeed.value().add(fundLogic.ethToUsd(newFund.getBalance())).mul(shareSupply).div(fundStorage.totalShareSupply()).sub(accumulatedMgmtFees).sub(accumulatedAdminFees);
 
     // Calculates the base management fee accrued since the last NAV calculation
     temp[4] = getAnnualFee(_shareClass, shareSupply, temp[3], temp[1]);   // mgmtFee
@@ -146,7 +146,7 @@ contract NewNavCalculator is DestructibleModified {
       if (temp[2] > 0) {
         // Update the lossCarryforward and netAssetValue variables
         lossCarryforward = lossCarryforward.sub(temp[8]);
-        temp[6] = getPerformFee(temp[2], uint(gainLoss).sub(temp[8]));           // performFee
+        temp[6] = getPerformFee(temp[2], uint(gainLoss).sub(temp[8]));         // performFee
       }
 
       netAssetValue = netAssetValue.add(uint(gainLoss)).sub(temp[6]);
