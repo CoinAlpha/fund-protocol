@@ -19,7 +19,9 @@ import "./zeppelin/DestructibleModified.sol";
  */
 
 contract INewNavCalculator {
-  function calcShareClassNav(uint _shareClass)
+  function calcStoredTotalFundValue()
+    returns (uint totalValue) {}
+  function calcNewShareClassNav(uint _shareClass, uint _oldFundTotalValue)
     returns (
       uint lastCalcDate,
       uint navPerShare,
@@ -73,9 +75,46 @@ contract NewNavCalculator is DestructibleModified {
     uint lossPaybackInPeriod
   );
 
+  /**
+  * Calculate total value of a shareClass: NAV + fees
+  * @param  _shareClass        Share class index
+  * @return shareClassValue    value in USD cents
+  */
+  function calcCurrentShareClassValue(uint _shareClass)
+    constant
+    returns (uint shareClassValue)
+  {
+    require(_shareClass < fundStorage.numberOfShareClasses());
+
+    uint shareSupply = fundStorage.getShareClassSupply(_shareClass);
+
+    var (lastCalcDate,      // lastCalcDate
+     navPerShare,           // navPerShare
+     lossCarryforward,      // lossCarryforward
+     accumulatedMgmtFees,   // accumulatedMgmtFees
+     accumulatedAdminFees   // accumulatedAdminFees
+    ) = fundStorage.getShareClassNavDetails(_shareClass);
+
+    return shareSupply.mul(navPerShare).add(accumulatedAdminFees).add(accumulatedMgmtFees);
+  }
+
+
+  /**
+  * Calculate total value of all shareClass' NAV + fees based on current values in fundStorage
+  * @return totalValue    value in USD cents
+  */
+  function calcStoredTotalFundValue()
+    constant
+    returns (uint totalValue)
+  {
+    for (uint8 i = 0; i < fundStorage.numberOfShareClasses(); i++) {
+      totalValue += calcCurrentShareClassValue(i);
+    }
+    return totalValue;
+  }
 
   // Calculate nav and allocate fees
-  function calcShareClassNav(uint _shareClass)
+  function calcNewShareClassNav(uint _shareClass, uint _oldFundTotalValue)
     onlyFund
     constant
     returns (
@@ -129,7 +168,7 @@ contract NewNavCalculator is DestructibleModified {
     // Prorates total asset value by Share Class share amount / total shares
 
     // grossAssetValuesLessFees
-    uint grossAssetValuesLessFees = dataFeed.value().add(fundLogic.ethToUsd(newFund.getBalance())).mul(shareSupply).div(fundStorage.totalShareSupply()).sub(accumulatedMgmtFees).sub(accumulatedAdminFees);
+    uint grossAssetValuesLessFees = dataFeed.value().add(fundLogic.ethToUsd(newFund.getBalance())).mul(navPerShare.mul(shareSupply).div(100).add(accumulatedMgmtFees).add(accumulatedAdminFees)).div(_oldFundTotalValue).sub(accumulatedMgmtFees).sub(accumulatedAdminFees);
 
     // Calculates the base management fee accrued since the last NAV calculation
     temp[4] = getAnnualFee(_shareClass, shareSupply, temp[3], temp[1]);   // mgmtFee

@@ -311,7 +311,7 @@ contract NewFund is DestructiblePausable {
     returns (bool success)
   {
     for (uint8 i = 0; i < fundStorage.numberOfShareClasses(); i++) {
-      calcShareClassNav(i);
+      calcNewShareClassNav(i);
     }
     return true;    
   }
@@ -319,17 +319,18 @@ contract NewFund is DestructiblePausable {
   // Calculate and update NAV per share, lossCarryforward (the amount of losses that the fund to make up in order to start earning performance fees),
   // and accumulated management fee balaces.
   // Delegates logic to the NavCalculator module
-  function calcShareClassNav(uint _shareClass)
+  function calcNewShareClassNav(uint _shareClass)
     onlyOwner
     returns (bool success)
   {
+    uint oldFundTotalValue = navCalculator.calcStoredTotalFundValue();
     var (
       _lastCalcDate,
       _navPerShare,
       _lossCarryforward,
       _accumulatedMgmtFees,
       _accumulatedAdminFees
-    ) = navCalculator.calcShareClassNav(_shareClass);
+    ) = navCalculator.calcNewShareClassNav(_shareClass, oldFundTotalValue);
 
     fundStorage.setShareClassNav(_shareClass, _lastCalcDate, _navPerShare, _lossCarryforward, _accumulatedMgmtFees, _accumulatedAdminFees);
 
