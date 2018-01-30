@@ -46,6 +46,7 @@ npm install
 4. Unlock your primary account: `web3.personal.unlockAccount(web3.eth.accounts[0], <INSERT YOUR PASSWORD HERE>, 15000)`
 5. Follow manual testing workflows in `js/Fund-test.js`
 
+<!-- 
 ### Ethereum Bridge | Oraclize
 Ethereum Bridge is used for connecting to Oraclize from a non-public blockchain instance (e.g. testrpc).  This is used for testing the DataFeed contracts.
 
@@ -61,4 +62,4 @@ Ethereum Bridge is used for connecting to Oraclize from a non-public blockchain 
   OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
   ```
 
-6. Add this line into DataFeel.sol
+6. Add this line into DataFeel.sol -->

@@ -61,7 +61,7 @@ contract DataFeed is usingOraclize, DestructibleModified {
   {
     // Testing Oraclize using Ethereum bridge (see readme for more details)
     /** ### NOTE:  COMMENT THIS OUT FOR DEPLOYMENT / PRODUCTION ## **/
-    OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+    // OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
 
     // Constants
     queryUrl = _queryUrl;
