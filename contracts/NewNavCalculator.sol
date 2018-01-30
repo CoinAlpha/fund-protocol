@@ -259,9 +259,13 @@ contract NewNavCalculator is DestructibleModified {
   function getAnnualFee(uint _shareClass, uint _shareSupply, uint _elapsedTime, uint _annualFeeBps) 
     internal 
     constant 
-    returns (uint feePayment) 
+    returns (uint feeAmount) 
   {
-    return _annualFeeBps.mul(fundLogic.sharesToUsd(_shareClass, _shareSupply)).div(10000).mul(_elapsedTime).div(31536000);
+    if (_annualFeeBps > 0) {
+      return _annualFeeBps.mul(fundLogic.sharesToUsd(_shareClass, _shareSupply)).div(10000).mul(_elapsedTime).div(31536000);
+    } else {
+      return 0;
+    }
   }
 
   // Returns the performance fee for a given gain in portfolio value
@@ -270,7 +274,11 @@ contract NewNavCalculator is DestructibleModified {
     constant 
     returns (uint performFee)  
   {
-    return _performFeeBps.mul(_usdGain).div(10 ** fundStorage.decimals());
+    if (_performFeeBps > 0) {
+      return _performFeeBps.mul(_usdGain).div(10 ** fundStorage.decimals());
+    } else {
+      return 0;
+    }
   }
 
   // Returns the gain in portfolio value for a given performance fee

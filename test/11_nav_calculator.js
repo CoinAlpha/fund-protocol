@@ -275,7 +275,7 @@ contract('New NavCalculator', (accounts) => {
     [1, 1.25, 2, 1.25, 1, 0.5, 0.75, 1].map(x => testNav(x));
   });
 
-  describe('Calculate NAVs for 2 share classes after subscription at NAV > 100', () => {
+  xdescribe('Calculate NAVs for 2 share classes after subscription at NAV > 100', () => {
     const initialBaseValue = 2 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
     const baseValue = 4 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
     const newNAV = 120;
@@ -334,7 +334,7 @@ contract('New NavCalculator', (accounts) => {
     [3400000, 6800000, 1700000, 1700000 + (1398300), 3400000].map(x => testNavByValue(x));
   });
 
-  describe('Test NAVs after share redemption', () => {
+  xdescribe('Test NAVs after share redemption', () => {
     const baseValue = 2 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
 
     before('Redeem investor', () => getInvestorData(fundStorage, investors[2])
