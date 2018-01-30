@@ -216,7 +216,7 @@ contract NewNavCalculator is DestructibleModified {
 
     // Update the remaining state variables and return them to the fund contract
     accumulatedAdminFees = accumulatedAdminFees.add(temp[5]);
-    accumulatedMgmtFees = accumulatedMgmtFees.add(temp[6]).sub(temp[7]);
+    accumulatedMgmtFees = accumulatedMgmtFees.add(temp[4]).add(temp[6]).sub(temp[7]);
     navPerShare = toNavPerShare(netAssetValue, shareSupply);
 
     LogNavCalculation(_shareClass, lastCalcDate, temp[3], temp[10], netAssetValue, shareSupply, temp[5], temp[4], temp[6], temp[7], temp[8]);
