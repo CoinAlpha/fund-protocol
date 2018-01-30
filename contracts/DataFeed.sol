@@ -73,8 +73,9 @@ contract DataFeed is usingOraclize, DestructibleModified {
     gasLimit = 300000;              // Adjust this value depending on code length
     gasPrice = 50000000000;         // 50 GWei, Oraclize default
 
-    oraclize_setCustomGasPrice(gasPrice);    
-    oraclize_setProof(proofType_NONE);
+    // Without Ethereum Bridge, this will fail using testing with TestRPC
+    // oraclize_setCustomGasPrice(gasPrice);    
+    // oraclize_setProof(proofType_NONE);
   }
 
   // Updates the value variable by fetching the queryUrl via Oraclize.
