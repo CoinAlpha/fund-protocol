@@ -195,7 +195,7 @@ contract NewNavCalculator is DestructibleModified {
         temp[8] = Math.min256(uint(gainLoss), lossCarryforward);                 // lossPayback
         // Update the lossCarryforward and netAssetValue variables
         lossCarryforward = lossCarryforward.sub(temp[8]);
-        temp[6] = getPerformFee(temp[2], uint(gainLoss).sub(temp[8]));         // performFee
+        temp[6] = getPerformFee(temp[2], uint(gainLoss).sub(temp[8]));           // performFee
       }
 
       netAssetValue = netAssetValue.add(uint(gainLoss)).sub(temp[6]);
@@ -205,7 +205,7 @@ contract NewNavCalculator is DestructibleModified {
       
       // if there is a performance fee
       if (temp[2] > 0) {
-       temp[7] = Math.min256(getPerformFee(temp[2], uint(-1 * gainLoss)), accumulatedMgmtFees);
+        temp[7] = Math.min256(getPerformFee(temp[2], uint(-1 * gainLoss)), accumulatedMgmtFees);
         // Update the lossCarryforward and netAssetValue variables
         lossCarryforward = lossCarryforward.add(uint(-1 * gainLoss));
         lossCarryforward = lossCarryforward.sub(getGainGivenPerformFee(temp[7], temp[2]));
@@ -222,7 +222,6 @@ contract NewNavCalculator is DestructibleModified {
     LogNavCalculation(_shareClass, lastCalcDate, temp[3], temp[10], netAssetValue, shareSupply, temp[5], temp[4], temp[6], temp[7], temp[8]);
 
     return (lastCalcDate, navPerShare, lossCarryforward, accumulatedMgmtFees, accumulatedAdminFees);
-    // return (grossAssetValuesLessFees, dataFeed.value(), fundLogic.ethToUsd(newFund.getBalance()), newFund.getBalance(), fundAddress.balance);
   }
 
 

@@ -20,7 +20,7 @@ if (typeof web3.eth.getAccountsPromise === 'undefined') {
 }
 
 const {
-  ethToWei, getInvestorData, getShareClassData, getContractNumericalData, getBalancePromise,
+  ethToWei, getInvestorData, getShareClassData, getContractNumericalData, getBalancePromise, createTimeDelay,
 } = require('../utils');
 
 // DEPLOY PARAMETERS
@@ -275,7 +275,7 @@ contract('New NavCalculator', (accounts) => {
     [1, 1.25, 2, 1.25, 1, 0.5, 0.75, 1].map(x => testNav(x));
   });
 
-  describe('Calculate NAVs for 2 share classes after subscription at NAV > 100', () => {
+  xdescribe('Calculate NAVs for 2 share classes after subscription at NAV > 100', () => {
     const initialBaseValue = 2 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
     const baseValue = 4 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
     const newNAV = 120;
@@ -334,7 +334,7 @@ contract('New NavCalculator', (accounts) => {
     [3400000, 6800000, 1700000, 1700000 + (1398300), 3400000].map(x => testNavByValue(x));
   });
 
-  describe('Test NAVs after share redemption', () => {
+  xdescribe('Test NAVs after share redemption', () => {
     const baseValue = 2 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
 
     before('Redeem investor', () => getInvestorData(fundStorage, investors[2])
@@ -375,5 +375,93 @@ contract('New NavCalculator', (accounts) => {
         .catch(err => assert.throw(`Error [${multiple}]: ${err.toString()}`)));
 
     [1, 1.25, 2, 1.25, 1, 0.5, 0.75, 1].map(x => testNav(x));
+  });
+
+  describe('Add 3 more share classes: 1% admin | 1% mgmt | 0.5% admin/0.5% mgmt | 0.5% admin/0.5% mgmt/20% perf', () => {
+    const baseValue = 6 * MIN_INITIAL_SUBSCRIPTION_USD * 100;
+
+    // add ShareClass 2: 1% admin fees
+    before('add shareclasses and subscribe investors', () => fundStorage.addShareClass(100000, 0, 0, { from: MANAGER })
+      // add ShareClass 3: 1% mgmt fees
+      .then(() => fundStorage.addShareClass(0, 100000, 0, { from: MANAGER }))
+      // add ShareClass 4: 0.5%/0.5% admin/mgmt fees
+      .then(() => fundStorage.addShareClass(50, 50, 0, { from: MANAGER }))
+      // add ShareClass 5: 0.5%/0.5% admin/mgmt fees | 20% perf fees
+      .then(() => fundStorage.addShareClass(50, 50, 2000, { from: MANAGER }))
+      .catch(err => assert.throw(`Error adding share classes ${err.toString()}`))
+
+      // subscribe an investor in new shareClass[1]
+      // .then(() => fund.subscribeUsdInvestor(investors[2], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+
+      // subscribe an investor in new shareClass[2]
+      .then(() => fund.whiteListInvestor(investors[3], 2, 2), { from: MANAGER })
+      .then(() => fund.subscribeUsdInvestor(investors[3], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+
+      // subscribe an investor in new shareClass[3]
+      .then(() => fund.whiteListInvestor(investors[4], 2, 3), { from: MANAGER })
+      .then(() => fund.subscribeUsdInvestor(investors[4], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+
+      // subscribe an investor in new shareClass[4]
+      .then(() => fund.whiteListInvestor(investors[5], 2, 4), { from: MANAGER })
+      .then(() => fund.subscribeUsdInvestor(investors[5], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+
+      // subscribe an investor in new shareClass[5]
+      .then(() => fund.whiteListInvestor(investors[6], 2, 5), { from: MANAGER })
+      .then(() => fund.subscribeUsdInvestor(investors[6], MIN_INITIAL_SUBSCRIPTION_USD * 100, { from: MANAGER }))
+
+      // confirm additions
+      .then(() => fundStorage.numberOfShareClasses())
+      .then(_num => assert.strictEqual(Number(_num), 6, 'incorrect number of share classes'))
+
+      .catch(err => assert.throw(`After subscribe investor ${err.toString()}`)));
+
+    const printNav = (_shareClassData) => {
+      const details = [`\nPerformanceFees ${_shareClassData.performFeeBps}`];
+      ['shareNav', 'accumulatedMgmtFees', 'lossCarryforward'].forEach(field => details.push(`${field} : ${_shareClassData[field]}`));
+      return details.join('\n');
+    };
+
+    const testNav = multiple => it(`[4] DataFeed value: [${multiple}x]`, () =>
+      dataFeed.updateByManager(multiple * baseValue, USD_ETH_EXCHANGE_RATE, USD_BTC_EXCHANGE_RATE, USD_LTC_EXCHANGE_RATE, { from: MANAGER })
+        .then(() => dataFeed.value())
+        .catch(_err => assert.throw(`Error updateByManager: ${_err.toString()}`))
+        .then(_val => assert.equal(Number(_val), Math.trunc(multiple * baseValue), `value @ ${multiple} does not match`))
+        .then(() => fund.calcNav())
+        .then(() => Promise.all([0, 1, 2, 3, 4, 5].map(i => getShareClassData(fundStorage, i))))
+        .catch(_err => assert.throw(`Error with calcNav: ${_err.toString()}`))
+        .then((_shareClassData) => {
+          console.log('Performance fees | shareNav | admin fees | mgmt fees');
+          _shareClassData.forEach(shareClass => console.log(shareClass));
+
+          const [shareClass0, shareClass1, shareClass2, shareClass3, shareClass4, shareClass5] = _shareClassData;
+          assert.strictEqual(shareClass0.shareNav, Math.trunc(10000 * multiple), 'incorrect Nav');
+          // console.log(shareClass1);
+
+          // 20% performance fees
+          const expectedNav = multiple <= 1 ? Math.trunc(10000 * multiple) :
+            10000 + (0.8 * (Math.trunc(10000 * multiple) - 10000));
+
+          const expectedFees = multiple <= 1 ? 0 :
+            (MIN_INITIAL_SUBSCRIPTION_USD * 100 * 0.2 * (Math.trunc(10000 * multiple) - 10000)) / 10000;
+
+            // NAV within 0.0005%
+          assert.isBelow(Math.abs(shareClass1.shareNav - expectedNav), 5, 'incorrect Nav');
+
+          // Fees within $1.50
+          assert.isBelow(Math.abs(shareClass1.accumulatedMgmtFees - expectedFees), 150, 'incorrect fees');
+        })
+        .catch(err => assert.throw(`Error [${multiple}]: ${err.toString()}`)));
+
+    [1, 2, 1].map(x => testNav(x));
+
+    const blocks = 10000;
+    it(`should check NAV after ${blocks} blocks`, () => createTimeDelay(MANAGER, MANAGER, blocks));
+    testNav(1);
+
+    it(`should check NAV after ${blocks} blocks`, () => createTimeDelay(MANAGER, MANAGER, blocks));
+    testNav(1);
+
+    it(`should check NAV after ${blocks} blocks`, () => createTimeDelay(MANAGER, MANAGER, blocks));
+    testNav(1);
   });
 });

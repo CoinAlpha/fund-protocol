@@ -84,6 +84,18 @@ const getContractNumericalData = (label, contractInstance, fields) => Promise.al
   })
   .catch(err => assert.throw(`Error getting contract field data: ${err.toString()}`));
 
+const createTimeDelay = (_from, _to, _blocks, _first = true) => {
+  if (_blocks > 0) {
+    if (_first) console.log('\nGenerating time delay');
+    if (_blocks % 1000 === 0) process.stdout.write(`${_blocks / 1000}`);
+    if (_blocks % 100 === 0) process.stdout.write('.');
+    return web3.eth.sendTransactionPromise({ from: _from, to: _to, value: web3.toWei(0.001, 'ether') })
+      .then(() => createTimeDelay(_from, _to, _blocks - 1, false));
+  }
+  console.log('');
+  return null;
+};
+
 module.exports = {
   transferExactAmountPromise,
   getInvestorData,
@@ -91,4 +103,5 @@ module.exports = {
   getShareClassData,
   ethToWei,
   getBalancePromise,
+  createTimeDelay,
 };
