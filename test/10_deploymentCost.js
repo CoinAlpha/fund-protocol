@@ -1,5 +1,6 @@
 const path = require('path');
 const Promise = require('bluebird');
+const numeral = require('numeral');
 
 const { constructors } = require('../migrations/artifacts');
 
@@ -24,13 +25,19 @@ let navCalculator;
 let fundStorage;
 let fundLogic;
 let fund;
+let gasPriceGwei;
 
 contract('Deployment costs', (accounts) => {
   const MANAGER = accounts[0];
   const EXCHANGE = accounts[1];
 
   before('before: should get starting manager balance', () => web3.eth.getBalancePromise(MANAGER)
-    .then(_bal => managerBalanceStart = web3.fromWei(_bal, 'ether')));
+    .then(_bal => managerBalanceStart = web3.fromWei(_bal, 'ether'))
+    .then(() => web3.eth.getGasPricePromise())
+    .then((_gasPrice) => {
+      gasPriceGwei = Number(_gasPrice) / 1e9;
+      console.log(`      Gas Price:     ${Number(_gasPrice)}\n`);
+    }));
 
   beforeEach('before: should get manager balance', () => web3.eth.getBalancePromise(MANAGER)
     .then(_bal => managerBalance = web3.fromWei(_bal, 'ether'))
@@ -39,17 +46,24 @@ contract('Deployment costs', (accounts) => {
   afterEach('after: should get manager balance', () => web3.eth.getBalancePromise(MANAGER)
     .then((_bal) => {
       const newBalance = web3.fromWei(_bal, 'ether');
+      const ethCost = managerBalance - newBalance;
+      const gasUsed = (ethCost / gasPriceGwei) * 1e9;
       console.log(`      New balance:        ${newBalance}`);
-      console.log(`      Difference:         ${managerBalance - newBalance}`);
+      console.log(`      Gas Used:           ${numeral(gasUsed).format('0,0')}`);
+      console.log(`      ETH Cost:           ${ethCost}`);
       managerBalance = newBalance;
     }));
 
   after('after: get closing manager balance', () => web3.eth.getBalancePromise(MANAGER)
     .then((_bal) => {
       const newBalance = web3.fromWei(_bal, 'ether');
+      const ethCost = managerBalanceStart - newBalance;
+      const gasUsed = (ethCost / gasPriceGwei) * 1e9;
+
       console.log(`      Ending balance:     ${newBalance}`);
       console.log('\n      =========================================');
-      console.log(`      TOTAL COST OF DEPLOYMENT: ${managerBalanceStart - newBalance}`);
+      console.log(`      Gas Used:           ${numeral(gasUsed).format('0,0')}`);
+      console.log(`      TOTAL ETH COST:     ${ethCost}`);
     }));
 
   describe('Calculate cost', () => {
