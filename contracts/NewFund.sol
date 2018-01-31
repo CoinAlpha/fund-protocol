@@ -390,6 +390,67 @@ contract NewFund is DestructiblePausable {
     return fundStorage.exchange();
   }
 
+  // ======================================== INVESTOR ========================================
+
+  /**
+    * Retrieve investor subscription and share details
+    * @param  _investor    Investor address / UUID
+    * @return isSuccess    Operation successful
+    */
+  function getInvestor(address _investor)
+    constant
+    returns (
+      uint investorType,
+      uint ethPendingSubscription,
+      uint sharesOwned,
+      uint shareClass,
+      uint sharesPendingRedemption,
+      uint amountPendingWithdrawal
+    )
+  {
+    return fundStorage.getInvestor(_investor);
+  }
+
+  /**
+    * Retrieve investor type
+    * @param  _investor       Investor address / UUID
+    * @return investorType    [0] not whitelisted, [1] Ether investor, [2] USD investor
+    */
+  function getInvestorType(address _investor)
+    constant
+    public
+    returns (uint investorType)
+  {
+    return fundStorage.getInvestorType(_investor);
+  }
+
+  // ====================================== SHARE CLASSES ======================================
+
+  function getShareClassDetails(uint _shareClassIndex)
+    constant
+    returns (
+      uint adminFeeBps,
+      uint mgmtFeeBps,
+      uint performFeeBps, 
+      uint shareSupply
+    )
+  {
+    return fundStorage.getShareClassDetails(_shareClassIndex);
+  }
+
+  function getShareClassNavDetails(uint _shareClassIndex)
+    constant
+    returns (
+      uint lastCalc,
+      uint shareNav,
+      uint lossCarryforward,
+      uint accumulatedMgmtFees,
+      uint accumulatedAdminFees
+    )
+  {
+    return fundStorage.getShareClassNavDetails(_shareClassIndex);
+  }
+
   // ========================================== ADMIN ==========================================
 
   /**
